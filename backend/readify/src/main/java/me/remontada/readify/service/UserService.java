@@ -24,4 +24,12 @@ public interface UserService {
     User verifyEmail(String token);
 
     void sendEmailVerification(String email);
+
+    User createUser(String firstName, String lastName, String email, String phoneNumber, String password);
+
+    User verifyPhone(String phoneNumber, String verificationCode);
+
+    void sendPhoneVerification(String phoneNumber);
+
+    boolean existsByPhoneNumber(String phoneNumber);
 }
