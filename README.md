@@ -5,7 +5,7 @@ BookStream is a Netflix/HBO Max-style platform for reading books online with a m
 
 ## Architecture
 
-Backend: Spring Boot 3.x + Spring Security + PostgreSQL
-Frontend: Next.js + TypeScript + Tailwind CSS + ShadCN
-Authentication: JWT with role-based access control
-Security: Anti-download protection, screenshot prevention
+### Backend: Spring Boot 3.x + Spring Security + PostgreSQL
+### Frontend: Next.js + TypeScript + Tailwind CSS + ShadCN
+### Authentication: JWT with role-based access control
+### Security: Anti-download protection, screenshot prevention
