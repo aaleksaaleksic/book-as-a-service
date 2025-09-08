@@ -1,4 +1,4 @@
-# book-as-a-service
+# Book As A Service
 
 Enterprise-grade online book reading platform with subscription model
 BookStream is a Netflix/HBO Max-style platform for reading books online with a monthly subscription model. Built with enterprise-level security and anti-piracy protection.
