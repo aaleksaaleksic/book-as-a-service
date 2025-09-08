@@ -25,6 +25,7 @@ class SecurityConfig {
                         .requestMatchers("/api/v1/users/register").permitAll()
                         .requestMatchers("/api/v1/users/verify-email").permitAll()
                         .requestMatchers("/api/v1/users/verify-phone").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/users").permitAll() // ZA TESTIRANJE - ukloni kasnije
                         .requestMatchers("/api/v1/users/**").permitAll() // ZA TESTIRANJE - ukloni kasnije
                         .anyRequest().authenticated() // Ostalo zahteva autentifikaciju
