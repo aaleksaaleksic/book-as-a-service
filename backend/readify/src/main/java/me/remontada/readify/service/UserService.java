@@ -1,0 +1,27 @@
+package me.remontada.readify.service;
+
+import me.remontada.readify.model.User;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface UserService {
+
+    Optional<User> findByEmail(String email);
+
+    List<User> findAll();
+
+    User save(User user);
+
+    Optional<User> findById(Long id);
+
+    void deleteById(Long id);
+
+    boolean existsByEmail(String email);
+
+    User createUser(String firstName, String lastName, String email, String password);
+
+    User verifyEmail(String token);
+
+    void sendEmailVerification(String email);
+}
