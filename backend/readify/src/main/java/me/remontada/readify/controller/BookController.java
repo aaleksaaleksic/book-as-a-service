@@ -6,8 +6,10 @@ import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -113,9 +115,15 @@ public class BookController {
         }
     }
 
+
+
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createBook(@RequestBody Map<String, Object> request) {
+    @PreAuthorize("hasAuthority('CAN_CREATE_BOOKS')")
+    public ResponseEntity<Map<String, Object>> createBook(@RequestBody Map<String, Object> request,
+                                                          Authentication authentication) {
         try {
+            User currentUser = getCurrentUser(authentication);
+
             String title = (String) request.get("title");
             String author = (String) request.get("author");
             String description = (String) request.get("description");
@@ -125,6 +133,7 @@ public class BookController {
             String language = (String) request.get("language");
             Integer publicationYear = (Integer) request.get("publicationYear");
 
+            // Handle price conversion
             BigDecimal price = BigDecimal.ZERO;
             if (request.get("price") != null) {
                 if (request.get("price") instanceof Number) {
@@ -135,18 +144,9 @@ public class BookController {
             }
 
             Boolean isPremium = (Boolean) request.get("isPremium");
-            Long addedByUserId = Long.valueOf(request.get("addedByUserId").toString());
-
-            Optional<User> userOpt = userService.findById(addedByUserId);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "User not found"
-                ));
-            }
 
             Book book = bookService.createBook(title, author, description, isbn, category,
-                    pages, language, publicationYear, price, isPremium, userOpt.get());
+                    pages, language, publicationYear, price, isPremium, currentUser);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -164,18 +164,12 @@ public class BookController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('CAN_UPDATE_BOOKS')")
     public ResponseEntity<Map<String, Object>> updateBook(@PathVariable Long id,
-                                                          @RequestBody Map<String, Object> request) {
+                                                          @RequestBody Map<String, Object> request,
+                                                          Authentication authentication) {
         try {
-            Long updatedByUserId = Long.valueOf(request.get("updatedByUserId").toString());
-
-            Optional<User> userOpt = userService.findById(updatedByUserId);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "User not found"
-                ));
-            }
+            User currentUser = getCurrentUser(authentication);
 
             // Create book object with updated data
             Book bookData = new Book();
@@ -198,7 +192,7 @@ public class BookController {
                 bookData.setPrice(price);
             }
 
-            Book updatedBook = bookService.updateBook(id, bookData, userOpt.get());
+            Book updatedBook = bookService.updateBook(id, bookData, currentUser);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -215,8 +209,12 @@ public class BookController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('CAN_DELETE_BOOKS')")
+    public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id,
+                                                          Authentication authentication) {
         try {
+            User currentUser = getCurrentUser(authentication);
+
             bookService.deleteBook(id);
 
             return ResponseEntity.ok(Map.of(
@@ -234,24 +232,17 @@ public class BookController {
 
     @GetMapping("/{id}/read")
     public ResponseEntity<Map<String, Object>> getBookContent(@PathVariable Long id,
-                                                              @RequestParam Long userId) {
+                                                              Authentication authentication) {
         try {
-            Optional<User> userOpt = userService.findById(userId);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "User not found"
-                ));
-            }
-
-            Book book = bookService.getBookContent(id, userOpt.get());
+            User user = getCurrentUser(authentication);
+            Book book = bookService.getBookContent(id, user);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Book content accessed",
                     "book", book,
                     "contentPreview", book.getContentPreview(),
-                    "canAccess", book.isAccessibleToUser(userOpt.get())
+                    "canAccess", book.isAccessibleToUser(user)
             ));
 
         } catch (Exception e) {
