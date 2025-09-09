@@ -5,6 +5,7 @@ import me.remontada.readify.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,7 +23,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity // Enables @PreAuthorize annotations
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -43,35 +44,46 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless API
+                .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults()) // Enable CORS
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Stateless JWT
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jsonSecurityHandlers) // 401 handler
                         .accessDeniedHandler(jsonSecurityHandlers) // 403 handler
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - no authentication required
-                        .requestMatchers("/api/v1/users/register").permitAll()
-                        .requestMatchers("/api/v1/users/verify-email").permitAll()
-                        .requestMatchers("/api/v1/users/verify-phone").permitAll()
-                        .requestMatchers("/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/auth/logout").permitAll()
 
-                        // Books - readable by everyone, but content access requires auth
-                        .requestMatchers("/api/v1/books").permitAll() // Book listing
-                        .requestMatchers("/api/v1/books/search").permitAll() // Search
-                        .requestMatchers("/api/v1/books/categories").permitAll() // Categories
-                        .requestMatchers("/api/v1/books/category/**").permitAll() // By category
-                        .requestMatchers("/api/v1/books/author/**").permitAll() // By author
-                        .requestMatchers("/api/v1/books/popular").permitAll() // Popular books
-                        .requestMatchers("/api/v1/books/top-rated").permitAll() // Top rated
-                        .requestMatchers("/api/v1/books/{id}").permitAll() // Book details
+                        // Authentication endpoints
+                        .requestMatchers("/api/v1/auth/**").permitAll()
 
-                        // Protected endpoints - require authentication
-                        .requestMatchers("/api/v1/books/{id}/read").authenticated()
-                        .requestMatchers("/api/v1/books").hasAuthority("CAN_CREATE_BOOKS")
-                        .requestMatchers("/api/v1/users").hasAuthority("CAN_READ_USERS")
+                        // User registration and verification
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-email").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-phone").permitAll()
+
+                        // Public book browsing (no authentication needed)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/category/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/author/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/popular").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/top-rated").permitAll()
+
+                        // Book reading
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/{id}/read").authenticated()
+
+                        // Book management
+                        .requestMatchers(HttpMethod.POST, "/api/v1/books").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/books/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/books/**").authenticated()
+
+                        // User management
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/users/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/users/**").authenticated()
 
                         // Everything else requires authentication
                         .anyRequest().authenticated()
@@ -85,10 +97,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000", // Next.js dev server
+                "http://localhost:3000",
                 "http://localhost:3001",
-                "https://readify.com" // Production domain(TODO!)
+                "https://readify.com" // Production domain (TODO)
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

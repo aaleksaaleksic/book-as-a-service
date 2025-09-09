@@ -5,6 +5,8 @@ import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Map;
@@ -21,13 +23,20 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.findAll();
-        return ResponseEntity.ok(users);
+    @PreAuthorize("hasAuthority('CAN_READ_USERS')")
+    public ResponseEntity<List<User>> getAllUsers(Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+            List<User> users = userService.findAll();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('CAN_READ_USERS')")
+    public ResponseEntity<User> getUserById(@PathVariable Long id, Authentication authentication) {
         return userService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -98,5 +107,12 @@ public class UserController {
                     "message", e.getMessage()
             ));
         }
+    }
+
+    private User getCurrentUser(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+            throw new RuntimeException("User not authenticated");
+        }
+        return (User) authentication.getPrincipal();
     }
 }
