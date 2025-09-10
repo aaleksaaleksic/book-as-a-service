@@ -6,5 +6,6 @@ public enum SubscriptionStatus {
     EXPIRED,
     CANCELED,
     TRIAL,
-    SUSPENDED       // Suspended (zbog neplaćanja)
+    SUSPENDED,       // Suspended (zbog neplaćanja)
+    PAYMENT_FAILED
 }

@@ -5,6 +5,7 @@ import me.remontada.readify.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -30,7 +31,7 @@ public class SecurityConfig {
     private final JsonSecurityHandlers jsonSecurityHandlers;
 
     @Autowired
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+    public SecurityConfig(@Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
                           JsonSecurityHandlers jsonSecurityHandlers) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jsonSecurityHandlers = jsonSecurityHandlers;

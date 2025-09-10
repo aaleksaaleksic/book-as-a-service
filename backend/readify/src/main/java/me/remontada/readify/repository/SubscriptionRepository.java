@@ -17,24 +17,60 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     Optional<Subscription> findByUserAndStatus(User user, SubscriptionStatus status);
 
-    List<Subscription> findByUserOrderByCreatedAtDesc(User user);
 
-    // Check if user has active subscription
     @Query("SELECT s FROM Subscription s WHERE s.user = :user AND s.status = 'ACTIVE' AND s.endDate > :now")
     Optional<Subscription> findActiveSubscription(@Param("user") User user, @Param("now") LocalDateTime now);
 
-    // Find subscriptions that need to be expired
     @Query("SELECT s FROM Subscription s WHERE s.status = 'ACTIVE' AND s.endDate <= :now")
     List<Subscription> findExpiredSubscriptions(@Param("now") LocalDateTime now);
 
-    // Admin stats - count active subscriptions
     @Query("SELECT COUNT(s) FROM Subscription s WHERE s.status = 'ACTIVE'")
     long countActiveSubscriptions();
 
-    // Admin stats - subscriptions by type
     @Query("SELECT s.type, COUNT(s) FROM Subscription s WHERE s.status = 'ACTIVE' GROUP BY s.type")
     List<Object[]> getActiveSubscriptionsByType();
 
-    // Check if user already has subscription (any status)
     boolean existsByUser(User user);
+
+
+    List<Subscription> findByStatus(SubscriptionStatus status);
+
+    long countByStatus(SubscriptionStatus status);
+
+
+    @Query("SELECT s FROM Subscription s WHERE s.status = 'ACTIVE' AND s.endDate < :expiredBefore")
+    List<Subscription> findActiveSubscriptionsExpiredBefore(@Param("expiredBefore") LocalDateTime expiredBefore);
+
+
+    @Query("SELECT s FROM Subscription s WHERE s.status = 'ACTIVE' AND s.autoRenew = true AND s.endDate BETWEEN :now AND :renewalWindow")
+    List<Subscription> findSubscriptionsNearingRenewal(@Param("now") LocalDateTime now, @Param("renewalWindow") LocalDateTime renewalWindow);
+
+
+    @Query("SELECT s FROM Subscription s WHERE s.user = :user ORDER BY s.createdAt DESC")
+    List<Subscription> findByUserOrderByCreatedAtDesc(@Param("user") User user);
+
+    /**
+     * Check if user has specific subscription type in history
+     * Used to prevent multiple trials
+     */
+    @Query("SELECT COUNT(s) > 0 FROM Subscription s WHERE s.user = :user AND s.type = :type")
+    boolean existsByUserAndType(@Param("user") User user, @Param("type") me.remontada.readify.model.SubscriptionType type);
+
+    /**
+     * Get revenue analytics - total subscription revenue by period
+     */
+    @Query("SELECT COALESCE(SUM(s.priceInRsd), 0) FROM Subscription s WHERE s.status = 'ACTIVE' AND s.createdAt BETWEEN :start AND :end")
+    java.math.BigDecimal getTotalSubscriptionRevenueForPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * Get subscription analytics - count by status for admin dashboard
+     */
+    @Query("SELECT s.status, COUNT(s) FROM Subscription s GROUP BY s.status")
+    List<Object[]> getSubscriptionCountByStatus();
+
+    /**
+     * Get subscription analytics - count by type for admin dashboard
+     */
+    @Query("SELECT s.type, COUNT(s) FROM Subscription s GROUP BY s.type")
+    List<Object[]> getSubscriptionCountByType();
 }

@@ -32,13 +32,16 @@ public class Subscription {
     private SubscriptionStatus status;
 
     @Column(nullable = false, name = "price_in_rsd")
-    private BigDecimal priceInRsd; // Cena u dinarima
+    private BigDecimal priceInRsd;
 
     @Column(nullable = false, name = "start_date")
     private LocalDateTime startDate;
 
     @Column(nullable = false, name = "end_date")
     private LocalDateTime endDate;
+
+    @Column(name = "activated_at")
+    private LocalDateTime activatedAt;
 
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
