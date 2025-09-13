@@ -34,23 +34,19 @@ public class BookMapper {
                     .language(book.getLanguage())
                     .publicationYear(book.getPublicationYear())
 
-                    // TYPE SAFE: BigDecimal -> BigDecimal (no conversion needed)
                     .price(book.getPrice())
 
                     .isPremium(book.getIsPremium())
                     .isAvailable(book.getIsAvailable())
                     .coverImageUrl(book.getCoverImageUrl())
 
-                    // TYPE SAFE: BigDecimal -> BigDecimal (consistent types)
                     .averageRating(safeGetBigDecimal(book.getAverageRating()))
 
-                    // TYPE SAFE: Long -> Long (field names match entity)
                     .ratingsCount(safeGetLong(book.getRatingsCount()))
                     .totalReads(safeGetLong(book.getTotalReads()))
 
                     .createdAt(book.getCreatedAt())
 
-                    // HIBERNATE PROXY SAFE: User mapping
                     .addedByName(extractUserFullName(book.getAddedBy()))
                     .addedById(extractUserId(book.getAddedBy()))
                     .build();
@@ -79,10 +75,10 @@ public class BookMapper {
                         return toResponseDTO(book);
                     } catch (Exception e) {
                         log.error("Failed to map book ID: {}", book != null ? book.getId() : "null", e);
-                        return null; // Will be filtered out
+                        return null;
                     }
                 })
-                .filter(dto -> dto != null)  // Remove failed mappings
+                .filter(dto -> dto != null)
                 .collect(Collectors.toList());
     }
 
@@ -121,7 +117,6 @@ public class BookMapper {
             }
 
         } catch (Exception e) {
-            // LazyInitializationException or other Hibernate issues
             log.debug("Could not load user name for book mapping", e);
             return "Unknown Author";
         }

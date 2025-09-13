@@ -28,9 +28,13 @@ public class BookResponseDTO {
     private Boolean isPremium;
     private Boolean isAvailable;
     private String coverImageUrl;
-    private Double averageRating;
-    private Integer totalReviews;
+
+    private BigDecimal averageRating;
+
+    private Long ratingsCount;
+
     private Long totalReads;
+
     private LocalDateTime createdAt;
 
     private String addedByName;

@@ -69,7 +69,45 @@ public class User {
         return permissions != null && permissions.contains(permission);
     }
 
+    public boolean hasActiveSubscription() {
+        // TODO: Implement proper subscription check when SubscriptionService is injected
+        return hasPermission(Permission.CAN_READ_PREMIUM_BOOKS);
+    }
+
     public String getFullName() {
-        return firstName + " " + lastName;
+        StringBuilder fullName = new StringBuilder();
+
+        if (firstName != null && !firstName.trim().isEmpty()) {
+            fullName.append(firstName.trim());
+        }
+
+        if (lastName != null && !lastName.trim().isEmpty()) {
+            if (fullName.length() > 0) {
+                fullName.append(" ");
+            }
+            fullName.append(lastName.trim());
+        }
+
+        return fullName.length() > 0 ? fullName.toString() : "Unknown User";
+    }
+
+    public boolean isVerified() {
+        return Boolean.TRUE.equals(emailVerified) || Boolean.TRUE.equals(phoneVerified);
+    }
+
+    public boolean isFullyVerified() {
+        return Boolean.TRUE.equals(emailVerified) && Boolean.TRUE.equals(phoneVerified);
+    }
+
+
+    public boolean isAdmin() {
+        return hasPermission(Permission.CAN_CREATE_USERS) ||
+                hasPermission(Permission.CAN_DELETE_USERS) ||
+                hasPermission(Permission.CAN_VIEW_ANALYTICS);
+    }
+
+
+    public void updateLastLogin() {
+        this.lastLoginAt = LocalDateTime.now();
     }
 }

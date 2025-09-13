@@ -1,5 +1,8 @@
 package me.remontada.readify.controller;
 
+import lombok.extern.slf4j.Slf4j;
+import me.remontada.readify.dto.response.BookResponseDTO;
+import me.remontada.readify.mapper.BookMapper;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
@@ -11,10 +14,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/books")
 public class BookController {
@@ -28,8 +34,9 @@ public class BookController {
         this.userService = userService;
     }
 
+
     @GetMapping
-    public ResponseEntity<List<Book>> getAllBooks(@RequestParam(required = false) String type) {
+    public ResponseEntity<List<BookResponseDTO>> getAllBooks(@RequestParam(required = false) String type) {
         try {
             List<Book> books;
 
@@ -41,28 +48,54 @@ public class BookController {
                 books = bookService.getAllAvailableBooks();
             }
 
-            return ResponseEntity.ok(books);
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
+            log.error("Error fetching books with type: {}", type, e);
             return ResponseEntity.status(500).build();
         }
     }
+
 
     @GetMapping("/{id}")
-    public ResponseEntity<Book> getBookById(@PathVariable Long id) {
-        Optional<Book> book = bookService.findById(id);
-        return book.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<Book>> searchBooks(@RequestParam String q) {
+    public ResponseEntity<BookResponseDTO> getBookById(@PathVariable Long id) {
         try {
-            List<Book> books = bookService.searchBooks(q);
-            return ResponseEntity.ok(books);
+            Optional<Book> bookOpt = bookService.findById(id);
+
+            if (bookOpt.isPresent()) {
+                BookResponseDTO response = BookMapper.toResponseDTO(bookOpt.get());
+                return ResponseEntity.ok(response);
+            } else {
+                log.warn("Book not found with ID: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
         } catch (Exception e) {
+            log.error("Error fetching book with ID: {}", id, e);
             return ResponseEntity.status(500).build();
         }
     }
+
+
+    @GetMapping("/search")
+    public ResponseEntity<List<BookResponseDTO>> searchBooks(@RequestParam String q) {
+        try {
+            log.info("Searching books with query: '{}'", q);
+
+            List<Book> books = bookService.searchBooks(q);
+
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error searching books with query: '{}'", q, e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
 
     @GetMapping("/categories")
     public ResponseEntity<List<String>> getAllCategories() {
@@ -70,50 +103,69 @@ public class BookController {
             List<String> categories = bookService.getAllCategories();
             return ResponseEntity.ok(categories);
         } catch (Exception e) {
+            log.error("Error fetching categories", e);
             return ResponseEntity.status(500).build();
         }
     }
+
 
     @GetMapping("/category/{category}")
-    public ResponseEntity<List<Book>> getBooksByCategory(@PathVariable String category) {
+    public ResponseEntity<List<BookResponseDTO>> getBooksByCategory(@PathVariable String category) {
         try {
             List<Book> books = bookService.findByCategory(category);
-            return ResponseEntity.ok(books);
+
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("Error fetching books by category: {}", category, e);
             return ResponseEntity.status(500).build();
         }
     }
+
 
     @GetMapping("/author/{author}")
-    public ResponseEntity<List<Book>> getBooksByAuthor(@PathVariable String author) {
+    public ResponseEntity<List<BookResponseDTO>> getBooksByAuthor(@PathVariable String author) {
         try {
             List<Book> books = bookService.findByAuthor(author);
-            return ResponseEntity.ok(books);
+
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("Error fetching books by author: {}", author, e);
             return ResponseEntity.status(500).build();
         }
     }
+
 
     @GetMapping("/popular")
-    public ResponseEntity<List<Book>> getPopularBooks() {
+    public ResponseEntity<List<BookResponseDTO>> getPopularBooks() {
         try {
             List<Book> books = bookService.getPopularBooks();
-            return ResponseEntity.ok(books);
+
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("Error fetching popular books", e);
             return ResponseEntity.status(500).build();
         }
     }
+
 
     @GetMapping("/top-rated")
-    public ResponseEntity<List<Book>> getTopRatedBooks() {
+    public ResponseEntity<List<BookResponseDTO>> getTopRatedBooks() {
         try {
             List<Book> books = bookService.getTopRatedBooks();
-            return ResponseEntity.ok(books);
+
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
         }
     }
-
 
 
     @PostMapping
@@ -131,36 +183,34 @@ public class BookController {
             Integer pages = (Integer) request.get("pages");
             String language = (String) request.get("language");
             Integer publicationYear = (Integer) request.get("publicationYear");
-
-            // Handle price conversion
-            BigDecimal price = BigDecimal.ZERO;
-            if (request.get("price") != null) {
-                if (request.get("price") instanceof Number) {
-                    price = BigDecimal.valueOf(((Number) request.get("price")).doubleValue());
-                } else {
-                    price = new BigDecimal(request.get("price").toString());
-                }
-            }
-
             Boolean isPremium = (Boolean) request.get("isPremium");
 
-            Book book = bookService.createBook(title, author, description, isbn, category,
-                    pages, language, publicationYear, price, isPremium, currentUser);
+            BigDecimal price = parsePrice(request.get("price"));
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Book created successfully",
-                    "bookId", book.getId(),
-                    "book", book
-            ));
+            Book createdBook = bookService.createBook(
+                    title, author, description, isbn, category,
+                    pages, language, publicationYear, price, isPremium, currentUser
+            );
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Book created successfully");
+            response.put("bookId", createdBook.getId());
+
+            response.put("book", BookMapper.toResponseDTO(createdBook));
+
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
+            log.error("Error creating book", e);
+            return ResponseEntity.status(400).body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
+                    "message", "Error creating book: " + e.getMessage()
             ));
         }
     }
+
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('CAN_UPDATE_BOOKS')")
@@ -170,7 +220,7 @@ public class BookController {
         try {
             User currentUser = getCurrentUser(authentication);
 
-            // Create book object with updated data
+            // Create update data object
             Book bookData = new Book();
             if (request.get("title") != null) bookData.setTitle((String) request.get("title"));
             if (request.get("author") != null) bookData.setAuthor((String) request.get("author"));
@@ -181,32 +231,32 @@ public class BookController {
             if (request.get("isPremium") != null) bookData.setIsPremium((Boolean) request.get("isPremium"));
             if (request.get("isAvailable") != null) bookData.setIsAvailable((Boolean) request.get("isAvailable"));
 
+            // Handle price update
             if (request.get("price") != null) {
-                BigDecimal price;
-                if (request.get("price") instanceof Number) {
-                    price = BigDecimal.valueOf(((Number) request.get("price")).doubleValue());
-                } else {
-                    price = new BigDecimal(request.get("price").toString());
-                }
-                bookData.setPrice(price);
+                bookData.setPrice(parsePrice(request.get("price")));
             }
 
             Book updatedBook = bookService.updateBook(id, bookData, currentUser);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Book updated successfully",
-                    "book", updatedBook
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Book updated successfully");
+            response.put("book", BookMapper.toResponseDTO(updatedBook));
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
+            log.error("Error updating book ID: {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
+                    "message", "Error updating book: " + e.getMessage()
             ));
         }
     }
 
+    /**
+     * Delete book endpoint
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('CAN_DELETE_BOOKS')")
     public ResponseEntity<Map<String, Object>> deleteBook(@PathVariable Long id,
@@ -216,18 +266,22 @@ public class BookController {
 
             bookService.deleteBook(id);
 
+            log.info("Deleted book ID: {} by user: {}", id, currentUser.getEmail());
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Book deleted successfully"
             ));
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
+            log.error("Error deleting book ID: {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
+                    "message", "Error deleting book: " + e.getMessage()
             ));
         }
     }
+
 
     @GetMapping("/{id}/read")
     public ResponseEntity<Map<String, Object>> getBookContent(@PathVariable Long id,
@@ -236,26 +290,52 @@ public class BookController {
             User user = getCurrentUser(authentication);
             Book book = bookService.getBookContent(id, user);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Book content accessed",
-                    "book", book,
-                    "contentPreview", book.getContentPreview(),
-                    "canAccess", book.isAccessibleToUser(user)
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Book content accessed");
+
+            // CRITICAL FIX: Return DTO instead of entity
+            response.put("book", BookMapper.toResponseDTO(book));
+            response.put("contentPreview", book.getContentPreview());
+            response.put("canAccess", book.isAccessibleToUser(user));
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
+            log.error("Error accessing book content for ID: {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
+                    "message", "Error accessing book: " + e.getMessage()
             ));
         }
     }
 
     private User getCurrentUser(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+        if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("User not authenticated");
         }
-        return (User) authentication.getPrincipal();
+
+        String email = authentication.getName();
+        return userService.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+    }
+
+
+    private BigDecimal parsePrice(Object priceObj) {
+        if (priceObj == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (priceObj instanceof Number) {
+            return BigDecimal.valueOf(((Number) priceObj).doubleValue());
+        } else if (priceObj instanceof String) {
+            try {
+                return new BigDecimal((String) priceObj);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid price format: " + priceObj);
+            }
+        } else {
+            throw new IllegalArgumentException("Price must be a number or string");
+        }
     }
 }
