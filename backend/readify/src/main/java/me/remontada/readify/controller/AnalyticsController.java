@@ -1,5 +1,7 @@
 package me.remontada.readify.controller;
 
+import me.remontada.readify.dto.response.ReadingSessionResponseDTO;
+import me.remontada.readify.mapper.ReadingSessionMapper;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.ReadingSession;
 import me.remontada.readify.model.User;
@@ -54,7 +56,6 @@ public class AnalyticsController {
         this.bookService = bookService;
     }
 
-    // USER ENDPOINTS
 
 
     @PostMapping("/analytics/reading/start")
@@ -82,7 +83,7 @@ public class AnalyticsController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Reading session started",
-                    "session", mapReadingSessionToResponse(session)
+                    "session", ReadingSessionMapper.toResponseDTO(session)
             ));
 
         } catch (Exception e) {
@@ -108,13 +109,13 @@ public class AnalyticsController {
 
             ReadingSession session = analyticsService.endReadingSession(sessionId, pagesRead);
 
-            logger.info("Reading session ended: {} by user: {} duration: {} minutes",
-                    sessionId, currentUser.getEmail(), session.getDurationMinutes());
+            logger.info("Reading session ended: {} for user: {}, pages read: {}",
+                    sessionId, currentUser.getEmail(), pagesRead);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Reading session ended",
-                    "session", mapReadingSessionToResponse(session)
+                    "session", ReadingSessionMapper.toResponseDTO(session)
             ));
 
         } catch (Exception e) {
@@ -142,7 +143,7 @@ public class AnalyticsController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Reading progress updated",
-                    "session", mapReadingSessionToResponse(session)
+                    "session", ReadingSessionMapper.toResponseDTO(session)
             ));
 
         } catch (Exception e) {
@@ -153,6 +154,7 @@ public class AnalyticsController {
             ));
         }
     }
+
 
 
     @PostMapping("/analytics/books/{bookId}/click")
@@ -185,22 +187,23 @@ public class AnalyticsController {
     }
 
 
-    @GetMapping("/analytics/my/reading-history")
+    @GetMapping("/analytics/reading/history")
     @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<Map<String, Object>> getMyReadingHistory(Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> getReadingHistory(Authentication authentication) {
         try {
             User currentUser = getCurrentUser(authentication);
 
             List<ReadingSession> sessions = analyticsService.getUserReadingHistory(currentUser);
 
-            List<Map<String, Object>> sessionList = sessions.stream()
-                    .map(this::mapReadingSessionToResponse)
-                    .toList();
+            List<ReadingSessionResponseDTO> sessionDTOs = ReadingSessionMapper.toResponseDTOList(sessions);
+
+            Long totalReadingTime = analyticsService.getTotalReadingTimeByUser(currentUser);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "sessions", sessionList,
-                    "count", sessionList.size()
+                    "sessions", sessionDTOs,
+                    "totalReadingTimeMinutes", totalReadingTime,
+                    "totalSessions", sessions.size()
             ));
 
         } catch (Exception e) {
@@ -248,7 +251,6 @@ public class AnalyticsController {
         }
     }
 
-    // ADMIN ENDPOINTS
 
 
     @GetMapping("/admin/analytics/dashboard")
