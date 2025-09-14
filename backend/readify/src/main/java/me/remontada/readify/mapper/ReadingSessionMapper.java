@@ -7,6 +7,9 @@ import me.remontada.readify.model.ReadingSession;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @UtilityClass
 @Slf4j
 public class ReadingSessionMapper {
@@ -100,5 +103,18 @@ public class ReadingSessionMapper {
                 .bookTitle("Unknown Book")
                 .userName("Unknown User")
                 .build();
+    }
+
+
+
+    public static List<ReadingSessionResponseDTO> toResponseDTOList(List<ReadingSession> sessions) {
+        if (sessions == null) {
+            return List.of();
+        }
+
+        return sessions.stream()
+                .map(ReadingSessionMapper::toResponseDTO)
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
     }
 }
