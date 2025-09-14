@@ -1,5 +1,8 @@
 package me.remontada.readify.controller;
 
+import lombok.extern.slf4j.Slf4j;
+import me.remontada.readify.dto.response.UserResponseDTO;
+import me.remontada.readify.mapper.UserMapper;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +14,8 @@ import org.springframework.security.core.Authentication;
 import java.util.List;
 import java.util.Map;
 
+
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -22,24 +27,41 @@ public class UserController {
         this.userService = userService;
     }
 
+
     @GetMapping
     @PreAuthorize("hasAuthority('CAN_READ_USERS')")
-    public ResponseEntity<List<User>> getAllUsers(Authentication authentication) {
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers(Authentication authentication) {
         try {
             User currentUser = getCurrentUser(authentication);
+            log.info("Admin {} requesting all users", currentUser.getEmail());
+
             List<User> users = userService.findAll();
-            return ResponseEntity.ok(users);
+
+            List<UserResponseDTO> userDTOs = UserMapper.toResponseDTOList(users);
+
+            return ResponseEntity.ok(userDTOs);
         } catch (Exception e) {
+            log.error("Error fetching all users", e);
             return ResponseEntity.status(500).build();
         }
     }
 
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('CAN_READ_USERS')")
-    public ResponseEntity<User> getUserById(@PathVariable Long id, Authentication authentication) {
-        return userService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id, Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+            log.info("Admin {} requesting user with ID: {}", currentUser.getEmail(), id);
+
+            return userService.findById(id)
+                    .map(user -> ResponseEntity.ok(UserMapper.toResponseDTO(user)))
+                    .orElse(ResponseEntity.notFound().build());
+
+        } catch (Exception e) {
+            log.error("Error fetching user with ID: {}", id, e);
+            return ResponseEntity.status(500).build();
+        }
     }
 
 
@@ -49,18 +71,22 @@ public class UserController {
             String token = request.get("token");
             User user = userService.verifyEmail(token);
 
+            log.info("Email verified successfully for user: {}", user.getEmail());
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Email verified successfully",
-                    "user", user.getEmail()
+                    "user", UserMapper.toMinimalDTO(user)
             ));
         } catch (Exception e) {
+            log.warn("Email verification failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()
             ));
         }
     }
+
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> registerUser(@RequestBody Map<String, String> request) {
@@ -73,14 +99,16 @@ public class UserController {
 
             User user = userService.createUser(firstName, lastName, email, phoneNumber, password);
 
+            log.info("User registered successfully: {}", user.getEmail());
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "User created successfully",
                     "userId", user.getId(),
-                    "emailVerificationToken", user.getEmailVerificationToken(),
-                    "phoneVerificationCode", user.getPhoneVerificationCode() // Za testiranje
+                    "user", UserMapper.toResponseDTO(user)
             ));
         } catch (Exception e) {
+            log.error("User registration failed", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()
@@ -88,31 +116,14 @@ public class UserController {
         }
     }
 
-    @PostMapping("/verify-phone")
-    public ResponseEntity<Map<String, Object>> verifyPhone(@RequestBody Map<String, String> request) {
-        try {
-            String phoneNumber = request.get("phoneNumber");
-            String code = request.get("code");
-
-            User user = userService.verifyPhone(phoneNumber, code);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Phone verified successfully",
-                    "user", user.getPhoneNumber()
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
-        }
-    }
 
     private User getCurrentUser(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+        if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("User not authenticated");
         }
-        return (User) authentication.getPrincipal();
+
+        String email = authentication.getName();
+        return userService.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
     }
 }
