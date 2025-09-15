@@ -104,7 +104,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                     Kreirajte nalog
                 </CardTitle>
                 <CardDescription className={dt.typography.body}>
-                    Pridružite se ČitamKnjige platformi
+                    Pridružite se ReadBookHub platformi
                 </CardDescription>
             </CardHeader>
 
