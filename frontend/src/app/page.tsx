@@ -140,7 +140,7 @@ export default function LandingPage() {
                     ČitamKnjige
                   </h3>
                   <p className={`${dt.typography.body} text-reading-text/70 max-w-md`}>
-                    Vaša premium digitalna biblioteka. Čitajte neograničeno knjiga uz našu pretplatnicu.
+                    Vaša premium digitalna biblioteka. Čitajte neograničeno knjiga uz našu pretplatu.
                     Počnite svoje čitalačko putovanje danas.
                   </p>
                 </div>

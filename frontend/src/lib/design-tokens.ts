@@ -21,7 +21,7 @@ export const dt = {
     },
 
     spacing: {
-        pageSections: "space-y-12",
+        pageSections: "py-16 lg:py-20",
         cardContent: "space-y-6",
         formFields: "space-y-4",
         componentSpacing: "space-y-3",
