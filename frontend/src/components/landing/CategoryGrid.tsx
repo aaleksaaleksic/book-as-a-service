@@ -86,11 +86,11 @@ export const CategoryGrid = ({ categories = defaultCategories }: CategoryGridPro
 
     return (
         <section className={dt.spacing.pageSections}>
-            <div className="text-center mb-8">
+            <div className="mb-12 pl-4">
                 <h2 className={`${dt.typography.sectionTitle} text-reading-text mb-4`}>
                     Istražite kategorije
                 </h2>
-                <p className={`${dt.typography.body} text-reading-text/70 max-w-2xl mx-auto`}>
+                <p className={`${dt.typography.body} text-reading-text/70 max-w-2xl`}>
                     Otkrijte knjige iz različitih žanrova i tema. Od književnosti do nauke,
                     pronađite svoju sledeću odličnu knjigu u našim pažljivo odabranim kategorijama.
                 </p>
