@@ -183,7 +183,7 @@ export interface TrialExtension {
     reason: string;
     additionalDays: number;
     grantedAt: string;
-    grantedBy: number; // Admin user ID
+    grantedBy: number;
 }
 
 export interface PromoCode {
