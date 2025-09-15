@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 
 @Slf4j
@@ -68,18 +69,29 @@ public class UserController {
     @PostMapping("/verify-email")
     public ResponseEntity<Map<String, Object>> verifyEmail(@RequestBody Map<String, String> request) {
         try {
-            String token = request.get("token");
-            User user = userService.verifyEmail(token);
+            String email = request.get("email");
+            String code = request.get("code");
 
-            log.info("Email verified successfully for user: {}", user.getEmail());
+            // MOCK VERIFIKACIJA - prihvati kod "123456"
+            if ("123456".equals(code)) {
+                Optional<User> userOpt = userService.findByEmail(email);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    user.setEmailVerified(true);
+                    userService.save(user);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Email verified successfully",
-                    "user", UserMapper.toMinimalDTO(user)
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "message", "Email successfully verified"
+                    ));
+                }
+            }
+
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Invalid verification code"
             ));
         } catch (Exception e) {
-            log.warn("Email verification failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()
