@@ -1,103 +1,189 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { Suspense } from 'react';
+import { Header } from '@/components/layout/Header';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { BookCarousel } from '@/components/landing/BookCarousel';
+import { CategoryGrid } from '@/components/landing/CategoryGrid';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { dt } from '@/lib/design-tokens';
+
+const featuredBook = {
+  id: 1,
+  title: "The Midnight Library",
+  author: "Matt Haig",
+  description: "Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived.",
+  coverImageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=600&fit=crop",
+  category: "Fiction",
+  rating: 4.5,
+};
+
+const featuredBooks = [
+  {
+    id: 2,
+    title: "Atomic Habits",
+    author: "James Clear",
+    coverImageUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop",
+    category: "Self-Help",
+    rating: 4.8,
+    popular: true,
+  },
+  {
+    id: 3,
+    title: "Dune",
+    author: "Frank Herbert",
+    coverImageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop",
+    category: "Science Fiction",
+    rating: 4.6,
+    featured: true,
+  },
+  {
+    id: 4,
+    title: "The Psychology of Money",
+    author: "Morgan Housel",
+    coverImageUrl: "https://images.unsplash.com/photo-1554475901-4538ddfbccc2?w=300&h=400&fit=crop",
+    category: "Finance",
+    rating: 4.7,
+  },
+  {
+    id: 5,
+    title: "Educated",
+    author: "Tara Westover",
+    coverImageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop",
+    category: "Biography",
+    rating: 4.9,
+    popular: true,
+  },
+  {
+    id: 6,
+    title: "The Silent Patient",
+    author: "Alex Michaelides",
+    coverImageUrl: "https://images.unsplash.com/photo-1592496431122-2349e0fbc666?w=300&h=400&fit=crop",
+    category: "Thriller",
+    rating: 4.4,
+  },
+];
+
+const popularBooks = [
+  {
+    id: 7,
+    title: "The Seven Husbands of Evelyn Hugo",
+    author: "Taylor Jenkins Reid",
+    coverImageUrl: "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=300&h=400&fit=crop",
+    category: "Romance",
+    rating: 4.6,
+    popular: true,
+  },
+  {
+    id: 8,
+    title: "Sapiens",
+    author: "Yuval Noah Harari",
+    coverImageUrl: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=300&h=400&fit=crop",
+    category: "History",
+    rating: 4.5,
+  },
+  {
+    id: 9,
+    title: "The Thursday Murder Club",
+    author: "Richard Osman",
+    coverImageUrl: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop",
+    category: "Mystery",
+    rating: 4.3,
+  },
+  {
+    id: 10,
+    title: "Becoming",
+    author: "Michelle Obama",
+    coverImageUrl: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&h=400&fit=crop",
+    category: "Biography",
+    rating: 4.8,
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+      <div className={dt.layouts.mainPage}>
+        <Header />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <main>
+          <HeroSection featuredBook={featuredBook} />
+
+          <div className={dt.layouts.pageContainer}>
+            <Suspense fallback={<LoadingSpinner size="lg" text="Loading featured books..." />}>
+              <BookCarousel
+                  title="Featured Books"
+                  books={featuredBooks}
+                  viewAllHref="/browse?featured=true"
+              />
+            </Suspense>
+
+            <Suspense fallback={<LoadingSpinner size="lg" text="Loading popular books..." />}>
+              <BookCarousel
+                  title="Popular This Month"
+                  books={popularBooks}
+                  viewAllHref="/browse?popular=true"
+              />
+            </Suspense>
+
+            <Suspense fallback={<LoadingSpinner size="lg" text="Loading categories..." />}>
+              <CategoryGrid />
+            </Suspense>
+          </div>
+        </main>
+
+        <footer className="bg-reading-surface border-t border-reading-accent/10 mt-16">
+          <div className={dt.layouts.pageContainer}>
+            <div className="py-12">
+              <div className="grid md:grid-cols-4 gap-8">
+                <div className="md:col-span-2">
+                  <h3 className={`${dt.typography.cardTitle} text-reading-text mb-4`}>
+                    ReadBookHub
+                  </h3>
+                  <p className={`${dt.typography.body} text-reading-text/70 max-w-md`}>
+                    Your premium digital library. Read unlimited books with our subscription service.
+                    Start your reading journey today.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className={`${dt.typography.body} font-semibold text-reading-text mb-4`}>
+                    Quick Links
+                  </h4>
+                  <ul className="space-y-2">
+                    {['Browse Books', 'Categories', 'Pricing', 'About'].map((link) => (
+                        <li key={link}>
+                          <a href="#" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
+                            {link}
+                          </a>
+                        </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className={`${dt.typography.body} font-semibold text-reading-text mb-4`}>
+                    Support
+                  </h4>
+                  <ul className="space-y-2">
+                    {['Help Center', 'Contact Us', 'Privacy Policy', 'Terms of Service'].map((link) => (
+                        <li key={link}>
+                          <a href="#" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
+                            {link}
+                          </a>
+                        </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="border-t border-reading-accent/10 mt-8 pt-8 text-center">
+                <p className={`${dt.typography.small} text-reading-text/60`}>
+                  © 2025 ReadBookHub. All rights reserved.
+                </p>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
   );
 }
