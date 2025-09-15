@@ -59,13 +59,13 @@ export const HeroSection = ({ featuredBook }: HeroSectionProps) => {
                             </Badge>
 
                             <h1 className={`${dt.responsive.heroTitle} font-bold text-reading-text leading-tight`}>
-                                Your Digital Library
-                                <span className="block text-reading-accent">Awaits</span>
+                                Vaša digitalna biblioteka
+                                <span className="block text-reading-accent">vas čeka</span>
                             </h1>
 
                             <p className={`${dt.responsive.heroSubtitle} text-reading-text/80 leading-relaxed mt-6`}>
-                                Discover unlimited books with our premium subscription.
-                                Read anywhere, anytime on any device. Start your journey today.
+                                Otkrijte neograničene knjige uz našu premium pretplatnicu.
+                                Čitajte bilo gde, bilo kada na bilo kom uređaju. Počnite svoje putovanje danas.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 mt-8">
@@ -74,33 +74,33 @@ export const HeroSection = ({ featuredBook }: HeroSectionProps) => {
                                     onClick={handleStartTrial}
                                     className={`${dt.interactive.buttonPrimary} group`}
                                 >
-                                    {isAuthenticated ? 'Go to Dashboard' : 'Start Free Trial'}
+                                    {isAuthenticated ? 'Idite na kontrolnu tablu' : 'Počni besplatno'}
                                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                 </Button>
 
                                 <Button
-                                    variant="outline"
                                     size="lg"
+                                    variant="outline"
                                     onClick={handleBrowseBooks}
                                     className={dt.interactive.buttonSecondary}
                                 >
                                     <BookOpen className="w-4 h-4 mr-2" />
-                                    Browse Books
+                                    Pretraži knjige
                                 </Button>
                             </div>
 
-                            <div className="flex items-center gap-6 mt-8 text-sm text-reading-text/60">
+                            <div className="flex items-center gap-6 mt-8 text-sm text-reading-text/70">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    7-day free trial
+                                    14-dnevna besplatna proba
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    Cancel anytime
+                                    Otkažite bilo kada
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    Unlimited books
+                                    Neograničene knjige
                                 </div>
                             </div>
                         </div>
@@ -115,7 +115,7 @@ export const HeroSection = ({ featuredBook }: HeroSectionProps) => {
                                             className="w-full h-96 object-cover rounded-t-lg"
                                         />
                                         <Badge className="absolute top-4 left-4 bg-reading-accent text-white">
-                                            Featured
+                                            Izdvojeno
                                         </Badge>
                                         <Button
                                             size="icon"
@@ -131,25 +131,24 @@ export const HeroSection = ({ featuredBook }: HeroSectionProps) => {
                                             <Badge variant="outline" className="mb-2">
                                                 {featuredBook.category}
                                             </Badge>
-                                            <h3 className={`${dt.typography.cardTitle} text-reading-text line-clamp-2`}>
+                                            <h3 className={`${dt.typography.cardTitle} text-reading-text mb-1`}>
                                                 {featuredBook.title}
                                             </h3>
-                                            <p className={`${dt.typography.muted} mt-1`}>
-                                                by {featuredBook.author}
+                                            <p className={`${dt.typography.small} text-reading-text/60 mb-3`}>
+                                                {featuredBook.author}
+                                            </p>
+                                            <p className={`${dt.typography.small} text-reading-text/70 mb-4`}>
+                                                {featuredBook.description}
                                             </p>
                                         </div>
-
-                                        <p className={`${dt.typography.body} text-reading-text/80 line-clamp-3`}>
-                                            {featuredBook.description}
-                                        </p>
 
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1">
                                                 {[...Array(5)].map((_, i) => (
                                                     <div
                                                         key={i}
-                                                        className={`w-4 h-4 rounded-full ${
-                                                            i < Math.floor(featuredBook.rating)
+                                                        className={`w-3 h-3 rounded-full ${
+                                                            i < featuredBook.rating
                                                                 ? 'bg-yellow-400'
                                                                 : 'bg-gray-200'
                                                         }`}
@@ -166,7 +165,7 @@ export const HeroSection = ({ featuredBook }: HeroSectionProps) => {
                                                 onClick={handleReadNow}
                                                 className="text-reading-accent hover:bg-book-green-100"
                                             >
-                                                Read Now
+                                                Čitaj odmah
                                             </Button>
                                         </div>
                                     </div>

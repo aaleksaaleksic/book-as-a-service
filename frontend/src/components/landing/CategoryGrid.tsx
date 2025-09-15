@@ -23,54 +23,54 @@ interface CategoryGridProps {
 const defaultCategories: Category[] = [
     {
         id: 1,
-        name: 'Fiction',
-        slug: 'fiction',
-        description: 'Novels and stories',
+        name: 'Književnost',
+        slug: 'knjizevnost',
+        description: 'Romani i priče',
         bookCount: 1250,
         icon: BookOpen,
         color: 'from-blue-400 to-blue-600',
     },
     {
         id: 2,
-        name: 'History',
-        slug: 'history',
-        description: 'Historical accounts',
+        name: 'Istorija',
+        slug: 'istorija',
+        description: 'Istorijski zapisi',
         bookCount: 890,
         icon: Clock,
         color: 'from-amber-400 to-amber-600',
     },
     {
         id: 3,
-        name: 'Science',
-        slug: 'science',
-        description: 'Scientific discoveries',
+        name: 'Nauka',
+        slug: 'nauka',
+        description: 'Naučna otkrića',
         bookCount: 674,
         icon: Beaker,
         color: 'from-green-400 to-green-600',
     },
     {
         id: 4,
-        name: 'Biography',
-        slug: 'biography',
-        description: 'Life stories',
+        name: 'Biografija',
+        slug: 'biografija',
+        description: 'Životne priče',
         bookCount: 445,
         icon: User,
         color: 'from-purple-400 to-purple-600',
     },
     {
         id: 5,
-        name: 'Technology',
-        slug: 'technology',
-        description: 'Tech innovations',
+        name: 'Tehnologija',
+        slug: 'tehnologija',
+        description: 'Tech inovacije',
         bookCount: 532,
         icon: Zap,
         color: 'from-orange-400 to-orange-600',
     },
     {
         id: 6,
-        name: 'Travel',
-        slug: 'travel',
-        description: 'World adventures',
+        name: 'Putovanja',
+        slug: 'putovanja',
+        description: 'Svetske avanture',
         bookCount: 298,
         icon: Globe,
         color: 'from-teal-400 to-teal-600',
@@ -88,11 +88,11 @@ export const CategoryGrid = ({ categories = defaultCategories }: CategoryGridPro
         <section className={dt.spacing.pageSections}>
             <div className="text-center mb-8">
                 <h2 className={`${dt.typography.sectionTitle} text-reading-text mb-4`}>
-                    Explore Categories
+                    Istražite kategorije
                 </h2>
                 <p className={`${dt.typography.body} text-reading-text/70 max-w-2xl mx-auto`}>
-                    Discover books across different genres and topics. From fiction to science,
-                    find your next great read in our carefully curated categories.
+                    Otkrijte knjige iz različitih žanrova i tema. Od književnosti do nauke,
+                    pronađite svoju sledeću odličnu knjigu u našim pažljivo odabranim kategorijama.
                 </p>
             </div>
 
@@ -123,7 +123,7 @@ export const CategoryGrid = ({ categories = defaultCategories }: CategoryGridPro
                                 </div>
 
                                 <Badge variant="secondary" className="bg-book-green-100 text-reading-accent">
-                                    {category.bookCount.toLocaleString()} books
+                                    {category.bookCount.toLocaleString()} knjiga
                                 </Badge>
                             </CardContent>
                         </Card>

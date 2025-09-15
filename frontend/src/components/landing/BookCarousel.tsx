@@ -60,7 +60,7 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
                         onClick={handleViewAll}
                         className="text-reading-accent hover:bg-book-green-100"
                     >
-                        View All
+                        Prikaži sve
                         <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                 )}
@@ -80,40 +80,37 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
                                 className={`${dt.components.bookCard} cursor-pointer group h-full`}
                                 onClick={() => handleBookClick(book.id)}
                             >
-                                <CardContent className="p-0">
+                                <CardContent className="p-0 h-full flex flex-col">
                                     <div className="relative">
                                         <img
                                             src={book.coverImageUrl}
                                             alt={book.title}
-                                            className="w-full h-64 object-cover rounded-t-lg group-hover:scale-105 transition-transform duration-300"
+                                            className="w-full h-48 sm:h-56 object-cover rounded-t-lg"
                                         />
-
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 rounded-t-lg" />
-
-                                        {book.featured && (
-                                            <Badge className="absolute top-2 left-2 bg-reading-accent text-white">
-                                                Featured
-                                            </Badge>
-                                        )}
-
                                         {book.popular && (
-                                            <Badge className="absolute top-2 right-2 bg-orange-500 text-white">
-                                                Popular
+                                            <Badge className="absolute top-2 left-2 bg-orange-500 text-white text-xs">
+                                                Popularno
+                                            </Badge>
+                                        )}
+                                        {book.featured && (
+                                            <Badge className="absolute top-2 left-2 bg-reading-accent text-white text-xs">
+                                                Izdvojeno
                                             </Badge>
                                         )}
 
-                                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        {/* Hover overlay */}
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-t-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                                             <Button
                                                 size="sm"
-                                                className="bg-white/90 hover:bg-white text-reading-accent shadow-lg"
+                                                className="bg-white/90 text-reading-accent hover:bg-white"
                                             >
-                                                Read
+                                                Čitaj odmah
                                             </Button>
                                         </div>
                                     </div>
 
-                                    <div className="p-4 space-y-3">
-                                        <div>
+                                    <div className="p-4 space-y-3 flex-1 flex flex-col">
+                                        <div className="flex-1">
                                             <Badge variant="outline" className="text-xs mb-2">
                                                 {book.category}
                                             </Badge>
@@ -125,11 +122,11 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
                                             </p>
                                         </div>
 
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 mt-auto">
                                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                                             <span className={`${dt.typography.small} text-reading-text/60`}>
-                        {book.rating}
-                      </span>
+                                                {book.rating}
+                                            </span>
                                         </div>
                                     </div>
                                 </CardContent>
