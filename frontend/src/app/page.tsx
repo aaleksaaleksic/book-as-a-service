@@ -137,7 +137,7 @@ export default function LandingPage() {
               <div className="grid md:grid-cols-4 gap-8">
                 <div className="md:col-span-2">
                   <h3 className={`${dt.typography.cardTitle} text-reading-text mb-4`}>
-                    ČitamKnjige
+                    ReadBookHub
                   </h3>
                   <p className={`${dt.typography.body} text-reading-text/70 max-w-md`}>
                     Vaša premium digitalna biblioteka. Čitajte neograničeno knjiga uz našu pretplatu.
@@ -194,7 +194,7 @@ export default function LandingPage() {
 
               <div className="border-t border-reading-accent/10 mt-8 pt-8 text-center">
                 <p className={`${dt.typography.small} text-reading-text/60`}>
-                  © 2024 ČitamKnjige. Sva prava zadržana.
+                  © 2024 ReadBookHub. Sva prava zadržana.
                 </p>
               </div>
             </div>

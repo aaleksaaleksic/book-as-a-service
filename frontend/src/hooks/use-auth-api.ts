@@ -15,12 +15,16 @@ export function useLogin() {
     return useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(client, data),
         onSuccess: (response) => {
-            localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, response.data.token);
-            localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, response.data.refreshToken);
+            const token = response.data.token;
+            const refreshToken = response.data.refreshToken;
+            const user = response.data.user;
+
+            localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
+            localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, refreshToken);
 
             toast({
                 title: "Dobrodošli nazad!",
-                description: `Uspešno ste se ulogovali kao ${response.data.user.firstName}`,
+                description: `Uspešno ste se ulogovali kao ${user.firstName}`,
             });
 
             router.push(AUTH_CONFIG.DASHBOARD_REDIRECT);

@@ -4,34 +4,37 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Check } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { dt } from '@/lib/design-tokens';
 
 const registerSchema = z.object({
     firstName: z
         .string()
         .min(1, 'Ime je obavezno')
-        .min(2, 'Ime mora imati najmanje 2 karaktera')
-        .max(50, 'Ime ne može biti duže od 50 karaktera'),
+        .min(2, 'Ime mora imati najmanje 2 karaktera'),
     lastName: z
         .string()
         .min(1, 'Prezime je obavezno')
-        .min(2, 'Prezime mora imati najmanje 2 karaktera')
-        .max(50, 'Prezime ne može biti duže od 50 karaktera'),
+        .min(2, 'Prezime mora imati najmanje 2 karaktera'),
     email: z
         .string()
         .min(1, 'Email je obavezan')
         .email('Unesite validnu email adresu'),
+    phoneNumber: z
+        .string()
+        .min(1, 'Broj telefona je obavezan')
+        .regex(/^\+?[1-9]\d{7,14}$/, 'Format: +381611234567 ili 0611234567'),
     password: z
         .string()
+        .min(1, 'Lozinka je obavezna')
         .min(8, 'Lozinka mora imati najmanje 8 karaktera')
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Lozinka mora sadržavati barem jedno malo slovo, veliko slovo i broj'),
+        .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Lozinka mora sadržati malo slovo, veliko slovo i broj'),
     confirmPassword: z
         .string()
         .min(1, 'Potvrda lozinke je obavezna'),
@@ -68,34 +71,16 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
         },
     });
 
-    const password = watch('password');
     const acceptTerms = watch('acceptTerms');
-
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
-
-    const toggleConfirmPasswordVisibility = () => {
-        setShowConfirmPassword(!showConfirmPassword);
-    };
+    const loading = isLoading || isSubmitting;
 
     const handleFormSubmit = async (data: RegisterFormData) => {
         try {
             await onSubmit(data);
         } catch (error) {
-            // Error handling se vrši u parent komponenti
+            // Error handling u parent komponenti
         }
     };
-
-    const loading = isLoading || isSubmitting;
-
-    // Password strength indicators
-    const passwordRequirements = [
-        { test: (pwd: string) => pwd.length >= 8, label: 'Najmanje 8 karaktera' },
-        { test: (pwd: string) => /[a-z]/.test(pwd), label: 'Malo slovo' },
-        { test: (pwd: string) => /[A-Z]/.test(pwd), label: 'Veliko slovo' },
-        { test: (pwd: string) => /\d/.test(pwd), label: 'Broj' },
-    ];
 
     return (
         <Card className="w-full max-w-md mx-auto">
@@ -110,7 +95,6 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
 
             <CardContent>
                 <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-                    {/* Error Alert */}
                     {error && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
@@ -120,9 +104,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
 
                     {/* First Name */}
                     <div className="space-y-2">
-                        <Label htmlFor="firstName" className={dt.typography.body}>
-                            Ime
-                        </Label>
+                        <Label htmlFor="firstName">Ime</Label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
@@ -143,9 +125,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
 
                     {/* Last Name */}
                     <div className="space-y-2">
-                        <Label htmlFor="lastName" className={dt.typography.body}>
-                            Prezime
-                        </Label>
+                        <Label htmlFor="lastName">Prezime</Label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
@@ -166,15 +146,13 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
 
                     {/* Email */}
                     <div className="space-y-2">
-                        <Label htmlFor="email" className={dt.typography.body}>
-                            Email
-                        </Label>
+                        <Label htmlFor="email">Email</Label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="vaš@email.com"
+                                placeholder="vas@email.com"
                                 className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                                 disabled={loading}
                                 {...register('email')}
@@ -187,55 +165,49 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         )}
                     </div>
 
+                    {/* Phone Number */}
+                    <div className="space-y-2">
+                        <Label htmlFor="phoneNumber">Broj telefona</Label>
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <Input
+                                id="phoneNumber"
+                                type="tel"
+                                placeholder="+381611234567"
+                                className={`pl-10 ${errors.phoneNumber ? 'border-red-500' : ''}`}
+                                disabled={loading}
+                                {...register('phoneNumber')}
+                            />
+                        </div>
+                        {errors.phoneNumber && (
+                            <p className={`${dt.typography.small} text-red-500`}>
+                                {errors.phoneNumber.message}
+                            </p>
+                        )}
+                    </div>
+
                     {/* Password */}
                     <div className="space-y-2">
-                        <Label htmlFor="password" className={dt.typography.body}>
-                            Lozinka
-                        </Label>
+                        <Label htmlFor="password">Lozinka</Label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
                                 id="password"
                                 type={showPassword ? 'text' : 'password'}
-                                placeholder="Unesite lozinku"
+                                placeholder="••••••••"
                                 className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
                                 disabled={loading}
                                 {...register('password')}
                             />
                             <button
                                 type="button"
-                                onClick={togglePasswordVisibility}
+                                onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                                 disabled={loading}
                             >
-                                {showPassword ? (
-                                    <EyeOff className="h-4 w-4" />
-                                ) : (
-                                    <Eye className="h-4 w-4" />
-                                )}
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
-
-                        {/* Password Requirements */}
-                        {password && (
-                            <div className="space-y-1">
-                                {passwordRequirements.map((req, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                        <Check
-                                            className={`h-3 w-3 ${
-                                                req.test(password) ? 'text-green-500' : 'text-gray-300'
-                                            }`}
-                                        />
-                                        <span className={`${dt.typography.small} ${
-                                            req.test(password) ? 'text-green-600' : 'text-gray-500'
-                                        }`}>
-                                            {req.label}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
                         {errors.password && (
                             <p className={`${dt.typography.small} text-red-500`}>
                                 {errors.password.message}
@@ -245,30 +217,24 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
 
                     {/* Confirm Password */}
                     <div className="space-y-2">
-                        <Label htmlFor="confirmPassword" className={dt.typography.body}>
-                            Potvrda lozinke
-                        </Label>
+                        <Label htmlFor="confirmPassword">Potvrdi lozinku</Label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
                                 id="confirmPassword"
                                 type={showConfirmPassword ? 'text' : 'password'}
-                                placeholder="Potvrdite lozinku"
+                                placeholder="••••••••"
                                 className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
                                 disabled={loading}
                                 {...register('confirmPassword')}
                             />
                             <button
                                 type="button"
-                                onClick={toggleConfirmPasswordVisibility}
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                                 disabled={loading}
                             >
-                                {showConfirmPassword ? (
-                                    <EyeOff className="h-4 w-4" />
-                                ) : (
-                                    <Eye className="h-4 w-4" />
-                                )}
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
                         {errors.confirmPassword && (
@@ -278,7 +244,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         )}
                     </div>
 
-                    {/* Terms and Conditions */}
+                    {/* Terms */}
                     <div className="flex items-start space-x-2">
                         <Checkbox
                             id="acceptTerms"
@@ -286,29 +252,9 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                             onCheckedChange={(checked) => setValue('acceptTerms', checked as boolean)}
                             disabled={loading}
                         />
-                        <div className="grid gap-1.5 leading-none">
-                            <Label
-                                htmlFor="acceptTerms"
-                                className={`${dt.typography.small} leading-normal cursor-pointer`}
-                            >
-                                Prihvatam{' '}
-                                <a
-                                    href="/terms"
-                                    className="text-reading-accent hover:underline"
-                                    target="_blank"
-                                >
-                                    uslove korišćenja
-                                </a>{' '}
-                                i{' '}
-                                <a
-                                    href="/privacy"
-                                    className="text-reading-accent hover:underline"
-                                    target="_blank"
-                                >
-                                    politiku privatnosti
-                                </a>
-                            </Label>
-                        </div>
+                        <Label htmlFor="acceptTerms" className="text-sm cursor-pointer">
+                            Prihvatam uslove korišćenja i politiku privatnosti
+                        </Label>
                     </div>
                     {errors.acceptTerms && (
                         <p className={`${dt.typography.small} text-red-500`}>
@@ -316,12 +262,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         </p>
                     )}
 
-                    {/* Submit Button */}
-                    <Button
-                        type="submit"
-                        className={`w-full ${dt.interactive.buttonPrimary}`}
-                        disabled={loading}
-                    >
+                    <Button type="submit" className="w-full" disabled={loading}>
                         {loading ? 'Kreiram nalog...' : 'Kreiraj nalog'}
                     </Button>
                 </form>
