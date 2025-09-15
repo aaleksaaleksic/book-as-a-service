@@ -2,49 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 212 237 218;
-  --foreground: 45 80 22;
-  --card: 248 249 250;
-  --card-foreground: 45 80 22;
-  --popover: 248 249 250;
-  --popover-foreground: 45 80 22;
-  --primary: 111 150 84;
-  --primary-foreground: 255 255 255;
-  --secondary: 212 237 218;
-  --secondary-foreground: 45 80 22;
-  --muted: 212 237 218;
-  --muted-foreground: 45 80 22;
-  --accent: 111 150 84;
-  --accent-foreground: 255 255 255;
-  --destructive: 239 68 68;
-  --destructive-foreground: 255 255 255;
-  --border: 111 150 84;
-  --input: 212 237 218;
-  --ring: 111 150 84;
-  --radius: 0.5rem;
-}
-
-.dark {
-  --background: 45 80 22;
-  --foreground: 248 249 250;
-  --card: 45 80 22;
-  --card-foreground: 248 249 250;
-  --popover: 45 80 22;
-  --popover-foreground: 248 249 250;
-  --primary: 212 237 218;
-  --primary-foreground: 45 80 22;
-  --secondary: 111 150 84;
-  --secondary-foreground: 248 249 250;
-  --muted: 111 150 84;
-  --muted-foreground: 248 249 250;
-  --accent: 111 150 84;
-  --accent-foreground: 248 249 250;
-  --destructive: 239 68 68;
-  --destructive-foreground: 248 249 250;
-  --border: 111 150 84;
-  --input: 111 150 84;
-  --ring: 212 237 218;
+@layer base {
+  :root {
+    --background: 133 85% 92%; /* #D4EDDA */
+    --foreground: 92 48% 13%;  /* #2D5016 */
+    --card: 0 0% 97%;          /* #F8F9FA */
+    --card-foreground: 92 48% 13%;
+    --popover: 0 0% 97%;
+    --popover-foreground: 92 48% 13%;
+    --primary: 92 48% 46%;     /* #6F9654 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 133 85% 92%;
+    --secondary-foreground: 92 48% 13%;
+    --muted: 133 85% 92%;
+    --muted-foreground: 92 48% 13%;
+    --accent: 92 48% 46%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 92 48% 46%;
+    --input: 133 85% 92%;
+    --ring: 92 48% 46%;
+    --radius: 0.5rem;
+  }
 }
 
 @layer base {
@@ -53,5 +33,35 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-reading-accent {
+    color: #6F9654;
+  }
+  .text-reading-text {
+    color: #2D5016;
+  }
+  .bg-reading-background {
+    background-color: #D4EDDA;
+  }
+  .bg-reading-surface {
+    background-color: #F8F9FA;
+  }
+  .bg-reading-accent {
+    background-color: #6F9654;
+  }
+  .border-reading-accent\/10 {
+    border-color: rgba(111, 150, 84, 0.1);
+  }
+  .border-reading-accent\/20 {
+    border-color: rgba(111, 150, 84, 0.2);
+  }
+  .hover\:bg-book-green-100:hover {
+    background-color: #D4EDDA;
+  }
+  .hover\:text-reading-accent:hover {
+    color: #6F9654;
   }
 }
