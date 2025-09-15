@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { AUTH_CONFIG } from "@/utils/constants";
 import type { LoginRequest, RegisterRequest } from "@/api/types/auth.types";
+import {EmailVerificationRequest} from "@/types";
 
 export function useLogin() {
     const client = useHttpClient();
@@ -65,6 +66,55 @@ export function useCurrentUser() {
         mutationFn: () => authApi.me(client),
         onError: (error: any) => {
             console.error("Failed to fetch current user:", error);
+        },
+    });
+}
+
+
+
+// Hook za email verifikaciju
+export function useEmailVerification() {
+    const client = useHttpClient();
+    const router = useRouter();
+
+    return useMutation({
+        mutationFn: (data: EmailVerificationRequest) =>
+            userApi.verifyEmail(client, data),
+        onSuccess: () => {
+            toast({
+                title: "Uspešno!",
+                description: "Email je uspešno verifikovan.",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Greška",
+                description: error.response?.data?.message || "Neuspešna verifikacija",
+                variant: "destructive",
+            });
+        },
+    });
+}
+
+// Hook za ponovno slanje email verifikacije
+export function useResendEmailVerification() {
+    const client = useHttpClient();
+
+    return useMutation({
+        mutationFn: (email: string) =>
+            userApi.resendEmailVerification(client, email),
+        onSuccess: () => {
+            toast({
+                title: "Poslato!",
+                description: "Novi verifikacioni kod je poslat na email.",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Greška",
+                description: error.response?.data?.message || "Neuspešno slanje",
+                variant: "destructive",
+            });
         },
     });
 }
