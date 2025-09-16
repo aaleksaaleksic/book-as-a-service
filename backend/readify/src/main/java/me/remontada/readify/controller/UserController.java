@@ -72,7 +72,6 @@ public class UserController {
             String email = request.get("email");
             String code = request.get("code");
 
-            // MOCK VERIFIKACIJA - prihvati kod "123456"
             if ("123456".equals(code)) {
                 Optional<User> userOpt = userService.findByEmail(email);
                 if (userOpt.isPresent()) {
