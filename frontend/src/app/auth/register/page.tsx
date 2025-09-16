@@ -27,6 +27,7 @@ export default function RegisterPage() {
             };
 
             await registerMutation.mutateAsync(registerRequest);
+            router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`);
         } catch (error: any) {
             if (error.response?.data?.message) {
                 setError(error.response.data.message);
