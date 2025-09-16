@@ -269,6 +269,43 @@ public class BookServiceImpl implements BookService {
         }
     }
 
+    @Override
+    @Transactional
+    public Book save(Book book) {
+        if (book == null) {
+            throw new IllegalArgumentException("Book cannot be null");
+        }
+
+        if (book.getId() != null) {
+            log.debug("Updating existing book with ID: {}", book.getId());
+
+            // Setuj updatedAt timestamp ako postoji to polje
+            // book.setUpdatedAt(LocalDateTime.now());
+        } else {
+            log.debug("Saving new book: {}", book.getTitle());
+
+            if (book.getTitle() == null || book.getTitle().trim().isEmpty()) {
+                throw new IllegalArgumentException("Book title is required");
+            }
+
+            if (book.getAuthor() == null || book.getAuthor().trim().isEmpty()) {
+                throw new IllegalArgumentException("Book author is required");
+            }
+
+            if (book.getIsbn() == null || book.getIsbn().trim().isEmpty()) {
+                throw new IllegalArgumentException("Book ISBN is required");
+            }
+        }
+
+
+        Book savedBook = bookRepository.save(book);
+
+        log.info("Successfully saved book: '{}' (ID: {})",
+                savedBook.getTitle(), savedBook.getId());
+
+        return savedBook;
+    }
+
 
     private void validateBookCreationData(String title, String author, String isbn,
                                           Integer pages, BigDecimal price, User addedBy) {

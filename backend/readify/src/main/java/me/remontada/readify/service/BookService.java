@@ -29,6 +29,8 @@ public interface BookService {
     Book updateBook(Long id, Book bookData, User updatedBy);
     void deleteBook(Long id);
 
+    Book save(Book book);
+
     Book getBookContent(Long bookId, User user);
     void incrementReadCount(Long bookId);
 }

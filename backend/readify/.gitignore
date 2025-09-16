@@ -31,3 +31,40 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Storage Files ###
+# Ignoriši sve u storage direktorijumu
+/storage/
+backend/storage/
+storage/books/
+storage/covers/
+
+# Ignoriši sve PDF i slike
+*.pdf
+*.jpg
+*.jpeg
+*.png
+
+# ALI dozvoli sample fajlove za testiranje
+!sample-*.pdf
+!sample-*.jpg
+!sample-*.png
+!test-*.pdf
+!test-*.jpg
+
+### Logs ###
+*.log
+logs/
+
+### Mac ###
+.DS_Store
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+
+### Temporary files ###
+*.tmp
+*.temp
+*.swp
+*~
