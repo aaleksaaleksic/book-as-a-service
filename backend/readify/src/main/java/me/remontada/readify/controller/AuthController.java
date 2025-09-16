@@ -40,7 +40,6 @@ public class AuthController {
 
             log.info("Login attempt for email: {}", email);
 
-            // Find user by email
             Optional<User> userOpt = userService.findByEmail(email);
             if (userOpt.isEmpty()) {
                 log.warn("Login failed - user not found: {}", email);
@@ -69,16 +68,16 @@ public class AuthController {
             }
 
             String token = jwtUtil.generateToken(email);
+            String refreshToken = jwtUtil.generateRefreshToken(email);
 
             user.updateLastLogin();
             userService.save(user);
-
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Login successful",
                     "token", token,
-                    // CRITICAL FIX: Use UserMapper instead of ad-hoc user data mapping
+                    "refreshToken", refreshToken,
                     "user", UserMapper.toResponseDTO(user)
             ));
 
@@ -90,6 +89,7 @@ public class AuthController {
             ));
         }
     }
+
 
 
     @GetMapping("/me")
@@ -178,17 +178,18 @@ public class AuthController {
 
 
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, Object>> refreshToken(
-            Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> refreshToken(@RequestBody Map<String, String> request) {
         try {
-            if (authentication == null || authentication.getName() == null) {
+            String refreshToken = request.get("refreshToken");
+
+            if (refreshToken == null || !jwtUtil.validateRefreshToken(refreshToken)) {
                 return ResponseEntity.status(401).body(Map.of(
                         "success", false,
-                        "message", "Not authenticated"
+                        "message", "Invalid refresh token"
                 ));
             }
 
-            String email = authentication.getName();
+            String email = jwtUtil.extractEmailFromRefreshToken(refreshToken);
             Optional<User> userOpt = userService.findByEmail(email);
 
             if (userOpt.isEmpty()) {
@@ -208,6 +209,7 @@ public class AuthController {
             }
 
             String newToken = jwtUtil.generateToken(email);
+            String newRefreshToken = jwtUtil.generateRefreshToken(email);
 
             log.info("Token refreshed for user: {}", email);
 
@@ -215,6 +217,7 @@ public class AuthController {
                     "success", true,
                     "message", "Token refreshed successfully",
                     "token", newToken,
+                    "refreshToken", newRefreshToken,
                     "user", UserMapper.toResponseDTO(user)
             ));
 
