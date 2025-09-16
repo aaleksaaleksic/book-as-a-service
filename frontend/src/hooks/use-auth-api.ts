@@ -27,7 +27,7 @@ export function useLogin() {
                 description: `Uspešno ste se ulogovali kao ${user.firstName}`,
             });
 
-            router.push(AUTH_CONFIG.DASHBOARD_REDIRECT);
+            router.replace(AUTH_CONFIG.DASHBOARD_REDIRECT);
         },
         onError: (error: any) => {
             toast({
