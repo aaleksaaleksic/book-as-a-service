@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useCan, useSubscription } from '@/hooks/useAuth';
+import { useAuth, useCan,useSubscription} from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -199,6 +199,8 @@ const SubscriptionRequired: React.FC = () => {
         </div>
     );
 };
+
+
 
 
 interface ActiveSubscriptionRequiredProps {

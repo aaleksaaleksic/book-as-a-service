@@ -97,23 +97,68 @@ export function useTopRatedBooks() {
     });
 }
 
-// Mutation za kreiranje nove knjige
 export function useCreateBook() {
     const client = useHttpClient();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (formData: FormData) => {
-            // Backend prima multipart/form-data sa book podacima i fajlovima
-            const response = await client.post("/api/v1/books", formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-            return response.data;
+        mutationFn: async (data: any) => {
+            try {
+
+                // Backend BookController očekuje Map<String, Object>
+                const bookData = {
+                    title: data.title,
+                    author: data.author,
+                    description: data.description,
+                    isbn: data.isbn,
+                    category: data.category,
+                    pages: data.pages,
+                    language: data.language,
+                    publicationYear: data.publicationYear,
+                    price: data.price,
+                    isPremium: data.isPremium,
+                };
+
+                // Prvi API poziv - kreiranje knjige
+                const bookResponse = await client.post('/api/v1/books', bookData);
+
+                if (!bookResponse.data.success) {
+                    throw new Error(bookResponse.data.message || 'Failed to create book');
+                }
+
+                const createdBookId = bookResponse.data.bookId || bookResponse.data.book?.id;
+
+                if (!createdBookId) {
+                    throw new Error('Book created but no ID returned');
+                }
+
+                // KORAK 2: Upload fajlova ako postoje
+                if (data.pdfFile && data.coverFile) {
+                    const formData = new FormData();
+                    formData.append('bookId', createdBookId.toString());
+                    formData.append('pdf', data.pdfFile);
+                    formData.append('cover', data.coverFile);
+
+                    const uploadResponse = await client.post('/api/v1/files/upload', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    });
+
+                    if (!uploadResponse.data.success) {
+                        // Ako upload ne uspe, obriši kreiranu knjigu
+                        await client.delete(`/api/v1/books/${createdBookId}`);
+                        throw new Error('Files upload failed, book creation rolled back');
+                    }
+                }
+
+                return bookResponse.data;
+            } catch (error) {
+                console.error('Create book error:', error);
+                throw error;
+            }
         },
         onSuccess: (data) => {
-            // Invalidira cache za sve knjige da bi se prikazala nova
             queryClient.invalidateQueries({ queryKey: ["books"] });
 
             toast({
@@ -123,24 +168,37 @@ export function useCreateBook() {
             });
         },
         onError: (error: any) => {
-            console.error('Create book error:', error);
             toast({
                 title: "Greška",
-                description: error.response?.data?.message || "Neuspešno kreiranje knjige.",
+                description: error.message || error.response?.data?.message || "Neuspešno kreiranje knjige.",
                 variant: "destructive",
             });
         },
     });
 }
 
-// Mutation za ažuriranje postojeće knjige
 export function useUpdateBook() {
     const client = useHttpClient();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: UpdateBookRequest }) => {
-            const response = await booksApi.updateBook(client, id, data);
+        mutationFn: async ({ id, data }: { id: number; data: any }) => {
+            // Backend prima Map<String, Object> format
+            const updateData: any = {};
+
+            // Dodaj samo polja koja su promenjena
+            if (data.title !== undefined) updateData.title = data.title;
+            if (data.author !== undefined) updateData.author = data.author;
+            if (data.description !== undefined) updateData.description = data.description;
+            if (data.category !== undefined) updateData.category = data.category;
+            if (data.pages !== undefined) updateData.pages = data.pages;
+            if (data.language !== undefined) updateData.language = data.language;
+            if (data.publicationYear !== undefined) updateData.publicationYear = data.publicationYear;
+            if (data.price !== undefined) updateData.price = data.price;
+            if (data.isPremium !== undefined) updateData.isPremium = data.isPremium;
+            if (data.isAvailable !== undefined) updateData.isAvailable = data.isAvailable;
+
+            const response = await client.put(`/api/v1/books/${id}`, updateData);
             return response.data;
         },
         onSuccess: (data, variables) => {
@@ -316,3 +374,4 @@ export function useBooksStatistics() {
         staleTime: 5 * 60 * 1000, // 5 minuta
     });
 }
+
