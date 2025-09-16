@@ -8,7 +8,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, Mail } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useEmailVerification, useResendEmailVerification } from '@/hooks/use-auth-api';
-import { dt } from '@/lib/design-tokens';
 
 export default function VerifyEmailPage() {
     const router = useRouter();
@@ -32,7 +31,7 @@ export default function VerifyEmailPage() {
                 router.push('/auth/login?verified=true');
             }, 2000);
         } catch (error) {
-            // Toast prikazuje grešku automatski
+            // Toast prikazuje grešku
         }
     };
 
@@ -41,13 +40,12 @@ export default function VerifyEmailPage() {
 
         try {
             await resendMutation.mutateAsync(email);
-            setCode(''); // Reset kod
+            setCode('');
         } catch (error) {
             // Toast prikazuje grešku
         }
     };
 
-    // Auto-submit kada se unese 6 cifara
     useEffect(() => {
         if (code.length === 6) {
             handleVerify();
@@ -75,64 +73,60 @@ export default function VerifyEmailPage() {
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-book-green-50 to-book-green-100">
             <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <Mail className="w-12 h-12 text-reading-accent mx-auto mb-4" />
-                    <CardTitle className={dt.typography.cardTitle}>
+                <CardHeader className="text-center px-4 sm:px-6">
+                    <Mail className="w-10 h-10 sm:w-12 sm:h-12 text-reading-accent mx-auto mb-4" />
+                    <CardTitle className="text-xl sm:text-2xl">
                         Verifikujte email
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm sm:text-base">
                         Unesite 6-cifreni kod koji smo poslali na
                         <br />
-                        <span className="font-medium text-reading-text">{email}</span>
+                        <span className="font-medium text-reading-text break-all">{email}</span>
                     </CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
-                    {/* Test poruka */}
+                <CardContent className="space-y-6 px-4 sm:px-6">
                     <Alert className="bg-blue-50 border-blue-200">
                         <AlertCircle className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-blue-800">
+                        <AlertDescription className="text-blue-800 text-sm">
                             Za test koristite kod: <strong>123456</strong>
                         </AlertDescription>
                     </Alert>
 
-                    {/* OTP Input */}
                     <div className="flex justify-center">
                         <InputOTP
                             maxLength={6}
                             value={code}
                             onChange={(value) => setCode(value)}
                             disabled={verifyMutation.isPending}
+                            className="gap-1 sm:gap-2"
                         >
                             <InputOTPGroup>
-                                <InputOTPSlot index={0} />
-                                <InputOTPSlot index={1} />
-                                <InputOTPSlot index={2} />
-                                <InputOTPSlot index={3} />
-                                <InputOTPSlot index={4} />
-                                <InputOTPSlot index={5} />
+                                <InputOTPSlot index={0} className="w-10 h-10 sm:w-12 sm:h-12" />
+                                <InputOTPSlot index={1} className="w-10 h-10 sm:w-12 sm:h-12" />
+                                <InputOTPSlot index={2} className="w-10 h-10 sm:w-12 sm:h-12" />
+                                <InputOTPSlot index={3} className="w-10 h-10 sm:w-12 sm:h-12" />
+                                <InputOTPSlot index={4} className="w-10 h-10 sm:w-12 sm:h-12" />
+                                <InputOTPSlot index={5} className="w-10 h-10 sm:w-12 sm:h-12" />
                             </InputOTPGroup>
                         </InputOTP>
                     </div>
 
-                    {/* Loading state */}
                     {verifyMutation.isPending && (
                         <p className="text-center text-sm text-gray-500">
                             Verifikujem kod...
                         </p>
                     )}
 
-                    {/* Error message */}
                     {verifyMutation.isError && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
+                            <AlertDescription className="text-sm">
                                 Neispravan kod. Pokušajte ponovo.
                             </AlertDescription>
                         </Alert>
                     )}
 
-                    {/* Resend section */}
                     <div className="text-center space-y-2">
                         <p className="text-sm text-gray-600">
                             Niste primili kod?
@@ -141,12 +135,12 @@ export default function VerifyEmailPage() {
                             variant="ghost"
                             onClick={handleResend}
                             disabled={resendMutation.isPending}
+                            size="sm"
                         >
                             {resendMutation.isPending ? 'Šalje se...' : 'Pošalji ponovo'}
                         </Button>
                     </div>
 
-                    {/* Manual verify button (opciono) */}
                     <Button
                         onClick={handleVerify}
                         className="w-full"
