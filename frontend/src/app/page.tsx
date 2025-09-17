@@ -106,14 +106,16 @@ export default function LandingPage() {
   const { isAuthenticated, isLoading, refreshUser } = useAuth();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('readbookhub_auth_token');
-
-      if (token && !isAuthenticated) {
-        refreshUser();
-      }
+    if (typeof window === 'undefined') {
+      return;
     }
-  }, []);
+
+    const token = localStorage.getItem('readbookhub_auth_token');
+
+    if (token && !isAuthenticated) {
+      void refreshUser();
+    }
+  }, [isAuthenticated, refreshUser]);
 
   if (isLoading) {
     return (
