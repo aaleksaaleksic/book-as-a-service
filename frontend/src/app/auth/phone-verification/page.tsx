@@ -17,6 +17,7 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -55,6 +56,7 @@ export default function PhoneVerificationPage() {
         setIsOtpDialogOpen(true);
     }, [isPhoneValid, verifyPhone]);
 
+
     const handleVerifyCode = useCallback(async (code: string) => {
         if (!code || code.length !== 6) {
             return;
@@ -65,6 +67,7 @@ export default function PhoneVerificationPage() {
 
             await verifyPhone.mutateAsync({
                 phoneNumber: requestPhoneNumber || normalizedPhone,
+
                 verificationCode: code,
             });
             setIsVerified(true);
@@ -77,6 +80,7 @@ export default function PhoneVerificationPage() {
             setVerificationCode('');
         }
     }, [normalizedPhone, phoneNumber, router, verifyPhone]);
+
 
     useEffect(() => {
         if (isOtpDialogOpen && verificationCode.length === 6) {

@@ -164,6 +164,7 @@ public class UserServiceImpl implements UserService {
             userOpt = userRepository.findByPhoneNumberSanitized(sanitizedPhone);
         }
 
+
         if (userOpt.isEmpty()) {
             throw new RuntimeException("User not found");
         }
