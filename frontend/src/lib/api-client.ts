@@ -1,163 +1,131 @@
-
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { API_CONFIG, AUTH_CONFIG } from '@/utils/constants';
-import type { ApiResponse, ApiError } from '@/types/api';
 
-export const apiClient: AxiosInstance = axios.create({
-    baseURL: API_CONFIG.BASE_URL,
-    timeout: API_CONFIG.TIMEOUT,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
+class TokenManager {
+    private token: string | null = null;
+    private refreshToken: string | null = null;
 
-export const tokenManager = {
-    getToken: (): string | null => {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
-    },
+    constructor() {
+        if (typeof window !== 'undefined') {
+            this.token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
+            this.refreshToken = localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
+        }
+    }
 
-    setToken: (token: string): void => {
-        if (typeof window === 'undefined') return;
-        localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
-    },
+    setToken(token: string): void {
+        this.token = token;
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
+        }
+    }
 
-    getRefreshToken: (): string | null => {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
-    },
+    setRefreshToken(refreshToken: string): void {
+        this.refreshToken = refreshToken;
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, refreshToken);
+        }
+    }
 
-    setRefreshToken: (token: string): void => {
-        if (typeof window === 'undefined') return;
-        localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, token);
-    },
+    getToken(): string | null {
+        if (typeof window !== 'undefined' && !this.token) {
+            this.token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
+        }
+        return this.token;
+    }
 
-    clearTokens: (): void => {
-        if (typeof window === 'undefined') return;
-        localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
-        localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
-    },
+    getRefreshToken(): string | null {
+        if (typeof window !== 'undefined' && !this.refreshToken) {
+            this.refreshToken = localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
+        }
+        return this.refreshToken;
+    }
 
-    isTokenExpired: (token: string): boolean => {
+    clearTokens(): void {
+        this.token = null;
+        this.refreshToken = null;
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
+            localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
+        }
+    }
+
+    isTokenExpired(token: string): boolean {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            const currentTime = Date.now() / 1000;
-            return payload.exp < currentTime;
+            const exp = payload.exp * 1000;
+            return Date.now() >= exp - AUTH_CONFIG.REFRESH_BUFFER_MS;
         } catch {
             return true;
         }
-    },
-};
-
-apiClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        const token = tokenManager.getToken();
-
-        if (token && !tokenManager.isTokenExpired(token)) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        // Log request in development
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-        }
-
-        return config;
-    },
-    (error) => {
-        console.error(' Request interceptor error:', error);
-        return Promise.reject(error);
     }
-);
+}
 
-apiClient.interceptors.response.use(
-    (response) => {
-        // Log successful response in development
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+export const tokenManager = new TokenManager();
+
+const createApiClient = (): AxiosInstance => {
+    const client = axios.create({
+        baseURL: API_CONFIG.BASE_URL,
+        timeout: API_CONFIG.TIMEOUT,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    // Request interceptor
+    client.interceptors.request.use(
+        (config: InternalAxiosRequestConfig) => {
+            const token = tokenManager.getToken();
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        },
+        (error: AxiosError) => {
+            return Promise.reject(error);
         }
-        return response;
-    },
-    async (error: AxiosError) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    );
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
+    // Response interceptor
+    client.interceptors.response.use(
+        (response) => response,
+        async (error: AxiosError) => {
+            const originalRequest = error.config as any;
 
-            try {
-                const refreshToken = tokenManager.getRefreshToken();
+            if (error.response?.status === 401 && !originalRequest._retry) {
+                originalRequest._retry = true;
 
-                if (refreshToken) {
-                    const response = await axios.post(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}/refresh`, {
-                        refreshToken,
-                    });
+                try {
+                    const refreshToken = tokenManager.getRefreshToken();
+                    if (!refreshToken) {
+                        throw new Error('No refresh token');
+                    }
 
-                    const { token: newToken, refreshToken: newRefreshToken } = response.data.data;
+                    const response = await axios.post(
+                        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}/refresh`,
+                        { refreshToken }
+                    );
 
-                    tokenManager.setToken(newToken);
+                    const { token, refreshToken: newRefreshToken } = response.data;
+
+                    tokenManager.setToken(token);
                     tokenManager.setRefreshToken(newRefreshToken);
 
-                    originalRequest.headers.Authorization = `Bearer ${newToken}`;
-                    return apiClient(originalRequest);
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return client(originalRequest);
+                } catch (refreshError) {
+                    tokenManager.clearTokens();
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new Event('auth:logout'));
+                    }
+                    return Promise.reject(refreshError);
                 }
-            } catch (refreshError) {
-                console.error(' Token refresh failed:', refreshError);
-
-
-                tokenManager.clearTokens();
-
-                window.dispatchEvent(new CustomEvent('auth:logout'));
-
-                return Promise.reject(refreshError);
             }
+
+            return Promise.reject(error);
         }
+    );
 
-        const apiError: ApiError = {
-            message: (error.response?.data as any)?.message || error.message || 'Network error occurred',
-            status: error.response?.status || 0,
-            path: error.config?.url || '',
-            timestamp: new Date().toISOString(),
-            errors: (error.response?.data as any)?.errors,
-        };
-
-        console.error(' API Error:', apiError);
-        return Promise.reject(apiError);
-    }
-);
-
-export const api = {
-    // GET request
-    get: async <T>(url: string): Promise<ApiResponse<T>> => {
-        const response = await apiClient.get<ApiResponse<T>>(url);
-        return response.data;
-    },
-
-    post: async <T, D = any>(url: string, data?: D): Promise<ApiResponse<T>> => {
-        const response = await apiClient.post<ApiResponse<T>>(url, data);
-        return response.data;
-    },
-
-    put: async <T, D = any>(url: string, data?: D): Promise<ApiResponse<T>> => {
-        const response = await apiClient.put<ApiResponse<T>>(url, data);
-        return response.data;
-    },
-
-    delete: async <T>(url: string): Promise<ApiResponse<T>> => {
-        const response = await apiClient.delete<ApiResponse<T>>(url);
-        return response.data;
-    },
-
-    patch: async <T, D = any>(url: string, data?: D): Promise<ApiResponse<T>> => {
-        const response = await apiClient.patch<ApiResponse<T>>(url, data);
-        return response.data;
-    },
+    return client;
 };
 
-export const handleApiError = (error: unknown): string => {
-    if (error && typeof error === 'object' && 'message' in error) {
-        return (error as ApiError).message;
-    }
-    return 'An unexpected error occurred';
-};
-
-export default apiClient;
+export const api = createApiClient();

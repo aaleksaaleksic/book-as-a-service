@@ -7,17 +7,17 @@ import { toast } from "@/hooks/use-toast";
 import { AUTH_CONFIG } from "@/utils/constants";
 import type { LoginRequest, RegisterRequest } from "@/api/types/auth.types";
 import {EmailVerificationRequest} from "@/types";
+import {useAuth} from "@/hooks/useAuth";
 
 export function useLogin() {
     const client = useHttpClient();
     const router = useRouter();
+    const { refreshUser } = useAuth();
 
     return useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(client, data),
-        onSuccess: (response) => {
-            const token = response.data.token;
-            const refreshToken = response.data.refreshToken;
-            const user = response.data.user;
+        onSuccess: async (response) => {
+            const { token, refreshToken, user } = response.data;
 
             localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
             localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, refreshToken);
@@ -26,6 +26,8 @@ export function useLogin() {
                 title: "Dobrodošli nazad!",
                 description: `Uspešno ste se ulogovali kao ${user.firstName}`,
             });
+
+            await refreshUser();
 
             router.replace(AUTH_CONFIG.LANDING_REDIRECT);
         },
