@@ -13,7 +13,8 @@ import {
     AlertCircle,
     Upload,
     Image,
-    FileText
+    FileText,
+    Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -498,6 +499,25 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                     <Badge variant="secondary" className="mt-3">
                                         Novi PDF: {watch('newPdfFile')?.name}
                                     </Badge>
+                                )}
+                                {!watch('newPdfFile') && book.contentUrl && (
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="mt-3"
+                                    >
+                                        <a
+                                            href={book.contentUrl.startsWith('http')
+                                                ? book.contentUrl
+                                                : `${process.env.NEXT_PUBLIC_API_URL}${book.contentUrl}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            <Download className="w-4 h-4 mr-2" />
+                                            Otvori postojeći PDF
+                                        </a>
+                                    </Button>
                                 )}
                             </div>
                         </div>
