@@ -106,7 +106,7 @@ export function useCreateBook() {
             try {
 
                 // Backend BookController očekuje Map<String, Object>
-                const bookData = {
+                const bookData: CreateBookRequest = {
                     title: data.title,
                     author: data.author,
                     description: data.description,
@@ -120,13 +120,14 @@ export function useCreateBook() {
                 };
 
                 // Prvi API poziv - kreiranje knjige
-                const bookResponse = await client.post('/api/v1/books', bookData);
+                const bookResponse = await booksApi.createBook(client, bookData);
+                const payload = bookResponse.data;
 
-                if (!bookResponse.data.success) {
-                    throw new Error(bookResponse.data.message || 'Failed to create book');
+                if (!payload.success) {
+                    throw new Error(payload.message || 'Failed to create book');
                 }
 
-                const createdBookId = bookResponse.data.bookId || bookResponse.data.book?.id;
+                const createdBookId = payload.data?.id;
 
                 if (!createdBookId) {
                     throw new Error('Book created but no ID returned');
@@ -152,7 +153,7 @@ export function useCreateBook() {
                     }
                 }
 
-                return bookResponse.data;
+                return payload;
             } catch (error) {
                 console.error('Create book error:', error);
                 throw error;
@@ -163,7 +164,7 @@ export function useCreateBook() {
 
             toast({
                 title: "Uspešno!",
-                description: `Knjiga "${data.book?.title || 'Nova knjiga'}" je uspešno kreirana.`,
+                description: `Knjiga "${data.data?.title || 'Nova knjiga'}" je uspešno kreirana.`,
                 variant: "default",
             });
         },
@@ -182,9 +183,9 @@ export function useUpdateBook() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: any }) => {
+        mutationFn: async ({ id, data }: { id: number; data: UpdateBookRequest }) => {
             // Backend prima Map<String, Object> format
-            const updateData: any = {};
+            const updateData: UpdateBookRequest = {};
 
             // Dodaj samo polja koja su promenjena
             if (data.title !== undefined) updateData.title = data.title;
@@ -198,7 +199,7 @@ export function useUpdateBook() {
             if (data.isPremium !== undefined) updateData.isPremium = data.isPremium;
             if (data.isAvailable !== undefined) updateData.isAvailable = data.isAvailable;
 
-            const response = await client.put(`/api/v1/books/${id}`, updateData);
+            const response = await booksApi.updateBook(client, id, updateData);
             return response.data;
         },
         onSuccess: (data, variables) => {

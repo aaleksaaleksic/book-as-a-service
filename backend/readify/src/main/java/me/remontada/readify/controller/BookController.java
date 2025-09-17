@@ -197,7 +197,7 @@ public class BookController {
             response.put("message", "Book created successfully");
             response.put("bookId", createdBook.getId());
 
-            response.put("book", BookMapper.toResponseDTO(createdBook));
+            response.put("data", BookMapper.toResponseDTO(createdBook));
 
 
             return ResponseEntity.ok(response);
@@ -241,7 +241,7 @@ public class BookController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Book updated successfully");
-            response.put("book", BookMapper.toResponseDTO(updatedBook));
+            response.put("data", BookMapper.toResponseDTO(updatedBook));
 
             return ResponseEntity.ok(response);
 
