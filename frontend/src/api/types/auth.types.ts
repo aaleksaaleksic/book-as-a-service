@@ -34,6 +34,11 @@ export interface AuthResponse {
     expiresIn: number;
 }
 
+export interface MeResponse {
+    success: boolean;
+    user: UserResponseDTO;
+}
+
 export interface UserResponseDTO {
     id: number;
     email: string;
