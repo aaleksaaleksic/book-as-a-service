@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense } from 'react';
+import {Suspense, useEffect} from 'react';
 import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { BookCarousel } from '@/components/landing/BookCarousel';
 import { CategoryGrid } from '@/components/landing/CategoryGrid';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { dt } from '@/lib/design-tokens';
+import {useAuth} from "@/hooks/useAuth";
 
 const featuredBook = {
   id: 1,
@@ -101,6 +102,27 @@ const popularBooks = [
 ];
 
 export default function LandingPage() {
+
+  const { isAuthenticated, isLoading, refreshUser } = useAuth();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('readbookhub_auth_token');
+
+      if (token && !isAuthenticated) {
+        refreshUser();
+      }
+    }
+  }, []);
+
+  if (isLoading) {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-book-green-50 via-book-green-100 to-book-green-200">
+          <LoadingSpinner size="lg" />
+        </div>
+    );
+  }
+
   return (
       <div className={dt.layouts.mainPage}>
         <Header />

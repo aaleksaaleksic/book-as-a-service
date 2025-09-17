@@ -38,18 +38,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         permissions: [],
     });
 
-    useEffect(() => {
-        initializeAuth();
-    }, []);
+    // Funkcija za parsiranje korisničkih podataka
+    const parseUserData = (data: any): User => {
+        // Backend vraća direktno user objekat, ne u data.data strukturi
+        const userData = data.data || data;
 
-    useEffect(() => {
-        const handleLogoutEvent = () => {
-            logout();
+        return {
+            id: userData.id,
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            role: userData.role as UserRole,
+            permissions: userData.permissions || [],
+            emailVerified: userData.emailVerified || false,
+            phoneVerified: userData.phoneVerified || false,
+            createdAt: userData.createdAt,
+            updatedAt: userData.updatedAt,
+            subscriptionStatus: userData.subscriptionStatus || 'TRIAL',
+            trialEndsAt: userData.trialEndsAt,
         };
+    };
 
-        window.addEventListener('auth:logout', handleLogoutEvent);
-        return () => window.removeEventListener('auth:logout', handleLogoutEvent);
-    }, []);
+    const fetchCurrentUser = async (): Promise<void> => {
+        try {
+            const response = await api.get(`${API_CONFIG.ENDPOINTS.AUTH}/me`);
+            const user = parseUserData(response.data);
+
+            setAuthState({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+                permissions: user.permissions || [],
+            });
+        } catch (error) {
+            console.error('Failed to fetch user:', error);
+            tokenManager.clearTokens();
+            setAuthState({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+                permissions: [],
+            });
+        }
+    };
 
     const initializeAuth = async () => {
         try {
@@ -73,48 +104,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    const fetchCurrentUser = async () => {
-        try {
-            const response = await api.get<User>(`${API_CONFIG.ENDPOINTS.AUTH}/me`);
+    useEffect(() => {
+        initializeAuth();
+    }, []);
 
-            setAuthState({
-                user: response.data,
-                isAuthenticated: true,
-                isLoading: false,
-                permissions: response.data.permissions,
-            });
-        } catch (error) {
-            console.error('Failed to fetch current user:', error);
-            throw error;
-        }
-    };
+    useEffect(() => {
+        const handleLogoutEvent = () => {
+            logout();
+        };
+
+        window.addEventListener('auth:logout', handleLogoutEvent);
+        return () => window.removeEventListener('auth:logout', handleLogoutEvent);
+    }, []);
 
     const login = async (email: string, password: string): Promise<void> => {
         try {
-            setAuthState(prev => ({ ...prev, isLoading: true }));
+            const response = await api.post(`${API_CONFIG.ENDPOINTS.AUTH}/login`, {
+                email,
+                password,
+            });
 
-            const loginData: LoginRequest = { email, password };
-            const response = await api.post(`${API_CONFIG.ENDPOINTS.AUTH}/login`, loginData);
-
-            const loginResponse = response.data as {
-                token: string;
-                refreshToken: string;
-                user: User;
-            };
-
-            const { token, refreshToken, user } = loginResponse;
+            const { token, refreshToken, user } = response.data;
 
             tokenManager.setToken(token);
             tokenManager.setRefreshToken(refreshToken);
 
+            const parsedUser = parseUserData(user);
+
             setAuthState({
-                user,
+                user: parsedUser,
                 isAuthenticated: true,
                 isLoading: false,
-                permissions: user.permissions,
+                permissions: parsedUser.permissions || [],
             });
 
-            router.push(AUTH_CONFIG.DASHBOARD_REDIRECT);
+            router.push(AUTH_CONFIG.LANDING_REDIRECT);
         } catch (error) {
             setAuthState(prev => ({ ...prev, isLoading: false }));
             throw error;
@@ -129,7 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             setAuthState(prev => ({ ...prev, isLoading: false }));
 
-            router.push(`/auth/verify?email=${encodeURIComponent(userData.email)}`);
+            router.push(`/auth/verify-email?email=${encodeURIComponent(userData.email)}`);
         } catch (error) {
             setAuthState(prev => ({ ...prev, isLoading: false }));
             throw error;
@@ -150,16 +174,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, [router]);
 
     const refreshUser = async (): Promise<void> => {
-        if (authState.isAuthenticated) {
+        if (authState.isAuthenticated || tokenManager.getToken()) {
             await fetchCurrentUser();
         }
     };
 
     const refreshTokenAction = async (): Promise<boolean> => {
         try {
-            await refreshUser();
+            const refreshToken = tokenManager.getRefreshToken();
+            if (!refreshToken) return false;
+
+            const response = await api.post(`${API_CONFIG.ENDPOINTS.AUTH}/refresh`, {
+                refreshToken,
+            });
+
+            const { token, refreshToken: newRefreshToken } = response.data;
+
+            tokenManager.setToken(token);
+            tokenManager.setRefreshToken(newRefreshToken);
+
+            await fetchCurrentUser();
             return true;
         } catch (error) {
+            console.error('Token refresh failed:', error);
+            logout();
             return false;
         }
     };
