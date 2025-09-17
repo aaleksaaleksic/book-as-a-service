@@ -12,12 +12,10 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+=======
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter as ShadDialogFooter,
+
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -52,8 +50,9 @@ export default function PhoneVerificationPage() {
         }
 
         setVerificationCode('');
+        verifyPhone.reset();
         setIsOtpDialogOpen(true);
-    }, [isPhoneValid]);
+    }, [isPhoneValid, verifyPhone]);
 
 
     const handleVerifyCode = useCallback(async (code: string) => {
@@ -64,7 +63,7 @@ export default function PhoneVerificationPage() {
         try {
             await verifyPhone.mutateAsync({
                 phoneNumber: normalizedPhone,
-                code,
+                verificationCode: code,
             });
             setIsVerified(true);
             setIsOtpDialogOpen(false);
@@ -227,88 +226,100 @@ export default function PhoneVerificationPage() {
                     setIsOtpDialogOpen(open);
                     if (!open) {
                         setVerificationCode('');
+                        verifyPhone.reset();
                     }
                 }}
             >
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-reading-accent" />
-                            <DialogTitle className="text-2xl">Unesite verifikacioni kod</DialogTitle>
+                <DialogContent className="max-w-lg border-none bg-transparent p-0 shadow-none">
+                    <div className="overflow-hidden rounded-2xl border border-reading-text/10 bg-white text-reading-text shadow-2xl">
+                        <div className="bg-gradient-to-r from-book-green-600 to-reading-accent px-8 py-6 text-white">
+                            <DialogHeader className="space-y-3 text-left">
+                                <div className="flex items-center gap-3">
+                                    <Shield className="h-6 w-6" />
+                                    <DialogTitle className="text-2xl font-semibold tracking-tight">
+                                        Unesite verifikacioni kod
+                                    </DialogTitle>
+                                </div>
+                                <DialogDescription className="text-base text-white/90">
+                                    Poslali smo 6-cifreni kod na{' '}
+                                    <span className="font-semibold text-white">
+                                        {formattedPhoneDisplay || phoneNumber}
+                                    </span>
+                                </DialogDescription>
+                            </DialogHeader>
                         </div>
-                        <DialogDescription className="text-base text-reading-text/80">
-                            Poslali smo 6-cifreni kod na{' '}
-                            <span className="font-medium text-reading-text">{formattedPhoneDisplay || phoneNumber}</span>
-                        </DialogDescription>
 
-                        {process.env.NODE_ENV === 'development' && (
-                            <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 p-2 text-left">
-                                <p className="text-xs text-yellow-800 font-semibold">Razvojno okruženje</p>
-                                <p className="text-xs text-yellow-800/80">
-                                    Kod trenutno nije automatski poslat SMS-om. Pronađite ga ručno u bazi podataka
-                                    (pgAdmin) i unesite ga ispod.
-                                </p>
+                        <div className="space-y-6 px-8 py-8">
+                            {process.env.NODE_ENV === 'development' && (
+                                <Alert className="border-amber-200 bg-amber-50/90">
+                                    <AlertTitle className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                        Razvojno okruženje
+                                    </AlertTitle>
+                                    <AlertDescription className="text-sm text-amber-700">
+                                        Kod trenutno nije automatski poslat SMS-om. Otvorite pgAdmin, pronađite svoj verifikacioni kod i
+                                        unesite ga ispod.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
 
+                            <div className="space-y-3">
+                                <p className="text-sm font-medium text-reading-text/80">Unesite verifikacioni kod</p>
+                                <InputOTP
+                                    maxLength={6}
+                                    value={verificationCode}
+                                    onChange={setVerificationCode}
+                                    disabled={verifyPhone.isPending}
+                                    containerClassName="justify-center"
+                                >
+                                    <InputOTPGroup className="gap-3">
+                                        <InputOTPSlot index={0} className="h-12 w-12 rounded-xl text-lg font-semibold" />
+                                        <InputOTPSlot index={1} className="h-12 w-12 rounded-xl text-lg font-semibold" />
+                                        <InputOTPSlot index={2} className="h-12 w-12 rounded-xl text-lg font-semibold" />
+                                        <InputOTPSlot index={3} className="h-12 w-12 rounded-xl text-lg font-semibold" />
+                                        <InputOTPSlot index={4} className="h-12 w-12 rounded-xl text-lg font-semibold" />
+                                        <InputOTPSlot index={5} className="h-12 w-12 rounded-xl text-lg font-semibold" />
+                                    </InputOTPGroup>
+                                </InputOTP>
                             </div>
-                        )}
-                    </DialogHeader>
 
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <p className="text-sm text-reading-text/70">Unesite verifikacioni kod:</p>
-                            <InputOTP
-                                maxLength={6}
-                                value={verificationCode}
-                                onChange={setVerificationCode}
-                                disabled={verifyPhone.isPending}
-                            >
-                                <InputOTPGroup>
-                                    <InputOTPSlot index={0} />
-                                    <InputOTPSlot index={1} />
-                                    <InputOTPSlot index={2} />
-                                    <InputOTPSlot index={3} />
-                                    <InputOTPSlot index={4} />
-                                    <InputOTPSlot index={5} />
-                                </InputOTPGroup>
-                            </InputOTP>
+                            {verifyPhone.isPending && (
+                                <p className="text-sm text-reading-text/60">Verifikacija u toku...</p>
+                            )}
+
+                            {verifyPhone.isError && (
+                                <Alert className="border-red-200 bg-red-50/90">
+                                    <AlertDescription className="text-sm text-red-700">
+                                        Neispravan kod. Pokušajte ponovo.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
                         </div>
 
-                        {verifyPhone.isPending && (
-                            <p className="text-sm text-reading-text/60">Verifikacija u toku...</p>
-                        )}
-
-                        {verifyPhone.isError && (
-                            <Alert className="border-red-200 bg-red-50">
-                                <AlertDescription className="text-sm text-red-700">
-                                    Neispravan kod. Pokušajte ponovo.
-                                </AlertDescription>
-                            </Alert>
-                        )}
+                        <div className="space-y-4 border-t border-reading-text/10 bg-reading-surface px-8 py-6">
+                            <Button
+                                onClick={() => handleVerifyCode(verificationCode)}
+                                disabled={verificationCode.length !== 6 || verifyPhone.isPending}
+                                className="w-full bg-reading-accent text-white hover:bg-book-green-600"
+                            >
+                                {verifyPhone.isPending ? 'Verifikuje se...' : 'Potvrdi kod'}
+                            </Button>
+                            <p className="text-center text-xs text-reading-text/70">
+                                Kod ostaje važeći dok ne zatražite novi putem produkcionog SMS servisa.
+                            </p>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setIsOtpDialogOpen(false);
+                                    setVerificationCode('');
+                                    verifyPhone.reset();
+                                }}
+                                className="w-full"
+                            >
+                                Promeni broj telefona
+                            </Button>
+                        </div>
                     </div>
 
-                    <ShadDialogFooter className="flex flex-col space-y-2">
-                        <Button
-                            onClick={() => handleVerifyCode(verificationCode)}
-                            disabled={verificationCode.length !== 6 || verifyPhone.isPending}
-                            className="w-full"
-                        >
-                            {verifyPhone.isPending ? 'Verifikuje se...' : 'Potvrdi kod'}
-                        </Button>
-                        <p className="text-xs text-reading-text/60 text-center w-full">
-                            Kod ostaje važeći dok ne zatražite novi putem produkcionog SMS servisa.
-                        </p>
-
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
-                                setIsOtpDialogOpen(false);
-                                setVerificationCode('');
-                            }}
-                            className="w-full"
-                        >
-                            Promeni broj telefona
-                        </Button>
-                    </ShadDialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
