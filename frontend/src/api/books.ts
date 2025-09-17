@@ -17,8 +17,19 @@ export const booksApi = {
         client.get<BookResponseDTO>(`/api/v1/books/${id}`),
 
     // Javni endpoint
-    searchBooks: (client: AxiosInstance, params: BookSearchParams) =>
-        client.get<BookResponseDTO[]>("/api/v1/books/search", { params }),
+    searchBooks: (client: AxiosInstance, params: BookSearchParams) => {
+        const { query, q, ...rest } = params;
+        const searchTerm = q ?? query;
+
+        const serializedParams = {
+            ...rest,
+            ...(searchTerm ? { q: searchTerm } : {}),
+        };
+
+        return client.get<BookResponseDTO[]>("/api/v1/books/search", {
+            params: serializedParams,
+        });
+    },
 
     // Javni endpoint
     getCategories: (client: AxiosInstance) =>

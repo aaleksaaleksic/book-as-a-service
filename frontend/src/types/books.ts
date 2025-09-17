@@ -78,6 +78,7 @@ export interface BookStatistics {
 
 
 export interface BookSearchParams {
+    q?: string;
     query?: string;
     category?: string;
     author?: string;
