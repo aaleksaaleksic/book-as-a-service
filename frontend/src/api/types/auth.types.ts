@@ -18,7 +18,7 @@ export interface EmailVerificationRequest {
 
 export interface PhoneVerificationRequest {
     phoneNumber: string;
-    code: string;
+    verificationCode: string;
 }
 
 export interface RefreshTokenRequest {
