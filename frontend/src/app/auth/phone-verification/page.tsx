@@ -13,19 +13,26 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter as ShadDialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useSendPhoneVerification, useVerifyPhone } from '@/hooks/use-phone-verification';
+import { useVerifyPhone } from '@/hooks/use-phone-verification';
 
 export default function PhoneVerificationPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const sendVerification = useSendPhoneVerification();
     const verifyPhone = useVerifyPhone();
 
     const [phoneNumber, setPhoneNumber] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
-    const [step, setStep] = useState<'enter-phone' | 'verify-code'>('enter-phone');
     const [isVerified, setIsVerified] = useState(false);
+    const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
 
     const normalizedPhone = useMemo(
         () => phoneNumber.replace(/\s+/g, ''),
@@ -39,18 +46,14 @@ export default function PhoneVerificationPage() {
         }
     }, [user?.phoneNumber]);
 
-    const handleSendCode = useCallback(async () => {
+    const handleSendCode = useCallback(() => {
         if (!isPhoneValid) {
             return;
         }
 
-        try {
-            await sendVerification.mutateAsync(normalizedPhone);
-            setStep('verify-code');
-        } catch {
-            // Error handling is managed inside the hook toast notifications
-        }
-    }, [isPhoneValid, normalizedPhone, sendVerification]);
+        setVerificationCode('');
+        setIsOtpDialogOpen(true);
+    }, [isPhoneValid]);
 
     const handleVerifyCode = useCallback(async (code: string) => {
         if (!code || code.length !== 6) {
@@ -63,6 +66,8 @@ export default function PhoneVerificationPage() {
                 code,
             });
             setIsVerified(true);
+            setIsOtpDialogOpen(false);
+            setVerificationCode('');
             setTimeout(() => {
                 router.push('/');
             }, 2000);
@@ -71,24 +76,11 @@ export default function PhoneVerificationPage() {
         }
     }, [normalizedPhone, router, verifyPhone]);
 
-    const handleResendCode = useCallback(async () => {
-        if (!isPhoneValid) {
-            return;
-        }
-
-        try {
-            await sendVerification.mutateAsync(normalizedPhone);
-            setVerificationCode('');
-        } catch {
-            // handled in hook
-        }
-    }, [isPhoneValid, normalizedPhone, sendVerification]);
-
     useEffect(() => {
-        if (step === 'verify-code' && verificationCode.length === 6) {
+        if (isOtpDialogOpen && verificationCode.length === 6) {
             void handleVerifyCode(verificationCode);
         }
-    }, [handleVerifyCode, step, verificationCode]);
+    }, [handleVerifyCode, isOtpDialogOpen, verificationCode]);
 
     const formattedPhoneDisplay = useMemo(() => {
         if (!normalizedPhone) return '';
@@ -158,8 +150,6 @@ export default function PhoneVerificationPage() {
         );
     }
 
-    const TEST_CODE = '123456';
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-book-green-50 via-book-green-100 to-book-green-200 flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-md">
@@ -179,120 +169,44 @@ export default function PhoneVerificationPage() {
                             <CardTitle className="text-2xl">Verifikujte broj telefona</CardTitle>
                         </div>
                         <CardDescription className="text-base">
-                            {step === 'enter-phone'
-                                ? 'Unesite broj telefona na koji ćemo poslati šestocifreni kod za potvrdu.'
-                                : (
-                                    <>
-                                        Kod je poslat na <span className="font-medium text-reading-text">{formattedPhoneDisplay}</span>
-                                    </>
-                                )}
+                            Unesite broj telefona na koji ćemo poslati šestocifreni kod za potvrdu.
                         </CardDescription>
                     </CardHeader>
 
-                    {step === 'enter-phone' ? (
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-reading-text">Broj telefona</label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-reading-text/40" />
-                                    <Input
-                                        type="tel"
-                                        placeholder="+381 61 234 5678"
-                                        value={phoneNumber}
-                                        onChange={(event) => setPhoneNumber(event.target.value)}
-                                        className="pl-10"
-                                    />
-                                </div>
-                                <p className="text-xs text-reading-text/60">
-                                    Koristite međunarodni format (npr. +38164...).
-                                </p>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-reading-text">Broj telefona</label>
+                            <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-reading-text/40" />
+                                <Input
+                                    type="tel"
+                                    placeholder="+381 61 234 5678"
+                                    value={phoneNumber}
+                                    onChange={(event) => setPhoneNumber(event.target.value)}
+                                    className="pl-10"
+                                />
                             </div>
+                            <p className="text-xs text-reading-text/60">
+                                Koristite međunarodni format (npr. +38164...).
+                            </p>
+                        </div>
 
-                            {!isPhoneValid && phoneNumber && (
-                                <Alert className="border-yellow-200 bg-yellow-50">
-                                    <AlertDescription className="text-xs text-yellow-800">
-                                        Proverite da li ste uneli ispravan broj telefona.
-                                    </AlertDescription>
-                                </Alert>
-                            )}
+                        {!isPhoneValid && phoneNumber && (
+                            <Alert className="border-yellow-200 bg-yellow-50">
+                                <AlertDescription className="text-xs text-yellow-800">
+                                    Proverite da li ste uneli ispravan broj telefona.
+                                </AlertDescription>
+                            </Alert>
+                        )}
 
-                            <Button
-                                onClick={handleSendCode}
-                                disabled={!isPhoneValid || sendVerification.isPending}
-                                className="w-full"
-                            >
-                                {sendVerification.isPending ? 'Šaljem kod...' : 'Pošalji kod'}
-                            </Button>
-                        </CardContent>
-                    ) : (
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <p className="text-sm text-reading-text/70">
-                                    Unesite verifikacioni kod koji ste primili:
-                                </p>
-                                <InputOTP
-                                    maxLength={6}
-                                    value={verificationCode}
-                                    onChange={setVerificationCode}
-                                    disabled={verifyPhone.isPending}
-                                >
-                                    <InputOTPGroup>
-                                        <InputOTPSlot index={0} />
-                                        <InputOTPSlot index={1} />
-                                        <InputOTPSlot index={2} />
-                                        <InputOTPSlot index={3} />
-                                        <InputOTPSlot index={4} />
-                                        <InputOTPSlot index={5} />
-                                    </InputOTPGroup>
-                                </InputOTP>
-                            </div>
-
-                            {process.env.NODE_ENV === 'development' && (
-                                <Alert className="border-yellow-200 bg-yellow-50">
-                                    <AlertDescription className="flex items-center justify-between text-xs text-yellow-800">
-                                        <span>Test kod: {TEST_CODE}</span>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 px-2"
-                                            onClick={() => navigator.clipboard.writeText(TEST_CODE)}
-                                        >
-                                            Kopiraj
-                                        </Button>
-                                    </AlertDescription>
-                                </Alert>
-                            )}
-
-                            <Button
-                                onClick={() => handleVerifyCode(verificationCode)}
-                                disabled={verificationCode.length !== 6 || verifyPhone.isPending}
-                                className="w-full"
-                            >
-                                {verifyPhone.isPending ? 'Verifikuje se...' : 'Potvrdi kod'}
-                            </Button>
-
-                            <div className="space-y-3 border-t pt-4">
-                                <Button
-                                    variant="outline"
-                                    onClick={handleResendCode}
-                                    disabled={sendVerification.isPending}
-                                    className="w-full"
-                                >
-                                    {sendVerification.isPending ? 'Šalje se novi kod...' : 'Pošalji novi kod'}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => {
-                                        setStep('enter-phone');
-                                        setVerificationCode('');
-                                    }}
-                                    className="w-full"
-                                >
-                                    Promeni broj telefona
-                                </Button>
-                            </div>
-                        </CardContent>
-                    )}
+                        <Button
+                            onClick={handleSendCode}
+                            disabled={!isPhoneValid}
+                            className="w-full"
+                        >
+                            Pošalji kod
+                        </Button>
+                    </CardContent>
 
                     <CardFooter>
                         <Button
@@ -305,6 +219,95 @@ export default function PhoneVerificationPage() {
                     </CardFooter>
                 </Card>
             </div>
+
+            <Dialog
+                open={isOtpDialogOpen}
+                onOpenChange={(open) => {
+                    setIsOtpDialogOpen(open);
+                    if (!open) {
+                        setVerificationCode('');
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-reading-accent" />
+                            <DialogTitle className="text-2xl">Unesite verifikacioni kod</DialogTitle>
+                        </div>
+                        <DialogDescription className="text-base text-reading-text/80">
+                            Poslali smo 6-cifreni kod na{' '}
+                            <span className="font-medium text-reading-text">{formattedPhoneDisplay || phoneNumber}</span>
+                        </DialogDescription>
+
+                        {process.env.NODE_ENV === 'development' && (
+                            <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 p-2 text-left">
+                                <p className="text-xs text-yellow-800 font-semibold">Razvojno okruženje</p>
+                                <p className="text-xs text-yellow-800/80">
+                                    Kod trenutno nije automatski poslat SMS-om. Pronađite ga ručno u bazi podataka
+                                    (pgAdmin) i unesite ga ispod.
+                                </p>
+                            </div>
+                        )}
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <p className="text-sm text-reading-text/70">Unesite verifikacioni kod:</p>
+                            <InputOTP
+                                maxLength={6}
+                                value={verificationCode}
+                                onChange={setVerificationCode}
+                                disabled={verifyPhone.isPending}
+                            >
+                                <InputOTPGroup>
+                                    <InputOTPSlot index={0} />
+                                    <InputOTPSlot index={1} />
+                                    <InputOTPSlot index={2} />
+                                    <InputOTPSlot index={3} />
+                                    <InputOTPSlot index={4} />
+                                    <InputOTPSlot index={5} />
+                                </InputOTPGroup>
+                            </InputOTP>
+                        </div>
+
+                        {verifyPhone.isPending && (
+                            <p className="text-sm text-reading-text/60">Verifikacija u toku...</p>
+                        )}
+
+                        {verifyPhone.isError && (
+                            <Alert className="border-red-200 bg-red-50">
+                                <AlertDescription className="text-sm text-red-700">
+                                    Neispravan kod. Pokušajte ponovo.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                    </div>
+
+                    <ShadDialogFooter className="flex flex-col space-y-2">
+                        <Button
+                            onClick={() => handleVerifyCode(verificationCode)}
+                            disabled={verificationCode.length !== 6 || verifyPhone.isPending}
+                            className="w-full"
+                        >
+                            {verifyPhone.isPending ? 'Verifikuje se...' : 'Potvrdi kod'}
+                        </Button>
+                        <p className="text-xs text-reading-text/60 text-center w-full">
+                            Kod ostaje važeći dok ne zatražite novi putem produkcionog SMS servisa.
+                        </p>
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setIsOtpDialogOpen(false);
+                                setVerificationCode('');
+                            }}
+                            className="w-full"
+                        >
+                            Promeni broj telefona
+                        </Button>
+                    </ShadDialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
