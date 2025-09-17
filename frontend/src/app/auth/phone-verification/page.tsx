@@ -55,6 +55,7 @@ export default function PhoneVerificationPage() {
         setIsOtpDialogOpen(true);
     }, [isPhoneValid]);
 
+
     const handleVerifyCode = useCallback(async (code: string) => {
         if (!code || code.length !== 6) {
             return;
@@ -247,6 +248,7 @@ export default function PhoneVerificationPage() {
                                     Kod trenutno nije automatski poslat SMS-om. Pronađite ga ručno u bazi podataka
                                     (pgAdmin) i unesite ga ispod.
                                 </p>
+
                             </div>
                         )}
                     </DialogHeader>
@@ -295,6 +297,7 @@ export default function PhoneVerificationPage() {
                         <p className="text-xs text-reading-text/60 text-center w-full">
                             Kod ostaje važeći dok ne zatražite novi putem produkcionog SMS servisa.
                         </p>
+
                         <Button
                             variant="ghost"
                             onClick={() => {
