@@ -48,6 +48,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
+            phoneNumber: userData.phoneNumber || userData.phone || null,
+            avatarUrl: userData.avatarUrl || userData.profileImageUrl || userData.avatar || null,
             role: userData.role as UserRole,
             permissions: userData.permissions || [],
             emailVerified: userData.emailVerified || false,
