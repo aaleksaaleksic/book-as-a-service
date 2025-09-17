@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, tokenManager } from '@/lib/api-client';
+import { extractUserPayload } from '@/api/auth';
 import { AUTH_CONFIG, API_CONFIG } from '@/utils/constants';
 import type {
     AuthContextType,
@@ -13,6 +14,7 @@ import type {
     Permission,
     UserRole
 } from '@/types/auth';
+import type { MeResponse } from '@/api/types/auth.types';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -40,8 +42,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Funkcija za parsiranje korisničkih podataka
     const parseUserData = (data: any): User => {
-        // Backend vraća direktno user objekat, ne u data.data strukturi
-        const userData = data.data || data;
+        // Backend vraća korisnika unutar user objekta, ali zadržavamo kompatibilnost
+        const userData = data?.data ?? data;
 
         return {
             id: userData.id,
@@ -63,8 +65,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const fetchCurrentUser = async (): Promise<void> => {
         try {
-            const response = await api.get(`${API_CONFIG.ENDPOINTS.AUTH}/me`);
-            const user = parseUserData(response.data);
+            const response = await api.get<MeResponse>(`${API_CONFIG.ENDPOINTS.AUTH}/me`);
+            const rawUserData = extractUserPayload(response.data) ?? response.data;
+            const user = parseUserData(rawUserData);
 
             setAuthState({
                 user,
@@ -131,7 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             tokenManager.setToken(token);
             tokenManager.setRefreshToken(refreshToken);
 
-            const parsedUser = parseUserData(user);
+            const parsedUser = parseUserData(extractUserPayload(user) ?? user);
 
             setAuthState({
                 user: parsedUser,

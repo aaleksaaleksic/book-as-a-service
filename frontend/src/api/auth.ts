@@ -6,8 +6,9 @@ import type {
     PhoneVerificationRequest,
     RefreshTokenRequest,
     AuthResponse,
-    UserResponseDTO,
+    MeResponse,
     MessageResponse,
+    UserResponseDTO,
 } from "./types/auth.types";
 
 export const authApi = {
@@ -17,7 +18,7 @@ export const authApi = {
 
     // Get current user information
     me: (client: AxiosInstance) =>
-        client.get<UserResponseDTO>("/api/v1/auth/me"),
+        client.get<MeResponse>("/api/v1/auth/me"),
 
     // Refresh access token
     refresh: (client: AxiosInstance, data: RefreshTokenRequest) =>
@@ -26,6 +27,28 @@ export const authApi = {
     // Logout
     logout: (client: AxiosInstance) =>
         client.post<MessageResponse>("/api/v1/auth/logout"),
+};
+
+export const extractUserPayload = (
+    payload: unknown,
+): UserResponseDTO | undefined => {
+    if (!payload) {
+        return undefined;
+    }
+
+    if (typeof payload === "object") {
+        const withUser = payload as { user?: UserResponseDTO };
+        if (withUser.user) {
+            return withUser.user;
+        }
+
+        const withData = payload as { data?: UserResponseDTO };
+        if (withData.data) {
+            return withData.data;
+        }
+    }
+
+    return payload as UserResponseDTO;
 };
 
 export const userApi = {
