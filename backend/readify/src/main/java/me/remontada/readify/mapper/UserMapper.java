@@ -16,6 +16,18 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserMapper {
 
+    private static final Set<Permission> ADMIN_ROLE_PERMISSIONS = Set.of(
+            Permission.CAN_CREATE_USERS,
+            Permission.CAN_UPDATE_USERS,
+            Permission.CAN_DELETE_USERS,
+            Permission.CAN_MANAGE_PAYMENTS
+    );
+
+    private static final Set<Permission> MODERATOR_ROLE_PERMISSIONS = Set.of(
+            Permission.CAN_MODERATE_CONTENT,
+            Permission.CAN_VIEW_ANALYTICS
+    );
+
 
     public static UserResponseDTO toResponseDTO(User user) {
         if (user == null) {
@@ -30,6 +42,7 @@ public class UserMapper {
                     .email(extractEmail(user))
                     .phoneNumber(extractPhoneNumber(user))
                     .fullName(extractFullName(user))
+                    .role(computeRole(user))
                     .permissions(extractPermissions(user))
                     .emailVerified(extractEmailVerified(user))
                     .phoneVerified(extractPhoneVerified(user))
@@ -227,10 +240,33 @@ public class UserMapper {
 
     private static Boolean computeIsAdmin(User user) {
         try {
-            return user != null ? user.isAdmin() : false;
+            Set<Permission> permissions = extractPermissions(user);
+            return permissions.stream().anyMatch(ADMIN_ROLE_PERMISSIONS::contains);
         } catch (Exception e) {
             log.warn("Failed to compute isAdmin for User", e);
             return false;
+        }
+    }
+
+    private static String computeRole(User user) {
+        try {
+            if (user == null) {
+                return "USER";
+            }
+
+            if (Boolean.TRUE.equals(computeIsAdmin(user))) {
+                return "ADMIN";
+            }
+
+            Set<Permission> permissions = extractPermissions(user);
+            if (permissions.stream().anyMatch(MODERATOR_ROLE_PERMISSIONS::contains)) {
+                return "MODERATOR";
+            }
+
+            return "USER";
+        } catch (Exception e) {
+            log.warn("Failed to compute role for User", e);
+            return "USER";
         }
     }
 
@@ -258,6 +294,7 @@ public class UserMapper {
                 .email("unknown@example.com")
                 .phoneNumber(null)
                 .fullName("Unknown User")
+                .role(computeRole(user))
                 .permissions(Set.of())
                 .emailVerified(false)
                 .phoneVerified(false)
