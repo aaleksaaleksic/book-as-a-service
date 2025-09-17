@@ -43,6 +43,7 @@ export function useBook(id: number) {
 // Query za pretragu knjiga
 export function useBookSearch(params: BookSearchParams) {
     const client = useHttpClient();
+    const searchTerm = params.q ?? params.query;
 
     return useQuery({
         queryKey: ["books", "search", params],
@@ -50,7 +51,7 @@ export function useBookSearch(params: BookSearchParams) {
             const response = await booksApi.searchBooks(client, params);
             return response.data;
         },
-        enabled: !!params.query && params.query.length >= 2, // Minimum 2 karaktera
+        enabled: !!searchTerm && searchTerm.length >= 2, // Minimum 2 karaktera
         staleTime: 2 * 60 * 1000,
     });
 }

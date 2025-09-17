@@ -48,6 +48,7 @@ export interface PaginationParams {
 }
 
 export interface SearchParams extends PaginationParams {
+    q?: string;
     query?: string;
     filters?: Record<string, any>;
 }

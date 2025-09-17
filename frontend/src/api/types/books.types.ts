@@ -39,6 +39,7 @@ export interface UpdateBookRequest extends Partial<CreateBookRequest> {
 
 export interface BookSearchParams {
     query?: string;
+    q?: string;
     category?: string;
     author?: string;
     type?: 'free' | 'premium';
