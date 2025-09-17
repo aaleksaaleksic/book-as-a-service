@@ -31,11 +31,14 @@ public class BookResponseDTO {
 
     private BigDecimal averageRating;
 
-    private Long ratingsCount;
+    private Long totalRatings;
 
-    private Long totalReads;
+    private Long readCount;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private String contentUrl;
 
     private String addedByName;
     private Long addedById;
