@@ -6,11 +6,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.security.Principal;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class MyUserDetails implements UserDetails {
+public class MyUserDetails implements UserDetails, Principal {
 
     private final User user;
 
@@ -38,6 +39,11 @@ public class MyUserDetails implements UserDetails {
     @Override
     public String getUsername() {
         return user.getEmail();
+    }
+
+    @Override
+    public String getName() {
+        return getUsername();
     }
 
     @Override
