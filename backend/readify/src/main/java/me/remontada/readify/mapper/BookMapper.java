@@ -7,6 +7,7 @@ import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,10 +43,13 @@ public class BookMapper {
 
                     .averageRating(safeGetBigDecimal(book.getAverageRating()))
 
-                    .ratingsCount(safeGetLong(book.getRatingsCount()))
-                    .totalReads(safeGetLong(book.getTotalReads()))
+                    .totalRatings(safeGetLong(book.getRatingsCount()))
+                    .readCount(safeGetLong(book.getTotalReads()))
 
                     .createdAt(book.getCreatedAt())
+                    .updatedAt(resolveUpdatedAt(book))
+
+                    .contentUrl(deriveContentUrl(book))
 
                     .addedByName(extractUserFullName(book.getAddedBy()))
                     .addedById(extractUserId(book.getAddedBy()))
@@ -94,6 +98,32 @@ public class BookMapper {
 
     private static Long safeGetLong(Long value) {
         return value != null ? value : 0L;
+    }
+
+
+    private static LocalDateTime resolveUpdatedAt(Book book) {
+        if (book == null) {
+            return null;
+        }
+
+        LocalDateTime updatedAt = book.getUpdatedAt();
+        return updatedAt != null ? updatedAt : book.getCreatedAt();
+    }
+
+
+    private static String deriveContentUrl(Book book) {
+        if (book == null) {
+            return null;
+        }
+
+        Long bookId = book.getId();
+        String contentPath = book.getContentFilePath();
+
+        if (bookId == null || contentPath == null || contentPath.isBlank()) {
+            return null;
+        }
+
+        return String.format("/api/v1/files/books/%d/content", bookId);
     }
 
 
