@@ -28,6 +28,8 @@ public class UserResponseDTO {
 
     private String fullName;
 
+    private String role;
+
     private Set<Permission> permissions;
 
     private Boolean emailVerified;
