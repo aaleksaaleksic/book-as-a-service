@@ -28,7 +28,7 @@ export const AUTH_CONFIG = {
     REFRESH_BUFFER_MS: 5 * 60 * 1000,
 
     LOGIN_REDIRECT: '/auth/login',
-    DASHBOARD_REDIRECT: '/dashboard',
+    LANDING_REDIRECT: '/',
 
     PASSWORD_MIN_LENGTH: 8,
     PASSWORD_REQUIREMENTS: {
