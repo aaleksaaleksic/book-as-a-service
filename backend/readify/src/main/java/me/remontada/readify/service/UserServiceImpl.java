@@ -144,12 +144,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User verifyPhone(String phoneNumber, String verificationCode) {
-        String sanitizedPhone = phoneNumber != null ? phoneNumber.replaceAll("\\s+", "") : null;
+        String trimmedPhone = Optional.ofNullable(phoneNumber)
+                .map(String::trim)
+                .orElse("");
 
-        Optional<User> userOpt = userRepository.findByPhoneNumber(phoneNumber)
-                .or(() -> sanitizedPhone == null || sanitizedPhone.equals(phoneNumber)
-                        ? Optional.empty()
-                        : userRepository.findByPhoneNumber(sanitizedPhone));
+        String sanitizedPhone = trimmedPhone.replaceAll("\\s+", "");
+
+        Optional<User> userOpt = Optional.empty();
+
+        if (!trimmedPhone.isEmpty()) {
+            userOpt = userRepository.findByPhoneNumber(trimmedPhone);
+        }
+
+        if (userOpt.isEmpty() && !sanitizedPhone.isEmpty()) {
+            userOpt = userRepository.findByPhoneNumber(sanitizedPhone);
+        }
+
+        if (userOpt.isEmpty() && !sanitizedPhone.isEmpty()) {
+            userOpt = userRepository.findByPhoneNumberSanitized(sanitizedPhone);
+        }
+
 
         if (userOpt.isEmpty()) {
             throw new RuntimeException("User not found");
