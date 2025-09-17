@@ -40,9 +40,7 @@ public class UserResponseDTO {
 
     private LocalDateTime lastLoginAt;
 
-
     private Boolean isVerified;
-
 
     private Boolean isFullyVerified;
 
