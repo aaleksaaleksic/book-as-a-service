@@ -1,19 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-    BookOpen,
-    Menu,
-    User,
-    Search,
-    Settings,
-    LogOut,
     AlertTriangle,
+    BookOpen,
+    ChevronDown,
+    LogOut,
+    Menu,
     Phone,
-    ChevronDown
+    Settings,
+    ShieldCheck,
+    User,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +26,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { dt } from '@/lib/design-tokens';
 
 interface NavigationItem {
@@ -32,17 +35,32 @@ interface NavigationItem {
     href: string;
 }
 
+const NAVIGATION_ITEMS: NavigationItem[] = [
+    { label: 'Početna', href: '/' },
+    { label: 'Pretraži', href: '/browse' },
+    { label: 'Kategorije', href: '/categories' },
+    { label: 'Cene', href: '/pricing' },
+];
+
 export const Header = () => {
     const router = useRouter();
-    const { user, isAuthenticated, logout } = useAuth();
+    const { user, isAuthenticated, isLoading, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    const navigation: NavigationItem[] = [
-        { label: 'Početna', href: '/' },
-        { label: 'Pretraži', href: '/browse' },
-        { label: 'Kategorije', href: '/categories' },
-        { label: 'Cene', href: '/pricing' },
-    ];
+    const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : '';
+    const firstInitial = user?.firstName?.charAt(0) ?? '';
+    const lastInitial = user?.lastName?.charAt(0) ?? '';
+    const initials = `${firstInitial}${lastInitial}`.trim().toUpperCase()
+        || (firstInitial || lastInitial || 'U').toUpperCase();
+    const avatarSource = user?.avatarUrl?.trim() ?? '';
+    const hasAvatar = Boolean(avatarSource);
+    const needsPhoneVerification = Boolean(user && !user.phoneVerified);
+    const phoneNumber = user?.phoneNumber?.trim() ?? '';
+
+    const goToPhoneVerification = () => {
+        router.push('/auth/phone-verification');
+        setIsMenuOpen(false);
+    };
 
     const handleLogout = () => {
         logout();
@@ -50,21 +68,42 @@ export const Header = () => {
         router.push('/');
     };
 
-    const fullName = user ? `${user.firstName} ${user.lastName}` : '';
-    const initials = user ?
-        `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()
-        : 'U';
+    const renderAvatar = (size: 'sm' | 'md' | 'lg' = 'sm') => {
+        const dimension = size === 'lg' ? 'w-12 h-12' : size === 'md' ? 'w-10 h-10' : 'w-9 h-9';
+        const textSize = size === 'lg' ? 'text-lg' : 'text-sm';
 
-    const needsPhoneVerification = user && !user.phoneVerified;
+        return (
+            <div
+                className={`relative ${dimension} rounded-full overflow-hidden flex items-center justify-center ${
+                    hasAvatar
+                        ? 'border border-reading-accent/20 bg-reading-surface'
+                        : 'bg-reading-accent text-white'
+                } ${hasAvatar ? '' : textSize}`}
+                style={
+                    hasAvatar
+                        ? {
+                              backgroundImage: `url(${avatarSource})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                          }
+                        : undefined
+                }
+            >
+                {!hasAvatar && <span className="font-semibold">{initials}</span>}
+            </div>
+        );
+    };
+
+    const navigation = NAVIGATION_ITEMS;
 
     return (
         <>
             <header className={dt.components.nav}>
                 <div className={dt.layouts.pageContainer}>
-                    <div className="flex items-center justify-between h-16">
+                    <div className="flex h-16 items-center justify-between">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2">
-                            <BookOpen className="w-8 h-8 text-reading-accent" />
+                            <BookOpen className="h-8 w-8 text-reading-accent" />
                             <span className={`${dt.typography.cardTitle} text-reading-text`}>
                                 ReadBookHub
                             </span>
@@ -76,7 +115,7 @@ export const Header = () => {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className={`${dt.typography.body} text-reading-text/70 hover:text-reading-accent transition-colors`}
+                                    className={`${dt.typography.body} text-reading-text/70 transition-colors hover:text-reading-accent`}
                                 >
                                     {item.label}
                                 </Link>
@@ -85,67 +124,84 @@ export const Header = () => {
 
                         {/* Desktop Auth Actions */}
                         <div className={`${dt.responsive.navDesktop} items-center gap-4`}>
-                            {isAuthenticated && user ? (
+                            {isLoading ? (
+                                <div className="flex items-center gap-3">
+                                    <Skeleton className="h-9 w-24" />
+                                    <Skeleton className="h-9 w-9 rounded-full" />
+                                </div>
+                            ) : isAuthenticated && user ? (
                                 <>
-                                    {/* Phone Verification Warning Badge */}
                                     {needsPhoneVerification && (
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="border-yellow-400 bg-yellow-50 hover:bg-yellow-100 text-yellow-700"
-                                            onClick={() => router.push('/settings/phone-verification')}
+                                            className="border-yellow-400 bg-yellow-50 text-yellow-700 transition-colors hover:bg-yellow-100"
+                                            onClick={goToPhoneVerification}
                                         >
-                                            <AlertTriangle className="w-3 h-3 mr-2" />
+                                            <AlertTriangle className="mr-2 h-3 w-3" />
                                             Verifikuj telefon
                                         </Button>
                                     )}
 
-                                    {/* User Dropdown */}
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
                                                 variant="ghost"
                                                 className="flex items-center gap-2 p-1.5 hover:bg-book-green-50"
                                             >
-                                                {/* Avatar sa inicijalima */}
-                                                <div className="w-9 h-9 bg-reading-accent text-white rounded-full flex items-center justify-center font-medium">
-                                                    {initials}
-                                                </div>
-                                                <span className="font-medium text-reading-text">
-                                                    {fullName}
-                                                </span>
-                                                <ChevronDown className="w-4 h-4 text-reading-text/60" />
+                                                {renderAvatar('sm')}
+                                                <span className="font-medium text-reading-text">{fullName}</span>
+                                                <ChevronDown className="h-4 w-4 text-reading-text/60" />
                                             </Button>
                                         </DropdownMenuTrigger>
 
                                         <DropdownMenuContent align="end" className="w-64">
                                             {/* User Info Header */}
-                                            <div className="px-4 py-3 border-b">
+                                            <div className="border-b px-4 py-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-reading-accent text-white rounded-full flex items-center justify-center font-medium">
-                                                        {initials}
-                                                    </div>
+                                                    {renderAvatar('md')}
                                                     <div className="flex-1">
-                                                        <p className="text-sm font-medium text-reading-text">
-                                                            {fullName}
-                                                        </p>
-                                                        <p className="text-xs text-reading-text/60 truncate">
-                                                            {user.email}
-                                                        </p>
+                                                        <p className="text-sm font-medium text-reading-text">{fullName}</p>
+                                                        <p className="truncate text-xs text-reading-text/60">{user.email}</p>
+                                                        {phoneNumber && (
+                                                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                                <span className="text-xs text-reading-text/60">
+                                                                    {phoneNumber}
+                                                                </span>
+                                                                <Badge
+                                                                    variant="secondary"
+                                                                    className={`flex items-center gap-1 ${
+                                                                        needsPhoneVerification
+                                                                            ? 'border-yellow-200 bg-yellow-100 text-yellow-800'
+                                                                            : 'border-green-200 bg-green-100 text-green-700'
+                                                                    }`}
+                                                                >
+                                                                    {needsPhoneVerification ? (
+                                                                        <>
+                                                                            <AlertTriangle className="h-3 w-3" />
+                                                                            <span>Potrebna verifikacija</span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <ShieldCheck className="h-3 w-3" />
+                                                                            <span>Verifikovano</span>
+                                                                        </>
+                                                                    )}
+                                                                </Badge>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {/* Phone Verification Alert in Dropdown */}
                                                 {needsPhoneVerification && (
                                                     <div
-                                                        className="mt-3 p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors"
-                                                        onClick={() => {
-                                                            router.push('/settings/phone-verification');
-                                                        }}
+                                                        className="mt-3 cursor-pointer rounded-lg border border-yellow-200 bg-yellow-50 p-2.5 transition-colors hover:bg-yellow-100"
+                                                        onClick={goToPhoneVerification}
                                                     >
                                                         <div className="flex items-center gap-2">
-                                                            <Phone className="w-4 h-4 text-yellow-600" />
-                                                            <span className="text-xs text-yellow-700 font-medium">
+                                                            <Phone className="h-4 w-4 text-yellow-600" />
+                                                            <span className="text-xs font-medium text-yellow-700">
                                                                 Verifikuj broj telefona
                                                             </span>
                                                         </div>
@@ -158,7 +214,7 @@ export const Header = () => {
                                                 onClick={() => router.push('/profile')}
                                                 className="cursor-pointer"
                                             >
-                                                <User className="w-4 h-4 mr-2" />
+                                                <User className="mr-2 h-4 w-4" />
                                                 Moj profil
                                             </DropdownMenuItem>
 
@@ -166,7 +222,7 @@ export const Header = () => {
                                                 onClick={() => router.push('/settings')}
                                                 className="cursor-pointer"
                                             >
-                                                <Settings className="w-4 h-4 mr-2" />
+                                                <Settings className="mr-2 h-4 w-4" />
                                                 Podešavanja
                                             </DropdownMenuItem>
 
@@ -174,9 +230,9 @@ export const Header = () => {
 
                                             <DropdownMenuItem
                                                 onClick={handleLogout}
-                                                className="text-red-600 focus:text-red-600 cursor-pointer"
+                                                className="cursor-pointer text-red-600 focus:text-red-600"
                                             >
-                                                <LogOut className="w-4 h-4 mr-2" />
+                                                <LogOut className="mr-2 h-4 w-4" />
                                                 Odjavi se
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -198,41 +254,102 @@ export const Header = () => {
                         <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                             <SheetTrigger asChild>
                                 <Button variant="ghost" size="sm" className={dt.responsive.navMobile}>
-                                    <Menu className="w-5 h-5" />
+                                    <Menu className="h-5 w-5" />
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="right" className="w-72">
+                            <SheetContent side="right" className="w-80">
                                 {/* Mobile menu content - isti sadržaj kao gore */}
                                 {isAuthenticated && user && (
-                                    <div className="mb-6 pb-6 border-b">
+                                    <div className="mb-6 space-y-4 border-b pb-6">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-reading-accent text-white rounded-full flex items-center justify-center font-medium">
-                                                {initials}
-                                            </div>
+                                            {renderAvatar('lg')}
                                             <div>
-                                                <p className="font-medium text-reading-text">
-                                                    {fullName}
-                                                </p>
-                                                <p className="text-xs text-reading-text/60">
-                                                    {user.email}
-                                                </p>
+                                                <p className="font-medium text-reading-text">{fullName}</p>
+                                                <p className="text-xs text-reading-text/60">{user.email}</p>
+                                                {phoneNumber && (
+                                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                        <span className="text-xs text-reading-text/60">{phoneNumber}</span>
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className={`flex items-center gap-1 ${
+                                                                needsPhoneVerification
+                                                                    ? 'border-yellow-200 bg-yellow-100 text-yellow-800'
+                                                                    : 'border-green-200 bg-green-100 text-green-700'
+                                                            }`}
+                                                        >
+                                                            {needsPhoneVerification ? (
+                                                                <>
+                                                                    <AlertTriangle className="h-3 w-3" />
+                                                                    <span>Potrebna verifikacija</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ShieldCheck className="h-3 w-3" />
+                                                                    <span>Verifikovano</span>
+                                                                </>
+                                                            )}
+                                                        </Badge>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
+
+                                        {needsPhoneVerification && (
+                                            <div className="space-y-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                                                <p className="text-xs text-yellow-800">
+                                                    Verifikujte broj telefona kako biste otključali sve pogodnosti platforme.
+                                                </p>
+                                                <Button
+                                                    onClick={goToPhoneVerification}
+                                                    variant="outline"
+                                                    className="w-full border-yellow-400 bg-yellow-400/10 text-yellow-800 transition-colors hover:bg-yellow-400/20"
+                                                >
+                                                    <AlertTriangle className="mr-2 h-4 w-4" />
+                                                    Verifikuj telefon
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
                                 <nav className="space-y-2">
                                     {navigation.map((item) => (
-                                        <Link
+                                        <button
                                             key={item.href}
-                                            href={item.href}
-                                            onClick={() => setIsMenuOpen(false)}
-                                            className="block px-3 py-2 rounded-lg hover:bg-book-green-50 transition-colors"
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                router.push(item.href);
+                                            }}
+                                            className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-reading-text/80 transition-colors hover:bg-book-green-50 hover:text-reading-text"
                                         >
                                             {item.label}
-                                        </Link>
+                                        </button>
                                     ))}
                                 </nav>
+
+                                {!isAuthenticated && !isLoading && (
+                                    <div className="mt-6 space-y-3">
+                                        <Button
+                                            className="w-full"
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                router.push('/auth/login');
+                                            }}
+                                        >
+                                            Prijavi se
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full"
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                router.push('/auth/register');
+                                            }}
+                                        >
+                                            Kreiraj nalog
+                                        </Button>
+                                    </div>
+                                )}
                             </SheetContent>
                         </Sheet>
                     </div>
@@ -242,15 +359,23 @@ export const Header = () => {
             {/* Global Phone Verification Alert */}
             {needsPhoneVerification && (
                 <Alert
-                    className="mx-auto max-w-7xl mt-4 border-yellow-400 bg-yellow-50 cursor-pointer"
-                    onClick={() => router.push('/settings/phone-verification')}
+                    className="mx-auto mt-4 max-w-7xl cursor-pointer border-yellow-400 bg-yellow-50"
+                    onClick={goToPhoneVerification}
                 >
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
                     <AlertDescription className="flex items-center justify-between text-yellow-800">
                         <span>
                             Molimo vas verifikujte broj telefona kako biste otključali sve funkcionalnosti.
                         </span>
-                        <Button size="sm" variant="outline" className="ml-4 border-yellow-400 text-yellow-700">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="ml-4 border-yellow-400 text-yellow-700"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                goToPhoneVerification();
+                            }}
+                        >
                             Verifikuj sada
                         </Button>
                     </AlertDescription>
