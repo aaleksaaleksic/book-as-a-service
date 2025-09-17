@@ -1,11 +1,11 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
 import { useHttpClient } from "@/context/HttpClientProvider";
-import { authApi, userApi } from "@/api/auth";
+import { authApi, extractUserPayload, userApi } from "@/api/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { AUTH_CONFIG } from "@/utils/constants";
-import type { LoginRequest, RegisterRequest } from "@/api/types/auth.types";
+import type { LoginRequest, MeResponse, RegisterRequest } from "@/api/types/auth.types";
 import {EmailVerificationRequest} from "@/types";
 import {useAuth} from "@/hooks/useAuth";
 
@@ -69,7 +69,15 @@ export function useCurrentUser() {
     const client = useHttpClient();
 
     return useMutation({
-        mutationFn: () => authApi.me(client),
+        mutationFn: async (): Promise<MeResponse> => {
+            const response = await authApi.me(client);
+            const user = extractUserPayload(response.data) ?? response.data.user;
+
+            return {
+                success: response.data.success,
+                user,
+            };
+        },
         onError: (error: any) => {
             console.error("Failed to fetch current user:", error);
         },
