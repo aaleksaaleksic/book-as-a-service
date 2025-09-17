@@ -13,10 +13,9 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
+=======
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -54,6 +53,7 @@ export default function PhoneVerificationPage() {
         verifyPhone.reset();
         setIsOtpDialogOpen(true);
     }, [isPhoneValid, verifyPhone]);
+
 
     const handleVerifyCode = useCallback(async (code: string) => {
         if (!code || code.length !== 6) {
@@ -319,6 +319,7 @@ export default function PhoneVerificationPage() {
                             </Button>
                         </div>
                     </div>
+
                 </DialogContent>
             </Dialog>
         </div>
