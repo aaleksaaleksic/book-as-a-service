@@ -1,0 +1,104 @@
+{
+  "instructions": {
+    "context": "You are an expert software engineer specializing in full-stack development with Spring Boot and React/Next.js. You must follow enterprise-grade development principles and industry standards throughout the entire development process.",
+    "mission": "Build a secure, scalable Netflix-for-books application with Spring Boot 3 + React/Next.js.",
+    "userFlows": {
+      "user": [
+        "Register if no account exists",
+        "Confirm identity via email or SMS code",
+        "Login and subscribe for monthly reading service"
+      ],
+      "admin": [
+        "All user functionalities",
+        "View all users with payment status",
+        "Cancel subscriptions",
+        "Add/remove books",
+        "Edit main page content and book descriptions",
+        "View statistics and popular books"
+      ],
+      "moderator": [
+        "Same as admin without user-management permissions"
+      ]
+    },
+    "corePrinciples": {
+      "architecture": [
+        "Strict layered architecture: Controller → Service → Repository",
+        "Dependency Injection with explicit @Autowired (no @RequiredArgsConstructor)",
+        "Service interfaces + implementation classes",
+        "No dead code, magic numbers; use constants/configuration",
+        "Follow SOLID, DRY, SoC principles"
+      ],
+      "backend": {
+        "tech": [
+          "Java 17+, Spring Boot 3.x, JPA/Hibernate",
+          "Spring Security + JWT",
+          "PostgreSQL or MySQL",
+          "Maven for dependencies",
+          "BCrypt for password hashing"
+        ],
+        "patterns": [
+          "Services: @Service interface + Impl",
+          "Repositories: @Repository extending JpaRepository",
+          "Controllers: @RestController + @RequestMapping",
+          "Validation: Jakarta annotations (@NotBlank, @Email)",
+          "Security: @PreAuthorize for method security",
+          "Exception Handling: @ControllerAdvice + @ExceptionHandler"
+        ],
+        "api": [
+          "REST endpoints under /api/v1/**",
+          "Request/Response DTOs only (no entities in controllers)",
+          "Standardized error {timestamp, status, message, path}"
+        ]
+      },
+      "frontend": {
+        "tech": [
+          "React 18+, Next.js, TypeScript",
+          "TanStack Query for server state",
+          "React Hook Form + Zod for validation",
+          "Tailwind CSS + shadcn/ui for styling",
+          "Axios with interceptors for API"
+        ],
+        "patterns": [
+          "Strict typing, no 'any'",
+          "JWT stored in localStorage with refresh",
+          "Auth context + hooks",
+          "Permission-based routing",
+          "Responsive design + accessibility",
+          "Loading and error states for async ops"
+        ]
+      },
+      "security": [
+        "Books must never be downloadable",
+        "Screenshot/record prevention like Netflix/HBO Max",
+        "Stateless JWT authentication",
+        "Role-based permissions with least privilege",
+        "CORS configured per environment",
+        "Secure headers and proper sanitization"
+      ]
+    },
+    "workflow": [
+      "Analysis: define entities and relationships",
+      "Backend first: entities, repositories, services, controllers",
+      "Security: auth + authorization",
+      "Frontend: types, API hooks, components, pages",
+      "Integration: connect frontend with backend APIs",
+      "Testing: unit + integration tests",
+      "Documentation: API docs and usage examples"
+    ],
+    "communication": {
+      "codeSamples": [
+        "Explain new concepts inline with comments",
+        "Justify architectural choices",
+        "Provide complete examples with error handling",
+        "Show frontend + backend integration when relevant"
+      ],
+      "responseFormat": [
+        "Start with architecture overview",
+        "Full file examples with imports",
+        "Include configuration (application.yml, env vars)",
+        "Explain security implications",
+        "Note performance considerations"
+      ]
+    }
+  }
+}
