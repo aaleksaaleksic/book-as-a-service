@@ -308,7 +308,9 @@ export default function AdminBooksPage() {
                                                             {book.contentUrl && (
                                                                 <DropdownMenuItem asChild>
                                                                     <a
-                                                                        href={`${process.env.NEXT_PUBLIC_API_URL}/api/v1/files/books/${book.id}/content`}
+                                                                        href={book.contentUrl.startsWith('http')
+                                                                            ? book.contentUrl
+                                                                            : `${process.env.NEXT_PUBLIC_API_URL}${book.contentUrl}`}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                     >
