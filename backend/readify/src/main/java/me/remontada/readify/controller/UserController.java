@@ -6,6 +6,7 @@ import me.remontada.readify.mapper.UserMapper;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -94,6 +95,47 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()
+            ));
+        }
+    }
+
+
+    @PostMapping("/verify-phone")
+    public ResponseEntity<Map<String, Object>> verifyPhone(@RequestBody Map<String, String> request) {
+        try {
+            String phoneNumber = Optional.ofNullable(request.get("phoneNumber"))
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .orElseThrow(() -> new IllegalArgumentException("Phone number is required"));
+
+            String verificationCode = Optional.ofNullable(request.get("verificationCode"))
+                    .or(() -> Optional.ofNullable(request.get("code")))
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .orElseThrow(() -> new IllegalArgumentException("Verification code is required"));
+
+            User user = userService.verifyPhone(phoneNumber, verificationCode);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Phone successfully verified",
+                    "user", UserMapper.toResponseDTO(user)
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Phone verification failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "Phone verification failed"
             ));
         }
     }
