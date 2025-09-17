@@ -51,3 +51,24 @@ export const useCan = () => {
         userRole: user?.role,
     };
 };
+
+export const useSubscription = () => {
+    const { user, hasPermission } = useAuth();
+
+    const subscriptionStatus = user?.subscriptionStatus;
+    const isActive = subscriptionStatus === 'ACTIVE';
+    const isTrial = subscriptionStatus === 'TRIAL';
+
+    const canReadBooks =
+        isActive ||
+        isTrial ||
+        hasPermission('CAN_READ_BOOKS') ||
+        hasPermission('CAN_READ_PREMIUM_BOOKS');
+
+    return {
+        canReadBooks,
+        needsSubscription: !canReadBooks,
+        isActive,
+        isTrial,
+    };
+};
