@@ -8,6 +8,7 @@ import { AUTH_CONFIG } from "@/utils/constants";
 import type { LoginRequest, MeResponse, RegisterRequest } from "@/api/types/auth.types";
 import {EmailVerificationRequest} from "@/types";
 import {useAuth} from "@/hooks/useAuth";
+import { tokenManager } from "@/lib/api-client";
 
 export function useLogin() {
     const client = useHttpClient();
@@ -19,8 +20,8 @@ export function useLogin() {
         onSuccess: async (response) => {
             const { token, refreshToken, user } = response.data;
 
-            localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
-            localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, refreshToken);
+            tokenManager.setToken(token);
+            tokenManager.setRefreshToken(refreshToken);
 
             toast({
                 title: "Dobrodošli nazad!",
