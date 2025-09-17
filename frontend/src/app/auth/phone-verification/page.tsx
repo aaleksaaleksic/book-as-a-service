@@ -13,16 +13,9 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useVerifyPhone } from '@/hooks/use-phone-verification';
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 
 export default function PhoneVerificationPage() {
     const router = useRouter();
@@ -63,11 +56,8 @@ export default function PhoneVerificationPage() {
         }
 
         try {
-            const requestPhoneNumber = phoneNumber.trim();
-
             await verifyPhone.mutateAsync({
-                phoneNumber: requestPhoneNumber || normalizedPhone,
-
+                phoneNumber: normalizedPhone,
                 verificationCode: code,
             });
             setIsVerified(true);
@@ -79,8 +69,7 @@ export default function PhoneVerificationPage() {
         } catch {
             setVerificationCode('');
         }
-    }, [normalizedPhone, phoneNumber, router, verifyPhone]);
-
+    }, [normalizedPhone, router, verifyPhone]);
 
     useEffect(() => {
         if (isOtpDialogOpen && verificationCode.length === 6) {
@@ -325,6 +314,7 @@ export default function PhoneVerificationPage() {
                             </Button>
                         </div>
                     </div>
+
                 </DialogContent>
             </Dialog>
         </div>
