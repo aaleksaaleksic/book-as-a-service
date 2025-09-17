@@ -102,8 +102,9 @@ public class User {
 
     public boolean isAdmin() {
         return hasPermission(Permission.CAN_CREATE_USERS) ||
+                hasPermission(Permission.CAN_UPDATE_USERS) ||
                 hasPermission(Permission.CAN_DELETE_USERS) ||
-                hasPermission(Permission.CAN_VIEW_ANALYTICS);
+                hasPermission(Permission.CAN_MANAGE_PAYMENTS);
     }
 
 

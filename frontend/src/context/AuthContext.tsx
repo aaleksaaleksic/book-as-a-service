@@ -16,6 +16,30 @@ import type {
 } from '@/types/auth';
 import type { MeResponse } from '@/api/types/auth.types';
 
+const ADMIN_ROLE_PERMISSIONS: Permission[] = [
+    'CAN_CREATE_USERS',
+    'CAN_UPDATE_USERS',
+    'CAN_DELETE_USERS',
+    'CAN_MANAGE_PAYMENTS',
+];
+
+const MODERATOR_ROLE_PERMISSIONS: Permission[] = [
+    'CAN_MODERATE_CONTENT',
+    'CAN_VIEW_ANALYTICS',
+];
+
+const deriveRoleFromPermissions = (permissions: Permission[] = []): UserRole => {
+    if (permissions.some(permission => ADMIN_ROLE_PERMISSIONS.includes(permission))) {
+        return 'ADMIN';
+    }
+
+    if (permissions.some(permission => MODERATOR_ROLE_PERMISSIONS.includes(permission))) {
+        return 'MODERATOR';
+    }
+
+    return 'USER';
+};
+
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuthContext = () => {
@@ -45,6 +69,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Backend vraća korisnika unutar user objekta, ali zadržavamo kompatibilnost
         const userData = data?.data ?? data;
 
+        const permissions: Permission[] = Array.isArray(userData.permissions) ? userData.permissions : [];
+        const role = (userData.role as UserRole | undefined) ?? deriveRoleFromPermissions(permissions);
+
         return {
             id: userData.id,
             email: userData.email,
@@ -52,12 +79,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             lastName: userData.lastName,
             phoneNumber: userData.phoneNumber || userData.phone || null,
             avatarUrl: userData.avatarUrl || userData.profileImageUrl || userData.avatar || null,
-            role: userData.role as UserRole,
-            permissions: userData.permissions || [],
+            role,
+            permissions,
             emailVerified: userData.emailVerified || false,
             phoneVerified: userData.phoneVerified || false,
             createdAt: userData.createdAt,
-            updatedAt: userData.updatedAt,
+            updatedAt: userData.updatedAt || userData.lastLoginAt || userData.createdAt,
             subscriptionStatus: userData.subscriptionStatus || 'TRIAL',
             trialEndsAt: userData.trialEndsAt,
         };
