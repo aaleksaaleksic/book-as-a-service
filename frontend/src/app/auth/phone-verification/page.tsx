@@ -41,7 +41,7 @@ import { api } from '@/lib/api-client';
 
 export default function PhoneVerificationPage() {
     const router = useRouter();
-    const { user, refreshUser } = useAuth();
+    const { user } = useAuth();
 
     // State
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -88,7 +88,6 @@ export default function PhoneVerificationPage() {
             return;
         }
 
-        // Reset state
         setVerificationCode('');
         setIsOtpDialogOpen(true);
         setResendTimer(60);
@@ -101,10 +100,7 @@ export default function PhoneVerificationPage() {
         });
     }, [isPhoneValid]);
 
-    /**
-     * Verify the entered code with backend
-     * NAPOMENA: Koristimo api direktno umesto userApi da izbegnemo probleme sa tipovima
-     */
+
     const handleVerifyCode = useCallback(async (code: string) => {
         if (!code || code.length !== 6) {
             return;
@@ -113,10 +109,9 @@ export default function PhoneVerificationPage() {
         setIsVerifying(true);
 
         try {
-            // Direktan API poziv sa pravilnim payload-om
             const response = await api.post('/api/v1/users/verify-phone', {
                 phoneNumber: normalizedPhone,
-                verificationCode: code, // Backend očekuje 'verificationCode'
+                verificationCode: code,
             });
 
             if (response.data.success) {
@@ -128,40 +123,26 @@ export default function PhoneVerificationPage() {
                     description: "Telefon je uspešno verifikovan",
                 });
 
-                // VAŽNO: Čekamo malo pre refresh da se backend ažurira
-                setTimeout(async () => {
-                    try {
-                        await refreshUser();
-                    } catch (error) {
-                        console.log('Refresh user after phone verification - expected if token needs refresh');
-                    }
-
-                    // Navigacija bez obzira na refresh rezultat
-                    router.push('/');
-                }, 500);
+                // KLJUČNA IZMENA - samo reload stranice
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
             }
         } catch (error: any) {
             console.error('Phone verification failed:', error);
-
-            // Clear code on error
             setVerificationCode('');
-
-            // Show error message
-            const errorMessage = error?.response?.data?.message || "Neispravni verifikacioni kod";
 
             toast({
                 title: "Greška",
-                description: errorMessage,
+                description: error?.response?.data?.message || "Neispravni verifikacioni kod",
                 variant: "destructive",
             });
         } finally {
             setIsVerifying(false);
         }
-    }, [normalizedPhone, refreshUser, router]);
+    }, [normalizedPhone]);
 
-    /**
-     * Resend code (for local testing, just reopens dialog)
-     */
+
     const handleResendCode = useCallback(() => {
         if (resendTimer > 0) return;
 
