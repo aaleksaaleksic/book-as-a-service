@@ -22,12 +22,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useSendPhoneVerification, useVerifyPhone } from '@/hooks/use-phone-verification';
+import { useVerifyPhone } from '@/hooks/use-phone-verification';
 
 export default function PhoneVerificationPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const sendVerification = useSendPhoneVerification();
     const verifyPhone = useVerifyPhone();
 
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -47,19 +46,15 @@ export default function PhoneVerificationPage() {
         }
     }, [user?.phoneNumber]);
 
-    const handleSendCode = useCallback(async () => {
+    const handleSendCode = useCallback(() => {
         if (!isPhoneValid) {
             return;
         }
 
-        try {
-            await sendVerification.mutateAsync(normalizedPhone);
-            setVerificationCode('');
-            setIsOtpDialogOpen(true);
-        } catch {
-            // Error handling is managed inside the hook toast notifications
-        }
-    }, [isPhoneValid, normalizedPhone, sendVerification]);
+        setVerificationCode('');
+        setIsOtpDialogOpen(true);
+    }, [isPhoneValid]);
+
 
     const handleVerifyCode = useCallback(async (code: string) => {
         if (!code || code.length !== 6) {
@@ -81,19 +76,6 @@ export default function PhoneVerificationPage() {
             setVerificationCode('');
         }
     }, [normalizedPhone, router, verifyPhone]);
-
-    const handleResendCode = useCallback(async () => {
-        if (!isPhoneValid) {
-            return;
-        }
-
-        try {
-            await sendVerification.mutateAsync(normalizedPhone);
-            setVerificationCode('');
-        } catch {
-            // handled in hook
-        }
-    }, [isPhoneValid, normalizedPhone, sendVerification]);
 
     useEffect(() => {
         if (isOtpDialogOpen && verificationCode.length === 6) {
@@ -169,8 +151,6 @@ export default function PhoneVerificationPage() {
         );
     }
 
-    const TEST_CODE = '123456';
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-book-green-50 via-book-green-100 to-book-green-200 flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-md">
@@ -222,10 +202,10 @@ export default function PhoneVerificationPage() {
 
                         <Button
                             onClick={handleSendCode}
-                            disabled={!isPhoneValid || sendVerification.isPending}
+                            disabled={!isPhoneValid}
                             className="w-full"
                         >
-                            {sendVerification.isPending ? 'Šaljem kod...' : 'Pošalji kod'}
+                            Pošalji kod
                         </Button>
                     </CardContent>
 
@@ -262,19 +242,13 @@ export default function PhoneVerificationPage() {
                         </DialogDescription>
 
                         {process.env.NODE_ENV === 'development' && (
-                            <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 p-2">
-                                <p className="text-xs text-yellow-800 mb-1">Test mode:</p>
-                                <div className="flex items-center justify-between">
-                                    <code className="text-sm font-mono">{TEST_CODE}</code>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-6 px-2"
-                                        onClick={() => navigator.clipboard.writeText(TEST_CODE)}
-                                    >
-                                        Kopiraj
-                                    </Button>
-                                </div>
+                            <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 p-2 text-left">
+                                <p className="text-xs text-yellow-800 font-semibold">Razvojno okruženje</p>
+                                <p className="text-xs text-yellow-800/80">
+                                    Kod trenutno nije automatski poslat SMS-om. Pronađite ga ručno u bazi podataka
+                                    (pgAdmin) i unesite ga ispod.
+                                </p>
+
                             </div>
                         )}
                     </DialogHeader>
@@ -320,14 +294,10 @@ export default function PhoneVerificationPage() {
                         >
                             {verifyPhone.isPending ? 'Verifikuje se...' : 'Potvrdi kod'}
                         </Button>
-                        <Button
-                            variant="outline"
-                            onClick={handleResendCode}
-                            disabled={sendVerification.isPending}
-                            className="w-full"
-                        >
-                            {sendVerification.isPending ? 'Šalje se novi kod...' : 'Pošalji novi kod'}
-                        </Button>
+                        <p className="text-xs text-reading-text/60 text-center w-full">
+                            Kod ostaje važeći dok ne zatražite novi putem produkcionog SMS servisa.
+                        </p>
+
                         <Button
                             variant="ghost"
                             onClick={() => {
