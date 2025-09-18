@@ -72,6 +72,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/top-rated").permitAll()
 
+                        // Public file access (book covers)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/files/covers/**").permitAll()
+
                         // Book reading
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/{id}/read").authenticated()
 
