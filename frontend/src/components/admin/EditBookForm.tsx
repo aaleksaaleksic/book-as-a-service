@@ -57,10 +57,6 @@ const editBookSchema = z.object({
         .max(new Date().getFullYear() + 1, 'Godina izdanja ne može biti u budućnosti')
         .optional()
         .nullable(),
-    price: z.number()
-        .min(0, 'Cena ne može biti negativna')
-        .max(999999.99, 'Cena ne može biti veća od 999999.99')
-        .optional(),
     isPremium: z.boolean().optional(),
     isAvailable: z.boolean().optional(),
     // Novi fajlovi su opcioni pri edit-u
@@ -103,13 +99,11 @@ export function EditBookForm({ book }: EditBookFormProps) {
             pages: book.pages,
             language: book.language || 'Serbian',
             publicationYear: book.publicationYear,
-            price: book.price,
             isPremium: book.isPremium,
             isAvailable: book.isAvailable,
         }
     });
 
-    const isPremium = watch('isPremium');
     const popularCategorySet = new Set<string>([...POPULAR_CATEGORIES]);
     const otherCategories = BOOK_CATEGORIES.filter(category => !popularCategorySet.has(category));
 
@@ -155,7 +149,6 @@ export function EditBookForm({ book }: EditBookFormProps) {
             if (data.pages !== book.pages) changedData.pages = data.pages;
             if (data.language !== book.language) changedData.language = data.language;
             if (data.publicationYear !== book.publicationYear) changedData.publicationYear = data.publicationYear;
-            if (data.price !== book.price) changedData.price = data.price;
             if (data.isPremium !== book.isPremium) changedData.isPremium = data.isPremium;
             if (data.isAvailable !== book.isAvailable) changedData.isAvailable = data.isAvailable;
 
@@ -351,22 +344,6 @@ export function EditBookForm({ book }: EditBookFormProps) {
                             />
                             {errors.publicationYear && (
                                 <p className="text-sm text-red-500">{errors.publicationYear.message}</p>
-                            )}
-                        </div>
-
-                        {/* Cena */}
-                        <div className="space-y-2">
-                            <Label htmlFor="price">Cena (RSD)</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                step="0.01"
-                                {...register('price', { valueAsNumber: true })}
-                                disabled={!isPremium}
-                                className={errors.price ? 'border-red-500' : ''}
-                            />
-                            {errors.price && (
-                                <p className="text-sm text-red-500">{errors.price.message}</p>
                             )}
                         </div>
 

@@ -12,8 +12,7 @@ import {
     Eye,
     MoreVertical,
     BookOpen,
-    Download,
-    DollarSign
+    Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,15 +82,6 @@ export default function AdminBooksPage() {
         if (confirm('Da li ste sigurni da želite obrisati ovu knjigu?')) {
             await deleteBookMutation.mutateAsync(id);
         }
-    };
-
-    const formatPrice = (price: number) => {
-        return new Intl.NumberFormat('sr-RS', {
-            style: 'currency',
-            currency: 'RSD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(price);
     };
 
     const resolveCoverUrl = (book: BookResponseDTO) => {
@@ -239,7 +229,6 @@ export default function AdminBooksPage() {
                                             <TableHead>Autor</TableHead>
                                             <TableHead>Kategorija</TableHead>
                                             <TableHead>Tip</TableHead>
-                                            <TableHead>Cena</TableHead>
                                             <TableHead className="text-center">Čitanja</TableHead>
                                             <TableHead className="text-center">Ocena</TableHead>
                                             <TableHead className="text-right">Akcije</TableHead>
@@ -295,11 +284,6 @@ export default function AdminBooksPage() {
                                                     ) : (
                                                         <Badge variant="secondary">Besplatna</Badge>
                                                     )}
-                                                </TableCell>
-
-                                                {/* Cena */}
-                                                <TableCell>
-                                                    {book.isPremium ? formatPrice(book.price) : '-'}
                                                 </TableCell>
 
                                                 {/* Čitanja */}

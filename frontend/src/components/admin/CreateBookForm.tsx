@@ -52,9 +52,6 @@ const createBookSchema = z.object({
         .min(1000, 'Godina izdanja nije validna')
         .max(new Date().getFullYear() + 1, 'Godina izdanja ne može biti u budućnosti')
         .optional(),
-    price: z.number()
-        .min(0, 'Cena ne može biti negativna')
-        .max(999999.99, 'Cena ne može biti veća od 999999.99'),
     isPremium: z.boolean(),
     isAvailable: z.boolean(),
     pdfFile: z.instanceof(File)
@@ -84,7 +81,6 @@ export function CreateBookForm() {
             isPremium: false,
             isAvailable: true,
             language: 'Serbian',
-            price: 0,
             pages: 1,
         }
     });
@@ -121,12 +117,6 @@ export function CreateBookForm() {
         register('coverFile');
     }, [register]);
 
-    useEffect(() => {
-        if (!isPremium) {
-            setValue('price', 0, { shouldDirty: false });
-        }
-    }, [isPremium, setValue]);
-
     // Submit form
     const onSubmit = async (data: CreateBookFormData) => {
         try {
@@ -141,7 +131,7 @@ export function CreateBookForm() {
                 pages: data.pages,
                 language: data.language,
                 publicationYear: publicationYearValue,
-                price: data.price,
+                price: 0,
                 isPremium: data.isPremium,
                 isAvailable: data.isAvailable,
                 pdfFile: data.pdfFile,
@@ -299,23 +289,6 @@ export function CreateBookForm() {
                             />
                             {errors.publicationYear && (
                                 <p className="text-sm text-red-500">{errors.publicationYear.message}</p>
-                            )}
-                        </div>
-
-                        {/* Cena */}
-                        <div className="space-y-2">
-                            <Label htmlFor="price">Cena (RSD)</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                step="0.01"
-                                {...register('price', { valueAsNumber: true })}
-                                placeholder="npr. 999.00"
-                                disabled={!isPremium}
-                                className={errors.price ? 'border-red-500' : ''}
-                            />
-                            {errors.price && (
-                                <p className="text-sm text-red-500">{errors.price.message}</p>
                             )}
                         </div>
                     </div>
