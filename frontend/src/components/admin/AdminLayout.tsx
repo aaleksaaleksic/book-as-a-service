@@ -9,12 +9,10 @@ import {
     BarChart3,
     Settings,
     Upload,
-    Library,
     DollarSign,
     Shield,
     LogOut,
-    Menu,
-    X
+    Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -89,27 +87,27 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     );
 
     const SidebarContent = () => (
-        <>
+        <div className="flex h-full flex-col">
             {/* Admin Header */}
-            <div className="px-4 py-6">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-reading-accent/10 rounded-lg">
-                        <Shield className="w-6 h-6 text-reading-accent" />
+            <div className="px-5 pb-6 pt-8">
+                <div className="flex items-center gap-3 rounded-2xl bg-reading-accent/10 p-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-reading-accent text-white shadow">
+                        <Shield className="h-6 w-6" />
                     </div>
                     <div>
-                        <h2 className={cn(dt.typography.cardTitle)}>Admin Panel</h2>
-                        <p className={cn(dt.typography.muted)}>
+                        <h2 className="text-lg font-semibold text-reading-text">Admin panel</h2>
+                        <p className="text-sm text-reading-text/70">
                             {user?.firstName} {user?.lastName}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <Separator />
+            <Separator className="border-reading-accent/10" />
 
             {/* Navigation */}
-            <ScrollArea className="flex-1 px-2 py-4">
-                <nav className="space-y-1">
+            <ScrollArea className="flex-1 px-3 py-6">
+                <nav className="space-y-2">
                     {filteredNavItems.map((item) => {
                         const isActive = pathname === item.href ||
                             (item.href !== '/admin' && pathname.startsWith(item.href));
@@ -120,46 +118,54 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                                 href={item.href}
                                 onClick={() => setMobileOpen(false)}
                                 className={cn(
-                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                                    "group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all", 
+                                    "hover:bg-reading-accent/10 hover:text-reading-text",
                                     isActive
-                                        ? "bg-reading-accent text-white"
-                                        : "text-reading-text hover:bg-book-green-100"
+                                        ? "bg-reading-accent text-white shadow"
+                                        : "text-reading-text/80"
                                 )}
                             >
-                                {item.icon}
-                                <span className="font-medium">{item.title}</span>
+                                <span className={cn(
+                                    "flex h-9 w-9 items-center justify-center rounded-lg border border-transparent",
+                                    isActive
+                                        ? "bg-white/20"
+                                        : "bg-reading-accent/5 text-reading-text/70 group-hover:border-reading-accent/30"
+                                )}>
+                                    {item.icon}
+                                </span>
+                                <span className="font-semibold tracking-wide">{item.title}</span>
                             </Link>
                         );
                     })}
                 </nav>
             </ScrollArea>
 
-            <Separator />
+            <Separator className="border-reading-accent/10" />
 
             {/* Logout Button */}
-            <div className="p-4">
+            <div className="px-5 pb-8 pt-6">
                 <Button
                     onClick={logout}
                     variant="ghost"
-                    className="w-full justify-start gap-3 text-reading-text hover:bg-book-green-100"
+                    className="w-full justify-start gap-3 rounded-xl bg-reading-accent/5 px-4 py-3 text-reading-text transition-colors hover:bg-reading-accent/15"
                 >
-                    <LogOut className="w-5 h-5" />
-                    <span>Odjavi se</span>
+                    <LogOut className="h-5 w-5" />
+                    <span className="font-semibold">Odjavi se</span>
                 </Button>
             </div>
-        </>
+        </div>
     );
 
     return (
-        <div className="flex h-screen bg-reading-background">
+        <div className="flex min-h-screen bg-gradient-to-br from-reading-background via-white to-book-green-50 text-reading-text">
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:flex lg:flex-col w-64 bg-reading-surface border-r border-reading-accent/10">
+            <aside className="hidden w-72 flex-col border-r border-reading-accent/10 bg-white/90 shadow-xl backdrop-blur lg:flex">
                 <SidebarContent />
             </aside>
 
             {/* Mobile Sidebar */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                <SheetContent side="left" className="w-64 p-0 bg-reading-surface">
+                <SheetContent side="left" className="w-72 border-none bg-white/95 p-0 shadow-xl">
                     <SidebarContent />
                 </SheetContent>
             </Sheet>
@@ -167,8 +173,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Top Bar */}
-                <header className="h-16 bg-reading-surface border-b border-reading-accent/10 px-4 lg:px-6">
-                    <div className="h-full flex items-center justify-between">
+                <header className="h-20 border-b border-reading-accent/10 bg-white/80 px-4 shadow-sm backdrop-blur lg:px-8">
+                    <div className="flex h-full items-center justify-between">
                         {/* Mobile Menu Button */}
                         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                             <SheetTrigger asChild>
@@ -183,28 +189,32 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         </Sheet>
 
                         {/* Page Title */}
-                        <h1 className={cn(dt.typography.sectionTitle, "hidden lg:block")}>
-                            {navItems.find(item => pathname.startsWith(item.href))?.title || 'Dashboard'}
-                        </h1>
+                        <div className="hidden flex-col gap-1 lg:flex">
+                            <span className="text-xs uppercase tracking-[0.2em] text-reading-text/60">Readify admin</span>
+                            <h1 className={cn(dt.typography.sectionTitle)}>
+                                {navItems.find(item => pathname.startsWith(item.href))?.title || 'Dashboard'}
+                            </h1>
+                        </div>
 
                         {/* User Info */}
                         <div className="flex items-center gap-4">
-                            <span className={cn(dt.typography.muted)}>
-                                {user?.role}
-                            </span>
-                            <div className="w-10 h-10 bg-reading-accent/10 rounded-full flex items-center justify-center">
-                                <span className="text-reading-accent font-semibold">
-                                    {user?.firstName?.[0]}{user?.lastName?.[0]}
-                                </span>
+                            <div className="hidden flex-col text-right text-sm text-reading-text/70 sm:flex">
+                                <span className="font-semibold text-reading-text">{user?.firstName} {user?.lastName}</span>
+                                <span className="text-xs uppercase tracking-widest text-reading-text/60">{user?.role}</span>
+                            </div>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-reading-accent/15 text-lg font-semibold text-reading-accent shadow-inner">
+                                {user?.firstName?.[0]}{user?.lastName?.[0]}
                             </div>
                         </div>
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-auto">
-                    <div className={cn(dt.layouts.pageContainer)}>
-                        {children}
+                <main className="flex-1 overflow-auto px-4 pb-10 pt-6 lg:px-8 lg:pt-8">
+                    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+                        <div className="w-full rounded-3xl border border-reading-accent/10 bg-white/85 p-6 shadow-sm backdrop-blur">
+                            {children}
+                        </div>
                     </div>
                 </main>
             </div>

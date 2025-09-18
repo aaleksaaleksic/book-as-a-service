@@ -36,8 +36,8 @@ public class LocalFileStorageService implements FileStorageService {
     @Value("${app.storage.local.covers-dir:covers}")
     private String coversDir;
 
-    // Maksimalna veličina fajla (50MB default)
-    @Value("${app.storage.max-file-size:52428800}")
+    // Maksimalna veličina fajla (70MB default)
+    @Value("${app.storage.max-file-size:73400320}")
     private long maxFileSize;
 
     private Path booksPath;
