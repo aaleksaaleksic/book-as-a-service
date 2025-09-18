@@ -479,25 +479,6 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                         Novi PDF: {watch('newPdfFile')?.name}
                                     </Badge>
                                 )}
-                                {!watch('newPdfFile') && book.contentUrl && (
-                                    <Button
-                                        asChild
-                                        size="sm"
-                                        variant="outline"
-                                        className="mt-3"
-                                    >
-                                        <a
-                                            href={book.contentUrl.startsWith('http')
-                                                ? book.contentUrl
-                                                : `${process.env.NEXT_PUBLIC_API_URL}${book.contentUrl}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            <Download className="w-4 h-4 mr-2" />
-                                            Otvori postojeći PDF
-                                        </a>
-                                    </Button>
-                                )}
                             </div>
                         </div>
                     </div>
