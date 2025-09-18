@@ -114,7 +114,7 @@ public class Book {
             return true;
         }
 
-        return user != null && user.getActive();
+        return user != null && user.hasActiveSubscription();
     }
 
 

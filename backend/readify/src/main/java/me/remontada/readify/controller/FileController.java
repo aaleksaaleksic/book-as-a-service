@@ -1,6 +1,7 @@
 package me.remontada.readify.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import me.remontada.readify.mapper.BookMapper;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
@@ -84,7 +85,7 @@ public class FileController {
      * No-cache za bezbednost, inline display (ne download)
      */
     @GetMapping("/books/{bookId}/content")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
                                                Authentication authentication,
                                                HttpServletRequest request) {
@@ -144,8 +145,8 @@ public class FileController {
     @PreAuthorize("hasAuthority('CAN_CREATE_BOOKS')")
     public ResponseEntity<Map<String, Object>> uploadBookFiles(
             @RequestParam("bookId") Long bookId,
-            @RequestParam("pdf") MultipartFile pdfFile,
-            @RequestParam("cover") MultipartFile coverFile,
+            @RequestParam(value = "pdf", required = false) MultipartFile pdfFile,
+            @RequestParam(value = "cover", required = false) MultipartFile coverFile,
             Authentication authentication) {
 
         Map<String, Object> response = new HashMap<>();
@@ -155,22 +156,33 @@ public class FileController {
             Book book = bookService.findById(bookId)
                     .orElseThrow(() -> new RuntimeException("Book not found"));
 
-            // Čuvanje fajlova kroz storage service
-            String pdfPath = fileStorageService.saveBookPdf(pdfFile, bookId);
-            String coverPath = fileStorageService.saveBookCover(coverFile, bookId);
+            boolean pdfProvided = pdfFile != null && !pdfFile.isEmpty();
+            boolean coverProvided = coverFile != null && !coverFile.isEmpty();
 
-            // Update putanja u bazi podataka
-            book.setContentFilePath(pdfPath);
-            book.setCoverImageUrl(coverPath);
-            bookService.save(book); // Trebalo bi dodati save() metodu u BookService
+            if (!pdfProvided && !coverProvided) {
+                throw new IllegalArgumentException("At least one file (pdf or cover) is required");
+            }
+
+            if (pdfProvided) {
+                String pdfPath = fileStorageService.saveBookPdf(pdfFile, bookId);
+                book.setContentFilePath(pdfPath);
+                response.put("pdfPath", pdfPath);
+            }
+
+            if (coverProvided) {
+                String coverPath = fileStorageService.saveBookCover(coverFile, bookId);
+                book.setCoverImageUrl(coverPath);
+                response.put("coverPath", coverPath);
+            }
+
+            Book updatedBook = bookService.save(book);
 
             log.info("Uploaded files for book {} by user {}",
                     bookId, authentication.getName());
 
             response.put("success", true);
             response.put("message", "Files uploaded successfully");
-            response.put("pdfPath", pdfPath);
-            response.put("coverPath", coverPath);
+            response.put("book", BookMapper.toResponseDTO(updatedBook));
 
             return ResponseEntity.ok(response);
 
@@ -198,14 +210,22 @@ public class FileController {
             Authentication authentication) {
 
         try {
+            Book book = bookService.findById(bookId)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+
             fileStorageService.deleteBookFiles(bookId);
+
+            book.setContentFilePath(null);
+            book.setCoverImageUrl(null);
+            Book updatedBook = bookService.save(book);
 
             log.info("Deleted files for book {} by user {}",
                     bookId, authentication.getName());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Files deleted successfully"
+                    "message", "Files deleted successfully",
+                    "book", BookMapper.toResponseDTO(updatedBook)
             ));
 
         } catch (IOException e) {
@@ -213,6 +233,12 @@ public class FileController {
             return ResponseEntity.status(500).body(Map.of(
                     "success", false,
                     "message", "Failed to delete files: " + e.getMessage()
+            ));
+        } catch (RuntimeException e) {
+            log.error("Error deleting files for book: {}", bookId, e);
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
             ));
         }
     }
@@ -243,8 +269,15 @@ public class FileController {
         if (filename == null) return "document";
 
         // Zameni sve ne-alfanumeričke karaktere sa _
-        return filename.replaceAll("[^a-zA-Z0-9.-]", "_")
-                .replaceAll("_{2,}", "_") // Multiple _ to single _
-                .substring(0, Math.min(filename.length(), 50)); // Max 50 chars
+        String sanitized = filename.replaceAll("[^a-zA-Z0-9.-]", "_")
+                .replaceAll("_{2,}", "_");
+
+        sanitized = sanitized.replaceAll("^_+", "");
+
+        if (sanitized.isBlank()) {
+            sanitized = "document";
+        }
+
+        return sanitized.substring(0, Math.min(sanitized.length(), 50));
     }
 }

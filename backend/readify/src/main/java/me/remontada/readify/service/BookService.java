@@ -13,6 +13,7 @@ public interface BookService {
     List<Book> getAllAvailableBooks();
     List<Book> getFreeBooks();
     List<Book> getPremiumBooks();
+    List<Book> getAllBooks();
     Optional<Book> findById(Long id);
     List<Book> findByCategory(String category);
     List<Book> findByAuthor(String author);
@@ -24,7 +25,7 @@ public interface BookService {
 
     Book createBook(String title, String author, String description, String isbn,
                     String category, Integer pages, String language, Integer publicationYear,
-                    BigDecimal price, Boolean isPremium, User addedBy);
+                    BigDecimal price, Boolean isPremium, Boolean isAvailable, User addedBy);
 
     Book updateBook(Long id, Book bookData, User updatedBy);
     void deleteBook(Long id);

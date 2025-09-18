@@ -175,21 +175,22 @@ public class BookController {
         try {
             User currentUser = getCurrentUser(authentication);
 
-            String title = (String) request.get("title");
-            String author = (String) request.get("author");
-            String description = (String) request.get("description");
-            String isbn = (String) request.get("isbn");
-            String category = (String) request.get("category");
-            Integer pages = (Integer) request.get("pages");
-            String language = (String) request.get("language");
-            Integer publicationYear = (Integer) request.get("publicationYear");
-            Boolean isPremium = (Boolean) request.get("isPremium");
+            String title = extractString(request.get("title"));
+            String author = extractString(request.get("author"));
+            String description = extractString(request.get("description"));
+            String isbn = extractString(request.get("isbn"));
+            String category = extractString(request.get("category"));
+            Integer pages = extractInteger(request.get("pages"));
+            String language = extractString(request.get("language"));
+            Integer publicationYear = extractInteger(request.get("publicationYear"));
+            Boolean isPremium = extractBoolean(request.get("isPremium"));
+            Boolean isAvailable = extractBoolean(request.get("isAvailable"));
 
             BigDecimal price = parsePrice(request.get("price"));
 
             Book createdBook = bookService.createBook(
                     title, author, description, isbn, category,
-                    pages, language, publicationYear, price, isPremium, currentUser
+                    pages, language, publicationYear, price, isPremium, isAvailable, currentUser
             );
 
             Map<String, Object> response = new HashMap<>();
@@ -222,14 +223,16 @@ public class BookController {
 
             // Create update data object
             Book bookData = new Book();
-            if (request.get("title") != null) bookData.setTitle((String) request.get("title"));
-            if (request.get("author") != null) bookData.setAuthor((String) request.get("author"));
-            if (request.get("description") != null) bookData.setDescription((String) request.get("description"));
-            if (request.get("category") != null) bookData.setCategory((String) request.get("category"));
-            if (request.get("pages") != null) bookData.setPages((Integer) request.get("pages"));
-            if (request.get("language") != null) bookData.setLanguage((String) request.get("language"));
-            if (request.get("isPremium") != null) bookData.setIsPremium((Boolean) request.get("isPremium"));
-            if (request.get("isAvailable") != null) bookData.setIsAvailable((Boolean) request.get("isAvailable"));
+            if (request.get("title") != null) bookData.setTitle(extractString(request.get("title")));
+            if (request.get("author") != null) bookData.setAuthor(extractString(request.get("author")));
+            if (request.get("description") != null) bookData.setDescription(extractString(request.get("description")));
+            if (request.get("category") != null) bookData.setCategory(extractString(request.get("category")));
+            if (request.get("pages") != null) bookData.setPages(extractInteger(request.get("pages")));
+            if (request.get("language") != null) bookData.setLanguage(extractString(request.get("language")));
+            if (request.get("isbn") != null) bookData.setIsbn(extractString(request.get("isbn")));
+            if (request.get("publicationYear") != null) bookData.setPublicationYear(extractInteger(request.get("publicationYear")));
+            if (request.get("isPremium") != null) bookData.setIsPremium(extractBoolean(request.get("isPremium")));
+            if (request.get("isAvailable") != null) bookData.setIsAvailable(extractBoolean(request.get("isAvailable")));
 
             // Handle price update
             if (request.get("price") != null) {
@@ -320,6 +323,38 @@ public class BookController {
                 .orElseThrow(() -> new RuntimeException("User not found: " + email));
     }
 
+    private String extractString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String str) {
+            return str.trim();
+        }
+        return value.toString();
+    }
+
+    private Integer extractInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String str && !str.isBlank()) {
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private Boolean extractBoolean(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value instanceof String str && !str.isBlank()) {
+            return Boolean.parseBoolean(str.trim());
+        }
+        return null;
+    }
 
     private BigDecimal parsePrice(Object priceObj) {
         if (priceObj == null) {

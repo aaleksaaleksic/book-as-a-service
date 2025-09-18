@@ -39,7 +39,7 @@ public class BookMapper {
 
                     .isPremium(book.getIsPremium())
                     .isAvailable(book.getIsAvailable())
-                    .coverImageUrl(book.getCoverImageUrl())
+                    .coverImageUrl(resolveCoverImageUrl(book))
 
                     .averageRating(safeGetBigDecimal(book.getAverageRating()))
 
@@ -124,6 +124,34 @@ public class BookMapper {
         }
 
         return String.format("/api/v1/files/books/%d/content", bookId);
+    }
+
+    private static String resolveCoverImageUrl(Book book) {
+        if (book == null) {
+            return null;
+        }
+
+        String coverPath = book.getCoverImageUrl();
+        if (coverPath == null || coverPath.isBlank()) {
+            return null;
+        }
+
+        String normalized = coverPath.replace("\\", "/");
+
+        if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+            return normalized;
+        }
+
+        if (normalized.startsWith("/api/")) {
+            return normalized;
+        }
+
+        Long bookId = book.getId();
+        if (bookId != null) {
+            return String.format("/api/v1/files/covers/%d", bookId);
+        }
+
+        return normalized;
     }
 
 
