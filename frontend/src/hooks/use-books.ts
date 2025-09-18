@@ -98,7 +98,8 @@ export function useTopRatedBooks() {
     });
 }
 
-type CreateBookMutationPayload = CreateBookRequest & {
+type CreateBookMutationPayload = Omit<CreateBookRequest, 'price'> & {
+    price?: number;
     pdfFile?: File | null;
     coverFile?: File | null;
 };
@@ -118,7 +119,7 @@ export function useCreateBook() {
                     category: data.category,
                     pages: data.pages,
                     language: data.language,
-                    price: Number(data.price),
+                    price: Number(data.price ?? 0),
                     isPremium: data.isPremium,
                     isAvailable: data.isAvailable,
                 };
