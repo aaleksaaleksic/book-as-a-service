@@ -221,7 +221,7 @@ export function CreateBookForm() {
                                             Popularne kategorije
                                         </p>
                                         {POPULAR_CATEGORIES.map(category => (
-                                            <SelectItem key={category} value={category}>
+                                            <SelectItem key={`popular-${category}`} value={category}>
                                                 {category}
                                             </SelectItem>
                                         ))}
@@ -233,7 +233,7 @@ export function CreateBookForm() {
                                             Sve kategorije
                                         </p>
                                         {BOOK_CATEGORIES.map(category => (
-                                            <SelectItem key={category} value={category}>
+                                            <SelectItem key={`all-${category}`} value={category}>
                                                 {category}
                                             </SelectItem>
                                         ))}
