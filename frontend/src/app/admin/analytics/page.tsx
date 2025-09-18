@@ -57,10 +57,11 @@ export default function AdminAnalyticsPage() {
     }, [users]);
 
     const topReaders = useMemo(() => {
+        const accentPalette = ['bg-amber-500', 'bg-indigo-500', 'bg-emerald-500', 'bg-reading-accent'];
         return (topReadersData?.readers ?? []).map((reader, index) => ({
             ...reader,
             label: userMap.get(reader.userId) ?? `Korisnik #${reader.userId}`,
-            accent: index === 0 ? 'from-amber-400 to-orange-500' : index === 1 ? 'from-purple-400 to-indigo-500' : 'from-emerald-400 to-reading-accent',
+            accent: accentPalette[index % accentPalette.length],
         }));
     }, [topReadersData?.readers, userMap]);
 
@@ -98,10 +99,8 @@ export default function AdminAnalyticsPage() {
     return (
         <AdminLayout>
             <div className="space-y-8">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-reading-accent via-book-green-100 to-cyan-500 p-8 text-white shadow-xl">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.25),transparent_55%)]" />
-                    <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),transparent_65%)]" />
-                    <div className="relative z-10 space-y-4">
+                <div className="rounded-3xl bg-reading-accent p-8 text-white shadow-xl">
+                    <div className="space-y-4">
                         <div className="flex items-center gap-3 text-sm uppercase tracking-[0.5em] text-white/70">
                             <Sparkles className="h-4 w-4" />
                             Superinteligentna analitika
@@ -159,7 +158,7 @@ export default function AdminAnalyticsPage() {
                                                 key={book.bookId}
                                                 className="relative overflow-hidden rounded-2xl border border-reading-accent/10 bg-reading-surface/80 p-4 shadow-inner"
                                             >
-                                                <div className="absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-gradient-to-b from-reading-accent to-emerald-500" />
+                                                <div className="absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-reading-accent" />
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div>
                                                         <div className="flex items-center gap-2">
@@ -174,7 +173,7 @@ export default function AdminAnalyticsPage() {
                                                     </div>
                                                 </div>
                                                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-reading-accent/10">
-                                                    <div className="h-full rounded-full bg-gradient-to-r from-reading-accent via-emerald-500 to-emerald-400" style={{ width: `${progress}%` }} />
+                                                    <div className="h-full rounded-full bg-reading-accent" style={{ width: `${progress}%` }} />
                                                 </div>
                                             </div>
                                         );
@@ -239,7 +238,7 @@ export default function AdminAnalyticsPage() {
                                     {topReaders.map((reader, index) => (
                                         <div key={reader.userId} className="flex items-center justify-between rounded-2xl border border-reading-accent/10 bg-reading-surface/80 px-4 py-3 shadow-inner">
                                             <div className="flex items-center gap-3">
-                                                <div className={cn('flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-semibold text-white shadow', reader.accent)}>
+                                                <div className={cn('flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold text-white shadow', reader.accent)}>
                                                     {index + 1}
                                                 </div>
                                                 <div>
