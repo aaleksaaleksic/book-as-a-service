@@ -67,7 +67,7 @@ export const dt = {
         bookCard: "bg-reading-surface rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105",
 
         // Navigation
-        nav: "bg-reading-surface/95 backdrop-blur-sm border-b border-reading-accent/10",
+        nav: "sticky top-0 z-50 w-full bg-reading-background/80 backdrop-blur-sm",
 
         // Modal/overlay
         modal: "bg-reading-surface border border-reading-accent/20 rounded-xl shadow-2xl",
