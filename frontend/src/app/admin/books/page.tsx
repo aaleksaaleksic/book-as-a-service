@@ -49,6 +49,7 @@ import { useCan } from '@/hooks/useAuth';
 import { BookResponseDTO } from '@/api/types/books.types';
 import { dt } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 const FALLBACK_COVER_IMAGE = '/book-placeholder.svg';
 
@@ -84,41 +85,7 @@ export default function AdminBooksPage() {
         }
     };
 
-    const resolveCoverUrl = (book: BookResponseDTO) => {
-        const rawCoverUrl = book.coverImageUrl?.trim();
-
-        if (!rawCoverUrl) {
-            return null;
-        }
-
-        if (/^https?:\/\//i.test(rawCoverUrl)) {
-            return rawCoverUrl;
-        }
-
-        const normalizedPath = rawCoverUrl.startsWith('/') ? rawCoverUrl : `/${rawCoverUrl}`;
-        const candidateBases: string[] = [];
-
-        if (process.env.NEXT_PUBLIC_API_URL) {
-            candidateBases.push(process.env.NEXT_PUBLIC_API_URL);
-        }
-
-        if (typeof window !== 'undefined') {
-            candidateBases.push(window.location.origin);
-        }
-
-        candidateBases.push('http://localhost:8080');
-
-        for (const base of candidateBases) {
-            try {
-                const formattedBase = base.endsWith('/') ? base : `${base}/`;
-                return new URL(normalizedPath, formattedBase).toString();
-            } catch (error) {
-                console.warn('Failed to resolve cover URL with base', base, error);
-            }
-        }
-
-        return normalizedPath;
-    };
+    const resolveCoverUrl = (book: BookResponseDTO) => resolveApiFileUrl(book.coverImageUrl);
 
     return (
         <AdminLayout>

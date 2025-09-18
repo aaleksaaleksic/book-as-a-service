@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { useAuth } from '@/hooks/useAuth';
 import { dt } from '@/lib/design-tokens';
+import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 interface Book {
     id: number;
@@ -83,7 +84,7 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
                                 <CardContent className="p-0 h-full flex flex-col">
                                     <div className="relative">
                                         <img
-                                            src={book.coverImageUrl}
+                                            src={resolveApiFileUrl(book.coverImageUrl) ?? book.coverImageUrl}
                                             alt={book.title}
                                             className="w-full h-48 sm:h-56 object-cover rounded-t-lg"
                                         />
