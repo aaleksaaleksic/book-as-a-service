@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.UserService;
 import me.remontada.readify.util.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +21,8 @@ import java.util.Optional;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUtil jwtUtil;
     private final UserService userService;
@@ -40,23 +44,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
-        String email = jwtUtil.extractEmail(token);
+        try {
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractEmail(token);
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            Optional<User> optionalUser = userService.findByEmail(email);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                Optional<User> optionalUser = userService.findByEmail(email);
 
-            if (optionalUser.isPresent() && jwtUtil.validateToken(token, email)) {
-                User user = optionalUser.get();
+                if (optionalUser.isPresent() && jwtUtil.validateToken(token, email)) {
+                    User user = optionalUser.get();
 
-                MyUserDetails userDetails = new MyUserDetails(user);
+                    MyUserDetails userDetails = new MyUserDetails(user);
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (Exception ex) {
+            // Ako JWT nije validan (npr. istekao, pogrešno potpisan itd.), ne prekidamo ceo request.
+            // Time omogućavamo da public endpointi (poput cover slika) ostanu dostupni čak i ako korisnik
+            // ima zastareo token u storage-u. Endpointi koji zahtevaju autentikaciju će i dalje vratiti 401.
+            logger.warn("Invalid JWT token received", ex);
         }
         filterChain.doFilter(request, response);
     }
