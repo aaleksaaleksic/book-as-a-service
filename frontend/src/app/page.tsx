@@ -1,7 +1,6 @@
 'use client';
 
 import {Suspense, useEffect} from 'react';
-import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { BookCarousel } from '@/components/landing/BookCarousel';
 import { CategoryGrid } from '@/components/landing/CategoryGrid';
@@ -127,8 +126,6 @@ export default function LandingPage() {
 
   return (
       <div className={dt.layouts.mainPage}>
-        <Header />
-
         <main>
           <HeroSection featuredBook={featuredBook} />
 
