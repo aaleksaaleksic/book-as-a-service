@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { SyntheticEvent, useState } from 'react';
 import Link from 'next/link';
 import {
     Plus,
@@ -50,6 +50,8 @@ import { useCan } from '@/hooks/useAuth';
 import { BookResponseDTO } from '@/api/types/books.types';
 import { dt } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+
+const FALLBACK_COVER_IMAGE = '/book-placeholder.svg';
 
 export default function AdminBooksPage() {
     const { can } = useCan();
@@ -225,25 +227,29 @@ export default function AdminBooksPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredBooks.map((book) => (
-                                            <TableRow key={book.id}>
-                                                {/* Cover */}
-                                                <TableCell>
-                                                    {resolveCoverUrl(book) ? (
-                                                        <img
-                                                            src={resolveCoverUrl(book) ?? undefined}
-                                                            alt={book.title}
-                                                            className="w-12 h-16 object-cover rounded"
-                                                            onError={(e) => {
-                                                                (e.target as any).src = 'https://via.placeholder.com/48x64';
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <div className="w-12 h-16 bg-reading-accent/10 rounded flex items-center justify-center">
-                                                            <BookOpen className="w-6 h-6 text-reading-accent/40" />
-                                                        </div>
-                                                    )}
-                                                </TableCell>
+                                        {filteredBooks.map((book) => {
+                                            const coverUrl = resolveCoverUrl(book);
+
+                                            return (
+                                                <TableRow key={book.id}>
+                                                    {/* Cover */}
+                                                    <TableCell>
+                                                        {coverUrl ? (
+                                                            <img
+                                                                src={coverUrl}
+                                                                alt={book.title}
+                                                                className="w-12 h-16 object-cover rounded"
+                                                                onError={(event: SyntheticEvent<HTMLImageElement>) => {
+                                                                    event.currentTarget.onerror = null;
+                                                                    event.currentTarget.src = FALLBACK_COVER_IMAGE;
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-12 h-16 bg-reading-accent/10 rounded flex items-center justify-center">
+                                                                <BookOpen className="w-6 h-6 text-reading-accent/40" />
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
 
                                                 {/* Naslov */}
                                                 <TableCell>
@@ -353,7 +359,8 @@ export default function AdminBooksPage() {
                                                     </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </div>
