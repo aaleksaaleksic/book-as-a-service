@@ -396,7 +396,7 @@ export function CreateBookForm() {
                                     className="hidden"
                                 />
                                 <p className={cn(dt.typography.muted, "mt-2")}>
-                                    Maksimalno 50MB
+                                    Maksimalno 70MB
                                 </p>
                                 {watch('pdfFile') && (
                                     <Badge variant="secondary" className="mt-3">
