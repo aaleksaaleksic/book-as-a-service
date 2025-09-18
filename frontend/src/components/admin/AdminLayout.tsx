@@ -7,7 +7,6 @@ import {
     BookOpen,
     Users,
     BarChart3,
-    Settings,
     Upload,
     DollarSign,
     Shield,
@@ -69,11 +68,6 @@ const navItems: NavItem[] = [
         href: '/admin/analytics',
         icon: <BarChart3 className="w-5 h-5" />,
         permission: 'CAN_VIEW_ANALYTICS',
-    },
-    {
-        title: 'Podešavanja',
-        href: '/admin/settings',
-        icon: <Settings className="w-5 h-5" />,
     },
 ];
 
@@ -157,7 +151,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     );
 
     return (
-        <div className="flex min-h-screen bg-gradient-to-br from-reading-background via-white to-book-green-50 text-reading-text">
+        <div className="flex min-h-screen bg-reading-background text-reading-text">
             {/* Desktop Sidebar */}
             <aside className="hidden w-72 flex-col border-r border-reading-accent/10 bg-white/90 shadow-xl backdrop-blur lg:flex">
                 <SidebarContent />

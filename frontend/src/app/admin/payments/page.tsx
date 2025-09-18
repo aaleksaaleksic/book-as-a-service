@@ -77,9 +77,8 @@ export default function AdminPaymentsPage() {
     return (
         <AdminLayout>
             <div className="space-y-8">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-book-green-600 via-reading-accent to-emerald-600 p-8 text-white shadow-xl">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_70%)]" />
-                    <div className="relative z-10 flex flex-col gap-4">
+                <div className="rounded-3xl bg-reading-accent p-8 text-white shadow-xl">
+                    <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-3 text-sm uppercase tracking-[0.4em] text-white/70">
                             <DollarSign className="h-4 w-4" />
                             Finansijski puls
@@ -181,7 +180,7 @@ export default function AdminPaymentsPage() {
                                     </div>
                                     <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-reading-accent/10">
                                         <div
-                                            className="h-full rounded-full bg-gradient-to-r from-reading-accent to-emerald-500"
+                                            className="h-full rounded-full bg-reading-accent"
                                             style={{ width: `${Math.min(100, totalRevenue ? (monthlyRevenue / totalRevenue) * 100 : 0)}%` }}
                                         />
                                     </div>
@@ -195,7 +194,7 @@ export default function AdminPaymentsPage() {
                                         {[25, 45, 65, conversionRate].map((value, index) => (
                                             <div key={index} className="flex-1">
                                                 <div
-                                                    className="w-full rounded-xl bg-gradient-to-t from-reading-accent/20 via-reading-accent/40 to-reading-accent"
+                                                    className="w-full rounded-xl bg-reading-accent"
                                                     style={{ height: `${Math.max(12, Math.min(100, value))}%` }}
                                                 />
                                             </div>
@@ -266,7 +265,7 @@ export default function AdminPaymentsPage() {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                    <Card className="border border-reading-accent/10 bg-gradient-to-br from-reading-accent/5 via-white to-white/90 p-6 shadow-inner">
+                    <Card className="border border-reading-accent/10 bg-white p-6 shadow-inner">
                         <CardHeader className="space-y-2 pb-4">
                             <CardTitle className="text-lg font-semibold text-reading-text">Sažetak KPI pokazatelja</CardTitle>
                             <p className="text-sm text-reading-text/60">Brzi pregled ključnih indikatora uspeha monetizacije.</p>
