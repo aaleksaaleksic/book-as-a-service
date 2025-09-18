@@ -1,226 +1,198 @@
 'use client';
 
-import {Suspense, useEffect} from 'react';
+import { useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { BookCarousel } from '@/components/landing/BookCarousel';
-import { CategoryGrid } from '@/components/landing/CategoryGrid';
+import { TopBooksSection } from '@/components/landing/TopBooksSection';
+import { ValuePropositionSection } from '@/components/landing/ValuePropositionSection';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Button } from '@/components/ui/button';
 import { dt } from '@/lib/design-tokens';
-import {useAuth} from "@/hooks/useAuth";
-
-const featuredBook = {
-  id: 1,
-  title: "Ponoćna biblioteka",
-  author: "Met Haig",
-  description: "Između života i smrti postoji biblioteka, a u toj biblioteci, police se protežu zauvek. Svaka knjiga pruža priliku da probaš drugi život koji si mogao da živiš.",
-  coverImageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=600&fit=crop",
-  category: "Književnost",
-  rating: 4.5,
-};
-
-const featuredBooks = [
-  {
-    id: 2,
-    title: "Atomske navike",
-    author: "Džejms Klir",
-    coverImageUrl: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop",
-    category: "Samopomoć",
-    rating: 4.8,
-    popular: true,
-  },
-  {
-    id: 3,
-    title: "Kapa",
-    author: "Frenk Herbert",
-    coverImageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop",
-    category: "Naučna fantastika",
-    rating: 4.6,
-    featured: true,
-  },
-  {
-    id: 4,
-    title: "Psihologija novca",
-    author: "Morgan Hauzel",
-    coverImageUrl: "https://images.unsplash.com/photo-1554475901-4538ddfbccc2?w=300&h=400&fit=crop",
-    category: "Finansije",
-    rating: 4.7,
-  },
-  {
-    id: 5,
-    title: "Obrazovanje",
-    author: "Tara Vestover",
-    coverImageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop",
-    category: "Biografija",
-    rating: 4.9,
-    popular: true,
-  },
-  {
-    id: 6,
-    title: "Tihi pacijent",
-    author: "Aleks Mihaelides",
-    coverImageUrl: "https://images.unsplash.com/photo-1592496431122-2349e0fbc666?w=300&h=400&fit=crop",
-    category: "Triler",
-    rating: 4.4,
-  },
-];
-
-const popularBooks = [
-  {
-    id: 7,
-    title: "Sedam muževa Evelin Hugo",
-    author: "Tejlor Dženkins Rid",
-    coverImageUrl: "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=300&h=400&fit=crop",
-    category: "Romans",
-    rating: 4.6,
-    popular: true,
-  },
-  {
-    id: 8,
-    title: "Sapijens",
-    author: "Juval Noa Harari",
-    coverImageUrl: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=300&h=400&fit=crop",
-    category: "Istorija",
-    rating: 4.5,
-  },
-  {
-    id: 9,
-    title: "Četvrtkov klub ubica",
-    author: "Ričard Ozman",
-    coverImageUrl: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&h=400&fit=crop",
-    category: "Misterija",
-    rating: 4.3,
-  },
-  {
-    id: 10,
-    title: "Postajanje",
-    author: "Mišel Obama",
-    coverImageUrl: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&h=400&fit=crop",
-    category: "Biografija",
-    rating: 4.8,
-  },
-];
+import { useAuth } from '@/hooks/useAuth';
+import { usePopularBooks } from '@/hooks/use-books';
+import { cn } from '@/lib/utils';
+import { ArrowUpRight, Mail } from 'lucide-react';
 
 export default function LandingPage() {
+    const router = useRouter();
+    const { isAuthenticated, isLoading, refreshUser } = useAuth();
+    const { data: popularBooks = [], isLoading: isPopularLoading } = usePopularBooks();
 
-  const { isAuthenticated, isLoading, refreshUser } = useAuth();
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
+        const token = localStorage.getItem('readbookhub_auth_token');
+
+        if (token && !isAuthenticated) {
+            void refreshUser();
+        }
+    }, [isAuthenticated, refreshUser]);
+
+    const topBook = useMemo(() => popularBooks[0], [popularBooks]);
+
+    const handlePrimaryCta = () => {
+        if (isAuthenticated) {
+            router.push('/dashboard');
+            return;
+        }
+
+        router.push('/auth/register');
+    };
+
+    const handleBrowse = () => {
+        router.push('/browse');
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-reading-background">
+                <LoadingSpinner size="lg" text="Pripremamo vašu biblioteku..." />
+            </div>
+        );
     }
 
-    const token = localStorage.getItem('readbookhub_auth_token');
+    const currentYear = new Date().getFullYear();
 
-    if (token && !isAuthenticated) {
-      void refreshUser();
-    }
-  }, [isAuthenticated, refreshUser]);
-
-  if (isLoading) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-book-green-50 via-book-green-100 to-book-green-200">
-          <LoadingSpinner size="lg" />
+        <div className={cn(dt.layouts.mainPage, 'text-reading-text')}>
+            <main>
+                <HeroSection
+                    topBook={topBook}
+                    isAuthenticated={isAuthenticated}
+                    isBooksLoading={isPopularLoading}
+                />
+
+                <TopBooksSection books={popularBooks} isLoading={isPopularLoading} />
+
+                <ValuePropositionSection isAuthenticated={isAuthenticated} />
+
+                <section className="relative overflow-hidden border-t border-reading-accent/10 bg-reading-background/80 py-20">
+                    <div className="absolute inset-0 -z-10 bg-hero-grid opacity-40" aria-hidden="true" />
+                    <div className={dt.layouts.pageContainer}>
+                        <div className="mx-auto max-w-3xl text-center">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-reading-accent/20 bg-reading-surface px-4 py-2 text-xs font-semibold uppercase tracking-widest text-reading-text/70">
+                                Spremni za sledeću knjigu?
+                            </div>
+                            <h2 className="mt-6 text-3xl font-semibold text-reading-text sm:text-4xl">
+                                Pridruži se zajednici čitalaca koja svakog dana otkriva nove svetove
+                            </h2>
+                            <p className="mt-4 text-sm text-reading-text/70">
+                                Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku, ReadBookHub ti pruža sve alate za nezaboravno iskustvo.
+                            </p>
+
+                            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                                <Button
+                                    size="lg"
+                                    onClick={handlePrimaryCta}
+                                    className="group flex items-center gap-2 rounded-full bg-reading-accent px-8 py-6 text-lg font-semibold text-white shadow-lg transition hover:bg-reading-accent/90"
+                                >
+                                    {isAuthenticated ? 'Otvori moju biblioteku' : 'Aktiviraj besplatnu probu'}
+                                    <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                </Button>
+
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    onClick={handleBrowse}
+                                    className="rounded-full border-reading-accent/30 bg-reading-surface px-8 py-6 text-lg font-semibold text-reading-text shadow-sm transition hover:bg-book-green-100"
+                                >
+                                    Istraži katalog
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="border-t border-reading-accent/10 bg-reading-surface/90">
+                <div className={cn(dt.layouts.pageContainer, 'py-16')}>
+                    <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr_1fr]">
+                        <div className="space-y-4">
+                            <h3 className="text-2xl font-semibold text-reading-text">ReadBookHub</h3>
+                            <p className="max-w-sm text-sm text-reading-text/70">
+                                Platforma koja spaja vrhunske knjige, pametne preporuke i zajednicu istinskih ljubitelja čitanja.
+                                Kreirana za sve koji žele da čitaju više i bolje.
+                            </p>
+                            <div className="flex items-center gap-3 rounded-2xl border border-reading-accent/20 bg-reading-background/60 px-4 py-3 text-sm text-reading-text/70">
+                                <Mail className="h-5 w-5 text-reading-accent" />
+                                support@readbookhub.rs
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="text-sm font-semibold uppercase tracking-widest text-reading-text/70">Navigacija</h4>
+                            <ul className="mt-4 space-y-3 text-sm text-reading-text/70">
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={handleBrowse}
+                                        className="transition hover:text-reading-accent"
+                                    >
+                                        Pretraži knjige
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/auth/login')}
+                                        className="transition hover:text-reading-accent"
+                                    >
+                                        Prijavi se
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={handlePrimaryCta}
+                                        className="transition hover:text-reading-accent"
+                                    >
+                                        {isAuthenticated ? 'Idi na kontrolnu tablu' : 'Registruj se'}
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="text-sm font-semibold uppercase tracking-widest text-reading-text/70">Resursi</h4>
+                            <ul className="mt-4 space-y-3 text-sm text-reading-text/70">
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/help')}
+                                        className="transition hover:text-reading-accent"
+                                    >
+                                        Pomoć i podrška
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/terms')}
+                                        className="transition hover:text-reading-accent"
+                                    >
+                                        Uslovi korišćenja
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/privacy')}
+                                        className="transition hover:text-reading-accent"
+                                    >
+                                        Privatnost
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="mt-12 border-t border-reading-accent/10 pt-6 text-sm text-reading-text/60">
+                        © {currentYear} ReadBookHub. Sva prava zadržana.
+                    </div>
+                </div>
+            </footer>
         </div>
     );
-  }
-
-  return (
-      <div className={dt.layouts.mainPage}>
-        <main>
-          <HeroSection featuredBook={featuredBook} />
-
-          <div className={dt.layouts.pageContainer}>
-            <Suspense fallback={<LoadingSpinner size="lg" text="Učitavam izdvojene knjige..." />}>
-              <BookCarousel
-                  title="Izdvojene knjige"
-                  books={featuredBooks}
-                  viewAllHref="/browse?featured=true"
-              />
-            </Suspense>
-
-            <Suspense fallback={<LoadingSpinner size="lg" text="Učitavam popularne knjige..." />}>
-              <BookCarousel
-                  title="Popularne ovog meseca"
-                  books={popularBooks}
-                  viewAllHref="/browse?popular=true"
-              />
-            </Suspense>
-
-            <Suspense fallback={<LoadingSpinner size="lg" text="Učitavam kategorije..." />}>
-              <CategoryGrid />
-            </Suspense>
-          </div>
-        </main>
-
-        <footer className="bg-reading-surface border-t border-reading-accent/10 mt-16">
-          <div className={dt.layouts.pageContainer}>
-            <div className="py-12">
-              <div className="grid md:grid-cols-4 gap-8">
-                <div className="md:col-span-2">
-                  <h3 className={`${dt.typography.cardTitle} text-reading-text mb-4`}>
-                    ReadBookHub
-                  </h3>
-                  <p className={`${dt.typography.body} text-reading-text/70 max-w-md`}>
-                    Vaša premium digitalna biblioteka. Čitajte neograničeno knjiga uz našu pretplatu.
-                    Počnite svoje čitalačko putovanje danas.
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className={`${dt.typography.body} font-semibold text-reading-text mb-4`}>
-                    Brze veze
-                  </h4>
-                  <ul className="space-y-2">
-                    <li>
-                      <a href="/browse" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
-                        Pretraži knjige
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/categories" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
-                        Kategorije
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/pricing" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
-                        Cene
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className={`${dt.typography.body} font-semibold text-reading-text mb-4`}>
-                    Podrška
-                  </h4>
-                  <ul className="space-y-2">
-                    <li>
-                      <a href="/help" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
-                        Pomoć
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/contact" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
-                        Kontakt
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/privacy" className={`${dt.typography.small} text-reading-text/60 hover:text-reading-accent transition-colors`}>
-                        Privatnost
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="border-t border-reading-accent/10 mt-8 pt-8 text-center">
-                <p className={`${dt.typography.small} text-reading-text/60`}>
-                  © 2024 ReadBookHub. Sva prava zadržana.
-                </p>
-              </div>
-            </div>
-          </div>
-        </footer>
-      </div>
-  );
 }
