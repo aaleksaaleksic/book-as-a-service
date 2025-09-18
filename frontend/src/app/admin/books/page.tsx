@@ -92,6 +92,23 @@ export default function AdminBooksPage() {
         }).format(price);
     };
 
+    const resolveCoverUrl = (book: BookResponseDTO) => {
+        const coverUrl = book.coverImageUrl;
+
+        if (!coverUrl) {
+            return null;
+        }
+
+        if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://')) {
+            return coverUrl;
+        }
+
+        const normalizedPath = coverUrl.startsWith('/') ? coverUrl : `/${coverUrl}`;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
+
+        return baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
+    };
+
     return (
         <AdminLayout>
             <div className="space-y-6">
@@ -212,9 +229,9 @@ export default function AdminBooksPage() {
                                             <TableRow key={book.id}>
                                                 {/* Cover */}
                                                 <TableCell>
-                                                    {book.coverImageUrl ? (
+                                                    {resolveCoverUrl(book) ? (
                                                         <img
-                                                            src={`${process.env.NEXT_PUBLIC_API_URL}/api/v1/files/covers/${book.id}`}
+                                                            src={resolveCoverUrl(book) ?? undefined}
                                                             alt={book.title}
                                                             className="w-12 h-16 object-cover rounded"
                                                             onError={(e) => {
