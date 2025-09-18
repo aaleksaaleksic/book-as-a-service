@@ -92,6 +92,9 @@ export function CreateBookForm() {
     const isPremium = watch('isPremium');
     const isAvailable = watch('isAvailable');
 
+    const popularCategorySet = new Set<string>([...POPULAR_CATEGORIES]);
+    const otherCategories = BOOK_CATEGORIES.filter(category => !popularCategorySet.has(category));
+
     // Handle cover image preview
     const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -210,7 +213,10 @@ export function CreateBookForm() {
                         {/* Kategorija */}
                         <div className="space-y-2">
                             <Label htmlFor="category">Kategorija *</Label>
-                            <Select onValueChange={(value) => setValue('category', value)}>
+                            <Select
+                                value={watch('category')}
+                                onValueChange={(value) => setValue('category', value, { shouldDirty: true })}
+                            >
                                 <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
                                     <SelectValue placeholder="Izaberite kategoriju" />
                                 </SelectTrigger>
@@ -220,7 +226,7 @@ export function CreateBookForm() {
                                         <p className="text-xs font-semibold text-muted-foreground mb-2">
                                             Popularne kategorije
                                         </p>
-                                        {POPULAR_CATEGORIES.map(category => (
+                                        {[...popularCategorySet].map(category => (
                                             <SelectItem key={`popular-${category}`} value={category}>
                                                 {category}
                                             </SelectItem>
@@ -232,7 +238,7 @@ export function CreateBookForm() {
                                         <p className="text-xs font-semibold text-muted-foreground mb-2">
                                             Sve kategorije
                                         </p>
-                                        {BOOK_CATEGORIES.map(category => (
+                                        {otherCategories.map(category => (
                                             <SelectItem key={`all-${category}`} value={category}>
                                                 {category}
                                             </SelectItem>
