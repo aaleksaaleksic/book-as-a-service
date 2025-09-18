@@ -95,20 +95,39 @@ export default function AdminBooksPage() {
     };
 
     const resolveCoverUrl = (book: BookResponseDTO) => {
-        const coverUrl = book.coverImageUrl;
+        const rawCoverUrl = book.coverImageUrl?.trim();
 
-        if (!coverUrl) {
+        if (!rawCoverUrl) {
             return null;
         }
 
-        if (coverUrl.startsWith('http://') || coverUrl.startsWith('https://')) {
-            return coverUrl;
+        if (/^https?:\/\//i.test(rawCoverUrl)) {
+            return rawCoverUrl;
         }
 
-        const normalizedPath = coverUrl.startsWith('/') ? coverUrl : `/${coverUrl}`;
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
+        const normalizedPath = rawCoverUrl.startsWith('/') ? rawCoverUrl : `/${rawCoverUrl}`;
+        const candidateBases: string[] = [];
 
-        return baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
+        if (process.env.NEXT_PUBLIC_API_URL) {
+            candidateBases.push(process.env.NEXT_PUBLIC_API_URL);
+        }
+
+        if (typeof window !== 'undefined') {
+            candidateBases.push(window.location.origin);
+        }
+
+        candidateBases.push('http://localhost:8080');
+
+        for (const base of candidateBases) {
+            try {
+                const formattedBase = base.endsWith('/') ? base : `${base}/`;
+                return new URL(normalizedPath, formattedBase).toString();
+            } catch (error) {
+                console.warn('Failed to resolve cover URL with base', base, error);
+            }
+        }
+
+        return normalizedPath;
     };
 
     return (
