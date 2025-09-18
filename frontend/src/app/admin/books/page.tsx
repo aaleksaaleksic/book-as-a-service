@@ -12,7 +12,6 @@ import {
     Eye,
     MoreVertical,
     BookOpen,
-    Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -283,7 +282,7 @@ export default function AdminBooksPage() {
                                                             <DropdownMenuSeparator />
 
                                                             <DropdownMenuItem asChild>
-                                                                <Link href={`/books/${book.id}`}>
+                                                                <Link href={`/admin/books/${book.id}`}>
                                                                     <Eye className="w-4 h-4 mr-2" />
                                                                     Pregledaj
                                                                 </Link>
@@ -295,21 +294,6 @@ export default function AdminBooksPage() {
                                                                         <Edit className="w-4 h-4 mr-2" />
                                                                         Izmeni
                                                                     </Link>
-                                                                </DropdownMenuItem>
-                                                            )}
-
-                                                            {book.contentUrl && (
-                                                                <DropdownMenuItem asChild>
-                                                                    <a
-                                                                        href={book.contentUrl.startsWith('http')
-                                                                            ? book.contentUrl
-                                                                            : `${process.env.NEXT_PUBLIC_API_URL}${book.contentUrl}`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                    >
-                                                                        <Download className="w-4 h-4 mr-2" />
-                                                                        Download PDF
-                                                                    </a>
                                                                 </DropdownMenuItem>
                                                             )}
 
