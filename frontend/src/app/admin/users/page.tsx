@@ -32,12 +32,7 @@ import {
 import { useCan } from '@/hooks/useAuth';
 import type { AdminSubscription, AdminUser } from '@/types/admin';
 
-const FALLBACK_GRADIENTS = [
-    'from-book-green-100 via-reading-accent/80 to-reading-accent',
-    'from-reading-accent via-book-green-100 to-book-green-600',
-    'from-cyan-400 to-blue-500',
-    'from-amber-400 to-orange-500',
-];
+const FALLBACK_ACCENTS = ['bg-reading-accent', 'bg-emerald-500', 'bg-cyan-500', 'bg-amber-500'];
 
 const getInitials = (user: AdminUser) => {
     const first = user.firstName?.[0] ?? user.fullName?.[0] ?? user.email?.[0] ?? '?';
@@ -124,7 +119,7 @@ export default function AdminUsersPage() {
 
     const renderUserCard = (user: AdminUser, index: number) => {
         const subscription = subscriptionMap.get(user.id);
-        const accent = FALLBACK_GRADIENTS[index % FALLBACK_GRADIENTS.length];
+        const accent = FALLBACK_ACCENTS[index % FALLBACK_ACCENTS.length];
         const initials = getInitials(user);
 
         return (
@@ -132,14 +127,14 @@ export default function AdminUsersPage() {
                 key={user.id}
                 className="relative overflow-hidden border border-reading-accent/10 bg-white/90 shadow-sm transition hover:shadow-lg"
             >
-                <div className={cn('absolute -right-10 -top-12 h-32 w-32 rounded-full bg-gradient-to-br opacity-20 blur-3xl', accent)} />
-                <div className={cn('absolute -bottom-14 -left-10 h-28 w-28 rounded-full bg-gradient-to-br opacity-10 blur-3xl', accent)} />
+                <div className={cn('absolute -right-10 -top-12 h-32 w-32 rounded-full opacity-20 blur-3xl', accent)} />
+                <div className={cn('absolute -bottom-14 -left-10 h-28 w-28 rounded-full opacity-10 blur-3xl', accent)} />
                 <CardContent className="relative z-10 space-y-4 p-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                             <div
                                 className={cn(
-                                    'flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br text-lg font-semibold text-white shadow-lg shadow-reading-accent/20',
+                                    'flex h-14 w-14 items-center justify-center rounded-2xl text-lg font-semibold text-white shadow-lg shadow-reading-accent/20',
                                     accent,
                                 )}
                             >
@@ -235,10 +230,8 @@ export default function AdminUsersPage() {
     return (
         <AdminLayout>
             <div className="space-y-8">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-reading-accent via-book-green-100 to-book-green-900 p-8 text-white shadow-lg">
-                    <div className="absolute -top-20 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-                    <div className="absolute -bottom-24 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-                    <div className="relative z-10 space-y-3">
+                <div className="rounded-3xl bg-reading-accent p-8 text-white shadow-lg">
+                    <div className="space-y-3">
                         <p className="text-xs uppercase tracking-[0.4em] text-white/70">Upravljanje korisnicima</p>
                         <h1 className={cn(dt.typography.pageTitle, 'text-white')}>Korisnici platforme</h1>
                         <p className="max-w-2xl text-sm text-white/80">
