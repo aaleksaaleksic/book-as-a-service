@@ -256,39 +256,6 @@ export default function AdminAnalyticsPage() {
                             )}
                         </CardContent>
                     </Card>
-
-                    <Card className="border border-reading-accent/10 bg-gradient-to-br from-reading-accent/5 via-white to-white/90 p-6 shadow-inner lg:col-span-2">
-                        <CardHeader className="space-y-2 pb-4">
-                            <CardTitle className="text-lg font-semibold text-reading-text">Strategijski uvidi</CardTitle>
-                            <p className="text-sm text-reading-text/60">Automatske preporuke bazirane na aktivnostima korisnika.</p>
-                        </CardHeader>
-                        <CardContent className="grid gap-3 md:grid-cols-2">
-                            <div className="rounded-2xl border border-reading-accent/10 bg-white/80 p-4 shadow">
-                                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-reading-text/50">
-                                    <Target className="h-3.5 w-3.5 text-reading-accent" /> Fokus
-                                </div>
-                                <p className="mt-3 text-sm font-semibold text-reading-text">
-                                    Naslovi iz top 5 najčitanijih knjiga generišu najveći deo angažmana – predložite slične premium naslove.
-                                </p>
-                            </div>
-                            <div className="rounded-2xl border border-reading-accent/10 bg-white/80 p-4 shadow">
-                                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-reading-text/50">
-                                    <Crown className="h-3.5 w-3.5 text-amber-500" /> VIP čitaoci
-                                </div>
-                                <p className="mt-3 text-sm font-semibold text-reading-text">
-                                    Nagradite top čitaoce ekskluzivnim sadržajem – njihova lojalnost podiže ukupni broj sati čitanja.
-                                </p>
-                            </div>
-                            <div className="rounded-2xl border border-reading-accent/10 bg-white/80 p-4 shadow md:col-span-2">
-                                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-reading-text/50">
-                                    <BookOpen className="h-3.5 w-3.5 text-reading-accent" /> Momentum kataloga
-                                </div>
-                                <p className="mt-3 text-sm font-semibold text-reading-text">
-                                    Najpopularniji naslovi beleže visok broj klikova – istaknite ih na naslovnoj strani i u newsletter kampanjama kako biste kapitalizovali interesovanje.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
         </AdminLayout>
