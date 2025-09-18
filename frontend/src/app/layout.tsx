@@ -6,6 +6,7 @@ import { HttpClientProvider } from "@/context/HttpClientProvider";
 import { QueryProvider } from "@/context/QueryProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
+import { Navbar } from "@/components/layout/Navbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +32,7 @@ export default function RootLayout({
             <HttpClientProvider>
                 <QueryProvider>
                     <AuthProvider>
+                        <Navbar />
                         {children}
                         <Toaster />
                     </AuthProvider>
