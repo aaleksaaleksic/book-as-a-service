@@ -9,6 +9,11 @@ class TokenManager {
         if (typeof window !== 'undefined') {
             this.token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
             this.refreshToken = localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
+
+            // Ensure middleware cookie exists when the app loads with a persisted token
+            if (this.token) {
+                this.setAuthCookie(this.token);
+            }
         }
     }
 
@@ -16,6 +21,7 @@ class TokenManager {
         this.token = token;
         if (typeof window !== 'undefined') {
             localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
+            this.setAuthCookie(token);
         }
     }
 
@@ -29,6 +35,9 @@ class TokenManager {
     getToken(): string | null {
         if (typeof window !== 'undefined' && !this.token) {
             this.token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
+            if (this.token) {
+                this.setAuthCookie(this.token);
+            }
         }
         return this.token;
     }
@@ -46,17 +55,57 @@ class TokenManager {
         if (typeof window !== 'undefined') {
             localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
             localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
+            this.deleteAuthCookie();
         }
     }
 
     isTokenExpired(token: string): boolean {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
+            const payload = this.decodeToken(token);
+            if (!payload?.exp) {
+                return true;
+            }
             const exp = payload.exp * 1000;
             return Date.now() >= exp - AUTH_CONFIG.REFRESH_BUFFER_MS;
         } catch {
             return true;
         }
+    }
+
+    private decodeToken(token: string): { exp?: number } | null {
+        try {
+            const payload = token.split('.')[1];
+            if (!payload) {
+                return null;
+            }
+            return JSON.parse(atob(payload));
+        } catch {
+            return null;
+        }
+    }
+
+    private setAuthCookie(token: string): void {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        const payload = this.decodeToken(token);
+        let expires = '';
+
+        if (payload?.exp) {
+            const expiryDate = new Date(payload.exp * 1000);
+            expires = `; expires=${expiryDate.toUTCString()}`;
+        }
+
+        document.cookie = `${AUTH_CONFIG.TOKEN_KEY}=${token}; path=/; SameSite=Lax${expires}`;
+    }
+
+    private deleteAuthCookie(): void {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        document.cookie = `${AUTH_CONFIG.TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     }
 }
 
