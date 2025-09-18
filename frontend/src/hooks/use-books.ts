@@ -98,30 +98,36 @@ export function useTopRatedBooks() {
     });
 }
 
+type CreateBookMutationPayload = CreateBookRequest & {
+    pdfFile?: File | null;
+    coverFile?: File | null;
+};
+
 export function useCreateBook() {
     const client = useHttpClient();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: CreateBookMutationPayload) => {
             try {
-
-                // Backend BookController očekuje Map<String, Object>
-                const bookData = {
-                    title: data.title,
-                    author: data.author,
-                    description: data.description,
-                    isbn: data.isbn,
+                const bookData: CreateBookRequest = {
+                    title: data.title.trim(),
+                    author: data.author.trim(),
+                    description: data.description.trim(),
+                    isbn: data.isbn?.replace(/[\s-]/g, ""),
                     category: data.category,
                     pages: data.pages,
                     language: data.language,
-                    publicationYear: data.publicationYear,
-                    price: data.price,
+                    price: Number(data.price),
                     isPremium: data.isPremium,
+                    isAvailable: data.isAvailable,
                 };
 
-                // Prvi API poziv - kreiranje knjige
-                const bookResponse = await client.post('/api/v1/books', bookData);
+                if (typeof data.publicationYear === "number" && !Number.isNaN(data.publicationYear)) {
+                    bookData.publicationYear = data.publicationYear;
+                }
+
+                const bookResponse = await booksApi.createBook(client, bookData);
 
                 if (!bookResponse.data.success) {
                     throw new Error(bookResponse.data.message || 'Failed to create book');
@@ -133,12 +139,18 @@ export function useCreateBook() {
                     throw new Error('Book created but no ID returned');
                 }
 
-                // KORAK 2: Upload fajlova ako postoje
-                if (data.pdfFile && data.coverFile) {
+                const hasPdf = !!data.pdfFile;
+                const hasCover = !!data.coverFile;
+
+                if (hasPdf || hasCover) {
                     const formData = new FormData();
                     formData.append('bookId', createdBookId.toString());
-                    formData.append('pdf', data.pdfFile);
-                    formData.append('cover', data.coverFile);
+                    if (hasPdf && data.pdfFile) {
+                        formData.append('pdf', data.pdfFile);
+                    }
+                    if (hasCover && data.coverFile) {
+                        formData.append('cover', data.coverFile);
+                    }
 
                     const uploadResponse = await client.post('/api/v1/files/upload', formData, {
                         headers: {
