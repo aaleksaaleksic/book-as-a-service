@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,6 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/admin/books")
-@PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
 public class AdminBookController {
 
     private final BookService bookService;
@@ -47,7 +45,7 @@ public class AdminBookController {
 
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CAN_ADD_BOOKS')")
+    @PreAuthorize("hasAuthority('CAN_CREATE_BOOKS')")
     public ResponseEntity<Map<String, Object>> createBookWithFiles(
             @RequestPart("book") @Valid BookCreateDTO bookDTO,
             @RequestPart("pdf") MultipartFile pdfFile,
@@ -85,6 +83,7 @@ public class AdminBookController {
                     bookDTO.getPublicationYear(),
                     bookDTO.getPrice(),
                     bookDTO.getIsPremium(),
+                    bookDTO.getIsAvailable(),
                     currentUser
             );
 
@@ -92,7 +91,7 @@ public class AdminBookController {
             String coverPath = fileStorageService.saveBookCover(coverFile, savedBook.getId());
 
             savedBook.setContentFilePath(pdfPath);
-            savedBook.setCoverImageUrl("/api/v1/files/covers/" + savedBook.getId());
+            savedBook.setCoverImageUrl(coverPath);
             Book finalBook = bookService.save(savedBook);
 
             log.info("Admin {} created book with files: {} (ID: {})",
@@ -119,7 +118,7 @@ public class AdminBookController {
 
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('CAN_EDIT_BOOKS')")
+    @PreAuthorize("hasAuthority('CAN_UPDATE_BOOKS')")
     public ResponseEntity<Map<String, Object>> updateBook(
             @PathVariable Long id,
             @Valid @RequestBody BookUpdateDTO updateDTO,
@@ -185,9 +184,10 @@ public class AdminBookController {
 
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<List<BookResponseDTO>> getAllBooksForAdmin() {
         try {
-            List<Book> books = bookService.getAllAvailableBooks(); // Koristi postojeći
+            List<Book> books = bookService.getAllBooks();
             return ResponseEntity.ok(BookMapper.toResponseDTOList(books));
         } catch (Exception e) {
             log.error("Error fetching books for admin", e);

@@ -45,6 +45,12 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<Book> getAllBooks() {
+        return bookRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Book> findById(Long id) {
         if (id == null) {
             log.warn("Attempted to find book with null ID");
@@ -108,24 +114,22 @@ public class BookServiceImpl implements BookService {
     @Override
     public Book createBook(String title, String author, String description, String isbn,
                            String category, Integer pages, String language, Integer publicationYear,
-                           BigDecimal price, Boolean isPremium, User addedBy) {
+                           BigDecimal price, Boolean isPremium, Boolean isAvailable, User addedBy) {
 
         validateBookCreationData(title, author, isbn, pages, price, addedBy);
-
-
 
         Book book = Book.builder()
                 .title(sanitizeString(title))
                 .author(sanitizeString(author))
                 .description(sanitizeString(description))
-                .isbn(isbn.trim())
+                .isbn(sanitizeIsbn(isbn))
                 .category(category != null ? category.trim() : "General")
                 .pages(pages)
                 .language(language != null ? language.trim() : "Serbian")
                 .publicationYear(publicationYear)
                 .price(price)
                 .isPremium(isPremium != null ? isPremium : false)
-                .isAvailable(true)
+                .isAvailable(isAvailable != null ? isAvailable : Boolean.TRUE)
                 .addedBy(addedBy)
                 .totalReads(0L)
                 .averageRating(BigDecimal.ZERO)
@@ -170,6 +174,13 @@ public class BookServiceImpl implements BookService {
             existingBook.setDescription(sanitizeString(bookData.getDescription()));
         }
 
+        if (bookData.getIsbn() != null) {
+            String sanitizedIsbn = sanitizeIsbn(bookData.getIsbn());
+            if (sanitizedIsbn != null && !sanitizedIsbn.equals(existingBook.getIsbn())) {
+                existingBook.setIsbn(sanitizedIsbn);
+            }
+        }
+
         if (bookData.getCategory() != null) {
             existingBook.setCategory(bookData.getCategory().trim());
         }
@@ -180,6 +191,10 @@ public class BookServiceImpl implements BookService {
 
         if (bookData.getLanguage() != null) {
             existingBook.setLanguage(bookData.getLanguage().trim());
+        }
+
+        if (bookData.getPublicationYear() != null) {
+            existingBook.setPublicationYear(bookData.getPublicationYear());
         }
 
         if (bookData.getPrice() != null && bookData.getPrice().compareTo(BigDecimal.ZERO) >= 0) {
@@ -331,7 +346,7 @@ public class BookServiceImpl implements BookService {
 
         // Basic ISBN format validation (can be improved with proper ISBN validation library)
         //TODO pitati Mišu za ISBN
-        String cleanIsbn = isbn.replaceAll("[^0-9X]", "");
+        String cleanIsbn = sanitizeIsbn(isbn);
         if (cleanIsbn.length() != 10 && cleanIsbn.length() != 13) {
             throw new IllegalArgumentException("ISBN must be 10 or 13 digits long");
         }
@@ -360,5 +375,12 @@ public class BookServiceImpl implements BookService {
 
     private String sanitizeString(String input) {
         return input != null ? input.trim() : null;
+    }
+
+    private String sanitizeIsbn(String isbn) {
+        if (isbn == null) {
+            return null;
+        }
+        return isbn.replaceAll("[^0-9X]", "");
     }
 }
