@@ -13,6 +13,7 @@ import java.util.List;
 public interface BookRepository extends JpaRepository<Book, Long> {
 
     List<Book> findByIsAvailableTrueOrderByCreatedAtDesc();
+    List<Book> findAllByOrderByCreatedAtDesc();
     List<Book> findByIsAvailableTrueAndIsPremiumFalseOrderByCreatedAtDesc();
     List<Book> findByIsAvailableTrueAndIsPremiumTrueOrderByCreatedAtDesc();
     List<Book> findByCategoryAndIsAvailableTrueOrderByTitle(String category);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -56,6 +56,7 @@ const createBookSchema = z.object({
         .min(0, 'Cena ne može biti negativna')
         .max(999999.99, 'Cena ne može biti veća od 999999.99'),
     isPremium: z.boolean(),
+    isAvailable: z.boolean(),
     pdfFile: z.instanceof(File)
         .refine(file => file.type === 'application/pdf', 'Fajl mora biti PDF'),
     coverFile: z.instanceof(File)
@@ -68,7 +69,6 @@ type CreateBookFormData = z.infer<typeof createBookSchema>;
 export function CreateBookForm() {
     const router = useRouter();
     const createBookMutation = useCreateBook();
-    const [uploadProgress, setUploadProgress] = useState(0);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const {
@@ -82,6 +82,7 @@ export function CreateBookForm() {
         resolver: zodResolver(createBookSchema),
         defaultValues: {
             isPremium: false,
+            isAvailable: true,
             language: 'Serbian',
             price: 0,
             pages: 1,
@@ -89,13 +90,13 @@ export function CreateBookForm() {
     });
 
     const isPremium = watch('isPremium');
-    const selectedCategory = watch('category');
+    const isAvailable = watch('isAvailable');
 
     // Handle cover image preview
     const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setValue('coverFile', file);
+            setValue('coverFile', file, { shouldDirty: true });
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPreviewUrl(reader.result as string);
@@ -108,18 +109,27 @@ export function CreateBookForm() {
     const handlePdfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setValue('pdfFile', file);
+            setValue('pdfFile', file, { shouldDirty: true });
         }
     };
+
+    useEffect(() => {
+        register('pdfFile');
+        register('coverFile');
+    }, [register]);
+
+    useEffect(() => {
+        if (!isPremium) {
+            setValue('price', 0, { shouldDirty: false });
+        }
+    }, [isPremium, setValue]);
 
     // Submit form
     const onSubmit = async (data: CreateBookFormData) => {
         try {
-            // Create FormData for multipart upload
-            const formData = new FormData();
+            const publicationYearValue = Number.isNaN(data.publicationYear) ? undefined : data.publicationYear;
 
-            // Book data as JSON
-            const bookData = {
+            await createBookMutation.mutateAsync({
                 title: data.title,
                 author: data.author,
                 description: data.description,
@@ -127,21 +137,13 @@ export function CreateBookForm() {
                 category: data.category,
                 pages: data.pages,
                 language: data.language,
-                publicationYear: data.publicationYear,
+                publicationYear: publicationYearValue,
                 price: data.price,
                 isPremium: data.isPremium,
-            };
-
-            // Backend expects Map<String, Object> format
-            Object.entries(bookData).forEach(([key, value]) => {
-                formData.append(key, String(value));
+                isAvailable: data.isAvailable,
+                pdfFile: data.pdfFile,
+                coverFile: data.coverFile,
             });
-
-            // Fajlovi
-            formData.append('pdf', data.pdfFile);
-            formData.append('cover', data.coverFile);
-
-            await createBookMutation.mutateAsync(formData as any);
             router.push('/admin/books');
         } catch (error) {
             console.error('Error creating book:', error);
@@ -340,7 +342,23 @@ export function CreateBookForm() {
                         <Switch
                             id="isPremium"
                             checked={isPremium}
-                            onCheckedChange={(checked) => setValue('isPremium', checked)}
+                            onCheckedChange={(checked) => setValue('isPremium', checked, { shouldDirty: true })}
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-book-green-50/50 rounded-lg">
+                        <div className="space-y-1">
+                            <Label htmlFor="isAvailable" className="text-base">
+                                Vidljivost knjige
+                            </Label>
+                            <p className={cn(dt.typography.muted)}>
+                                Kontroliše da li je knjiga odmah dostupna čitaocima
+                            </p>
+                        </div>
+                        <Switch
+                            id="isAvailable"
+                            checked={isAvailable}
+                            onCheckedChange={(checked) => setValue('isAvailable', checked, { shouldDirty: true })}
                         />
                     </div>
                 </CardContent>
@@ -410,7 +428,7 @@ export function CreateBookForm() {
                                             className="absolute top-0 right-0"
                                             onClick={() => {
                                                 setPreviewUrl(null);
-                                                setValue('coverFile', null as any);
+                                                setValue('coverFile', undefined as any, { shouldDirty: true });
                                             }}
                                         >
                                             <X className="w-4 h-4" />

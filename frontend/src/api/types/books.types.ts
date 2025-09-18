@@ -31,6 +31,7 @@ export interface CreateBookRequest {
     publicationYear?: number;
     price: number;
     isPremium: boolean;
+    isAvailable: boolean;
 }
 
 export interface UpdateBookRequest extends Partial<CreateBookRequest> {
