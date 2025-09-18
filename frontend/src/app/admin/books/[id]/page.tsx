@@ -82,9 +82,8 @@ export default function AdminBookDetailsPage() {
     return (
         <AdminLayout>
             <div className="space-y-8">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-reading-accent via-book-green-100 to-emerald-600 p-8 text-white shadow-xl">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.2),transparent_55%)]" />
-                    <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="rounded-3xl bg-reading-accent p-8 text-white shadow-xl">
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex flex-col gap-4">
                             <Link href="/admin/books" className="flex items-center gap-2 text-xs uppercase tracking-[0.4em] text-white/70">
                                 <ArrowLeft className="h-4 w-4" /> Nazad
@@ -212,7 +211,7 @@ export default function AdminBookDetailsPage() {
                                             </div>
                                             <div className="flex-1">
                                                 <div className="h-2 w-full overflow-hidden rounded-full bg-reading-accent/10">
-                                                    <div className="h-full rounded-full bg-gradient-to-r from-reading-accent via-emerald-500 to-emerald-400" style={{ width: `${Math.max(8, Math.round((day.readingMinutes / dailyMax) * 100))}%` }} />
+                                                    <div className="h-full rounded-full bg-reading-accent" style={{ width: `${Math.max(8, Math.round((day.readingMinutes / dailyMax) * 100))}%` }} />
                                                 </div>
                                             </div>
                                             <div className="w-20 text-right text-xs text-reading-text/60">{formatMinutes(day.readingMinutes)}</div>
