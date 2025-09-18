@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { dt } from '@/lib/design-tokens';
+import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 interface FeaturedBook {
     id: number;
@@ -110,7 +111,7 @@ export const HeroSection = ({ featuredBook }: HeroSectionProps) => {
                                 <Card className={`${dt.components.bookCard} max-w-sm mx-auto lg:max-w-none`}>
                                     <div className="relative">
                                         <img
-                                            src={featuredBook.coverImageUrl}
+                                            src={resolveApiFileUrl(featuredBook.coverImageUrl) ?? featuredBook.coverImageUrl}
                                             alt={featuredBook.title}
                                             className="w-full h-96 object-cover rounded-t-lg"
                                         />

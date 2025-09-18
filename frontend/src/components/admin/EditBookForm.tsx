@@ -31,6 +31,7 @@ import { BOOK_CATEGORIES, POPULAR_CATEGORIES } from '@/utils/book-categories';
 import { BookResponseDTO } from '@/api/types/books.types';
 import { dt } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 // Validation schema za edit (sva polja su opciona jer šaljemo samo promenjene)
 const editBookSchema = z.object({
@@ -195,10 +196,7 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
     const getCoverUrl = () => {
         if (previewUrl) return previewUrl;
-        if (book.coverImageUrl) {
-            return `${process.env.NEXT_PUBLIC_API_URL}/api/v1/files/covers/${book.id}`;
-        }
-        return null;
+        return resolveApiFileUrl(book.coverImageUrl);
     };
 
     return (
