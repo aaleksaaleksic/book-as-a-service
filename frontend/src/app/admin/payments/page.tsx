@@ -306,26 +306,7 @@ export default function AdminPaymentsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border border-reading-accent/10 bg-white/90 p-6 shadow-sm backdrop-blur">
-                        <CardHeader className="space-y-2 pb-4">
-                            <CardTitle className="text-lg font-semibold text-reading-text">Brza analiza performansi</CardTitle>
-                            <p className="text-sm text-reading-text/60">Automatski generisane preporuke zasnovane na trenutnim brojkama.</p>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm text-reading-text/80">
-                            <div className="rounded-2xl border border-reading-accent/10 bg-reading-accent/5 p-4">
-                                <p className="text-xs uppercase tracking-[0.3em] text-reading-text/50">Preporuka</p>
-                                <p className="mt-2 font-semibold text-reading-text">
-                                    Fokusirajte se na zadržavanje korisnika – rast prihoda je direktno vezan za broj aktivnih pretplata.
-                                </p>
-                            </div>
-                            <div className="rounded-2xl border border-reading-accent/10 bg-reading-accent/5 p-4">
-                                <p className="text-xs uppercase tracking-[0.3em] text-reading-text/50">Uvid</p>
-                                <p className="mt-2 font-semibold text-reading-text">
-                                    Dominantna metoda plaćanja je {insights?.primaryPaymentMethod ?? 'NLB PAY'}, što otvara prostor za dodatne promo kampanje sa tim partnerom.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
+
                 </div>
             </div>
         </AdminLayout>
