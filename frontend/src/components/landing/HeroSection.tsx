@@ -60,7 +60,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                     'max-w-xl text-reading-contrast/80 leading-relaxed',
                                 )}
                             >
-                                Personalizovane preporuke, sinhronizovane beleške i knjige koje vas čekaju na svakom uređaju.
+                                Knjige koje vas čekaju na svakom uređaju.
                                 Bez ograničenja, uz iskustvo dizajnirano za moderne čitaoce.
                             </p>
 
@@ -68,7 +68,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                 <div className="max-w-xl rounded-3xl border border-library-highlight/30 bg-library-azure/40 p-6 shadow-[0_20px_60px_rgba(6,18,38,0.6)] backdrop-blur">
                                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-library-highlight">Niste još član?</p>
                                     <p className="mt-3 text-sm text-reading-contrast/85">
-                                        Kreirajte nalog za manje od minuta i otključajte preko 2.000 naslova, klubove čitalaca i offline čitanje.
+                                        Kreirajte nalog za manje od minuta i otključajte sve dostupne naslove.
                                         Vaša avantura počinje besplatnom trodnevnom probom.
                                     </p>
                                 </div>
@@ -176,10 +176,10 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                                     <Clock3 className="h-3.5 w-3.5 text-library-gold" />
                                                     {topBook.pages} strana
                                                 </div>
-                                                <div className="flex items-center gap-2 rounded-full border border-library-gold/25 px-3 py-1">
-                                                    <Users className="h-3.5 w-3.5 text-library-gold" />
-                                                    {topBook.readCount ?? 0} čitanja
-                                                </div>
+                                                {/*<div className="flex items-center gap-2 rounded-full border border-library-gold/25 px-3 py-1">*/}
+                                                {/*    <Users className="h-3.5 w-3.5 text-library-gold" />*/}
+                                                {/*    {topBook.readCount ?? 0} čitanja*/}
+                                                {/*</div>*/}
                                             </div>
 
                                             <Button
