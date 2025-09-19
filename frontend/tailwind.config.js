@@ -7,31 +7,35 @@ module.exports = {
         extend: {
             // ReadBookHub brand colors
             colors: {
-                // Primary green palette
-                'book-green': {
-                    50: '#F8F9FA',
-                    100: '#D4EDDA',
-                    600: '#6F9654',
-                    900: '#2D5016',
+                library: {
+                    midnight: '#0B1D3A',
+                    azure: '#133C5D',
+                    gold: '#E4B34C',
+                    highlight: '#54A6FF',
+                    parchment: '#F5F1E6',
+                    linen: '#E0D8C7',
+                    charcoal: '#1F2933',
+                    slate: '#A5B4C7',
+                    copper: '#B65C33',
+                    mint: '#22D1B2',
+                    violet: '#7F5AF0',
+                    fog: '#F2F5F7',
+                    gray: '#8896A5',
                 },
-                // Reading-specific colors
-                'reading': {
-                    background: '#D4EDDA',
-                    surface: '#F8F9FA',
-                    accent: '#6F9654',
-                    text: '#2D5016',
-                    warning: '#FFF3CD',
+                reading: {
+                    background: '#0B1D3A',
+                    surface: '#F5F1E6',
+                    surfaceAlt: '#E0D8C7',
+                    accent: '#E4B34C',
+                    text: '#1F2933',
+                    contrast: '#F5F1E6',
+                    highlight: '#54A6FF',
                 },
-                // Circadian rhythm color temperatures (for future use)
-                'temperature': {
-                    warm: '#FF8C42',    // 2700K
-                    neutral: '#FFFFFF', // 5500K
-                    cool: '#87CEEB',    // 6500K
-                }
             },
             fontFamily: {
-                'reading': ['Georgia', 'Times New Roman', 'serif'],
-                'ui': ['Inter', 'system-ui', 'sans-serif'],
+                display: ['var(--font-playfair)', 'Playfair Display', 'serif'],
+                reading: ['var(--font-inter)', 'Inter', 'sans-serif'],
+                ui: ['var(--font-inter)', 'Inter', 'sans-serif'],
             },
             screens: {
                 'xs': '475px',   // Small phones

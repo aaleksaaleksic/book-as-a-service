@@ -53,17 +53,17 @@ const benefits = [
 
 export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSectionProps) => {
     return (
-        <section className="relative overflow-hidden border-y border-reading-accent/10 bg-reading-surface">
-            <div className="absolute -left-10 top-16 h-40 w-40 rounded-full border border-reading-accent/10 opacity-60 blur-2xl" />
-            <div className="absolute -right-10 bottom-10 h-48 w-48 rounded-[36px] border border-dashed border-reading-accent/20 opacity-40" />
+        <section className="relative overflow-hidden border-y border-library-gold/15 bg-gradient-to-br from-library-fog via-library-parchment to-white">
+            <div className="absolute -left-10 top-16 h-40 w-40 rounded-full border border-library-highlight/20 opacity-60 blur-2xl" />
+            <div className="absolute -right-10 bottom-10 h-48 w-48 rounded-[36px] border border-dashed border-library-gold/25 opacity-40" />
 
             <div className={cn(dt.layouts.pageContainer, 'relative z-10 py-20')}>
                 <div className="grid gap-16 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-8">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-reading-accent/20 bg-reading-background/70 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-reading-text/70">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-copper">
                             Kako funkcioniše ReadBookHub
                         </div>
-                        <h2 className="text-3xl font-semibold text-reading-text sm:text-4xl">
+                        <h2 className="font-display text-3xl font-semibold text-reading-text sm:text-4xl">
                             Sve što ti treba da čitanje postane navika koju obožavaš
                         </h2>
                         <p className="max-w-xl text-sm text-reading-text/70">
@@ -75,19 +75,19 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                             {steps.map((step, index) => (
                                 <div
                                     key={step.title}
-                                    className="relative rounded-3xl border border-reading-accent/15 bg-reading-background/60 p-6 shadow-sm backdrop-blur"
+                                    className="relative rounded-3xl border border-library-gold/15 bg-white/80 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.12)] backdrop-blur"
                                 >
-                                    <div className="absolute -left-3 -top-3 flex h-12 w-12 items-center justify-center rounded-3xl bg-reading-accent text-lg font-semibold text-white shadow">
+                                    <div className="absolute -left-3 -top-3 flex h-12 w-12 items-center justify-center rounded-3xl bg-library-gold text-lg font-semibold text-library-midnight shadow-lg">
                                         {index + 1}
                                     </div>
-                                    <h3 className="text-lg font-semibold text-reading-text">{step.title}</h3>
+                                    <h3 className="font-display text-lg font-semibold text-reading-text">{step.title}</h3>
                                     <p className="mt-2 text-sm text-reading-text/70">{step.description}</p>
                                 </div>
                             ))}
                         </div>
 
                         {!isAuthenticated && (
-                            <div className="rounded-3xl border border-reading-accent/20 bg-white/70 p-6 shadow-lg">
+                            <div className="rounded-3xl border border-library-highlight/30 bg-library-highlight/10 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.15)]">
                                 <p className="text-sm font-semibold text-reading-text">
                                     Tip: Aktiviraj probu sada i dobijaš personalizovani plan čitanja za prva tri dana – potpuno besplatno i bez obaveze.
                                 </p>
@@ -96,19 +96,19 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                     </div>
 
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-reading-accent/20 bg-reading-background/70 p-8 shadow-lg">
-                            <h3 className="text-xl font-semibold text-reading-text">Zašto nas korisnici biraju</h3>
+                        <div className="rounded-3xl border border-library-gold/20 bg-library-linen/80 p-8 shadow-[0_20px_60px_rgba(31,41,51,0.18)]">
+                            <h3 className="font-display text-xl font-semibold text-reading-text">Zašto nas korisnici biraju</h3>
                             <p className="mt-3 text-sm text-reading-text/70">
                                 Spojili smo tehnologiju i ljubav prema knjigama kako bismo kreirali iskustvo koje je istovremeno moderno, intuitivno i inspirativno.
                             </p>
                             <div className="mt-6 grid gap-5">
                                 {benefits.map((benefit) => (
                                     <div key={benefit.title} className="flex gap-4">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-reading-accent/20 bg-reading-surface text-reading-accent shadow-sm">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-library-gold/25 bg-white text-library-gold shadow-sm">
                                             <benefit.icon className="h-6 w-6" />
                                         </div>
                                         <div>
-                                            <h4 className="text-base font-semibold text-reading-text">{benefit.title}</h4>
+                                            <h4 className="font-display text-base font-semibold text-reading-text">{benefit.title}</h4>
                                             <p className="mt-1 text-sm text-reading-text/70">{benefit.description}</p>
                                         </div>
                                     </div>
@@ -116,7 +116,7 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                             </div>
                         </div>
 
-                        <div className="rounded-3xl border border-reading-accent/15 bg-reading-surface/90 p-8 shadow-xl">
+                        <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">
                             <p className="text-sm text-reading-text/70">
                                 “ReadBookHub mi je pomogao da se vratim čitanju. Preporuke su neverovatno precizne, a osećaj kao da imam sopstvenog knjižara koji zna šta volim.”
                             </p>
