@@ -95,23 +95,23 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                 </Button>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-6 pt-4 text-sm sm:grid-cols-3">
-                                <div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">
-                                    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Naslovi</p>
-                                    <p className="mt-3 text-2xl font-semibold text-reading-contrast">2.000+</p>
-                                    <p className="mt-2 text-xs text-reading-contrast/70">Svaki žanr koji možete da zamislite</p>
-                                </div>
-                                <div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">
-                                    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Pros. vreme čitanja</p>
-                                    <p className="mt-3 text-2xl font-semibold text-reading-contrast">36 min/dan</p>
-                                    <p className="mt-2 text-xs text-reading-contrast/70">Zasnovano na navikama naše zajednice</p>
-                                </div>
-                                <div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">
-                                    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Zadovoljstvo</p>
-                                    <p className="mt-3 text-2xl font-semibold text-reading-contrast">4.9/5</p>
-                                    <p className="mt-2 text-xs text-reading-contrast/70">Ocena članova zajednice</p>
-                                </div>
-                            </div>
+                            {/*<div className="grid grid-cols-1 gap-6 pt-4 text-sm sm:grid-cols-3">*/}
+                            {/*    /!*<div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">*!/*/}
+                            {/*    /!*    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Naslovi</p>*!/*/}
+                            {/*    /!*    <p className="mt-3 text-2xl font-semibold text-reading-contrast">2.000+</p>*!/*/}
+                            {/*    /!*    <p className="mt-2 text-xs text-reading-contrast/70">Svaki žanr koji možete da zamislite</p>*!/*/}
+                            {/*    /!*</div>*!/*/}
+                            {/*    /!*<div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">*!/*/}
+                            {/*    /!*    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Pros. vreme čitanja</p>*!/*/}
+                            {/*    /!*    <p className="mt-3 text-2xl font-semibold text-reading-contrast">36 min/dan</p>*!/*/}
+                            {/*    /!*    <p className="mt-2 text-xs text-reading-contrast/70">Zasnovano na navikama naše zajednice</p>*!/*/}
+                            {/*    /!*</div>*!/*/}
+                            {/*    /!*<div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">*!/*/}
+                            {/*    /!*    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Zadovoljstvo</p>*!/*/}
+                            {/*    /!*    <p className="mt-3 text-2xl font-semibold text-reading-contrast">4.9/5</p>*!/*/}
+                            {/*    /!*    <p className="mt-2 text-xs text-reading-contrast/70">Ocena članova zajednice</p>*!/*/}
+                            {/*    /!*</div>*!/*/}
+                            {/*</div>*/}
                         </div>
 
                         <div className="relative">
@@ -123,12 +123,6 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                     <Users className="h-4 w-4" />
                                     Najčitanija knjiga ove nedelje
                                 </div>
-
-                                <div className="absolute -bottom-12 right-8 hidden items-center gap-3 rounded-2xl border border-library-gold/25 bg-library-parchment px-5 py-3 text-xs text-reading-text shadow-lg lg:flex animate-tilt-soft">
-                                    <ShieldCheck className="h-4 w-4 text-library-gold" />
-                                    Sinhronizovano na svim uređajima
-                                </div>
-
                                 {isBooksLoading ? (
                                     <div className="space-y-5">
                                         <div className="h-64 w-full animate-pulse rounded-3xl bg-library-azure/30" />
