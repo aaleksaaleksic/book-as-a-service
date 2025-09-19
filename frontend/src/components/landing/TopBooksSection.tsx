@@ -39,11 +39,11 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                     <h2 className="mt-6 font-display text-3xl font-semibold text-reading-text sm:text-4xl">
                         Najčitanije priče koje ne smete propustiti
                     </h2>
-                    <p className="mx-auto mt-4 max-w-2xl text-sm text-reading-text/70">
-                        Naša zajednica je u poslednjih 30 dana provela preko{' '}
-                        <span className="font-semibold text-reading-text">{totalReads.toLocaleString('sr-RS')}</span>{' '}
-                        čitanja na ovim naslovima. Otkrijte zašto svi pričaju baš o njima.
-                    </p>
+                    {/*<p className="mx-auto mt-4 max-w-2xl text-sm text-reading-text/70">*/}
+                    {/*    Naša zajednica je u poslednjih 30 dana provela preko{' '}*/}
+                    {/*    <span className="font-semibold text-reading-text">{totalReads.toLocaleString('sr-RS')}</span>{' '}*/}
+                    {/*    čitanja na ovim naslovima. Otkrijte zašto svi pričaju baš o njima.*/}
+                    {/*</p>*/}
                 </div>
 
                 <div className="mt-12 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
@@ -108,16 +108,16 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                                                       )}
                                                   </div>
 
-                                                  <div className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.32em] text-reading-text/60">
-                                                      <span className="flex items-center gap-2 text-library-copper">
-                                                          <Flame className="h-4 w-4" />
-                                                          {book.readCount?.toLocaleString('sr-RS') ?? 0} čitanja
-                                                      </span>
-                                                      <span className="flex items-center gap-2">
-                                                          <BarChart3 className="h-4 w-4 text-library-highlight" />
-                                                          Ocena {book.averageRating?.toFixed(1) ?? '—'}/5
-                                                      </span>
-                                                  </div>
+                                                  {/*<div className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.32em] text-reading-text/60">*/}
+                                                  {/*    <span className="flex items-center gap-2 text-library-copper">*/}
+                                                  {/*        <Flame className="h-4 w-4" />*/}
+                                                  {/*        {book.readCount?.toLocaleString('sr-RS') ?? 0} čitanja*/}
+                                                  {/*    </span>*/}
+                                                  {/*    <span className="flex items-center gap-2">*/}
+                                                  {/*        <BarChart3 className="h-4 w-4 text-library-highlight" />*/}
+                                                  {/*        Ocena {book.averageRating?.toFixed(1) ?? '—'}/5*/}
+                                                  {/*    </span>*/}
+                                                  {/*</div>*/}
                                               </div>
                                           </div>
 

@@ -15,39 +15,30 @@ const steps = [
     },
     {
         title: 'Izabereš svoj ritam',
-        description: 'Probaj 3 dana potpuno besplatno. Nakon toga biraš plan koji ti odgovara – mesečno, godišnje ili premium klub za ekskluzivne naslove.'
+        description: 'Probaj 3 dana potpuno besplatno. Nakon toga biraš plan koji ti odgovara – mesečni ili godišnji za ekskluzivne naslove.'
     },
     {
         title: 'Čitaš gde god poželiš',
-        description: 'Na telefonu, tabletu ili laptopu. Sve beleške i napredak se automatski sinhronizuju, tako da nikada ne gubiš mesto.'
+        description: 'Na telefonu, tabletu ili laptopu. Sve beleške i napredak se automatski sinhronizuju, tako da nikada ne gubiš progres.'
     },
 ];
 
 const benefits = [
     {
-        icon: Sparkles,
-        title: 'Personalizovane preporuke',
-        description: 'Naša platforma uči šta voliš da čitaš i svakodnevno predlaže naslove koji odgovaraju tvom ukusu.'
-    },
-    {
         icon: Layers,
-        title: 'Sve u jednom mestu',
-        description: 'Čitaj e-knjige, slušaj audio formate, pravi beleške i deli listu želja sa prijateljima iz jedne aplikacije.'
+        title: 'Sve na jednom mestu',
     },
     {
         icon: Headphones,
         title: 'Mode čitanja za svaku situaciju',
-        description: 'Noćni režim, audio naracija i kontrola veličine fonta obezbeđuju savršeno iskustvo čitanja.'
     },
     {
         icon: Users,
         title: 'Zajednica strastvenih čitalaca',
-        description: 'Priključi se klubovima, diskusijama i izazovima koji te motivišu da čitaš više svakog meseca.'
     },
     {
         icon: Compass,
-        title: 'Putovanje kroz žanrove',
-        description: 'Otkrivaj nove autore i žanrove kroz tematske kolekcije koje se osvežavaju svake nedelje.'
+        title: 'Putovanje kroz interesovanja u svetu programiranja',
     },
 ];
 
@@ -109,7 +100,6 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                                         </div>
                                         <div>
                                             <h4 className="font-display text-base font-semibold text-reading-text">{benefit.title}</h4>
-                                            <p className="mt-1 text-sm text-reading-text/70">{benefit.description}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -118,9 +108,9 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
 
                         <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">
                             <p className="text-sm text-reading-text/70">
-                                “ReadBookHub mi je pomogao da se vratim čitanju. Preporuke su neverovatno precizne, a osećaj kao da imam sopstvenog knjižara koji zna šta volim.”
+                                “ReadBookHub nam omugućava da imamo sve knjige koje volimo na jednom mestu. ”
                             </p>
-                            <p className="mt-4 text-sm font-semibold text-reading-text">Milica, članica od 2023. godine</p>
+                            <p className="mt-4 text-sm font-semibold text-reading-text">Aleksa, jedan od osnivača ReadBookHub platforme </p>
                         </div>
                     </div>
                 </div>
