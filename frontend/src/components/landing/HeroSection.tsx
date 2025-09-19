@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowUpRight, BookOpen, Clock3, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Clock3, Sparkles, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { dt } from '@/lib/design-tokens';
@@ -134,15 +134,17 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                     </div>
                                 ) : topBook ? (
                                     <div className="space-y-6">
-                                        <div className="overflow-hidden rounded-3xl shadow-xl">
+                                        <div className="relative overflow-hidden rounded-3xl bg-library-parchment/95 p-4 shadow-xl">
                                             {coverImageUrl ? (
-                                                <img
-                                                    src={coverImageUrl}
-                                                    alt={topBook.title}
-                                                    className="h-64 w-full object-cover"
-                                                />
+                                                <div className="flex min-h-[18rem] items-center justify-center sm:min-h-[22rem]">
+                                                    <img
+                                                        src={coverImageUrl}
+                                                        alt={topBook.title}
+                                                        className="max-h-[18rem] w-auto object-contain drop-shadow-xl sm:max-h-[22rem]"
+                                                    />
+                                                </div>
                                             ) : (
-                                                <div className="flex h-64 w-full items-center justify-center rounded-3xl bg-library-azure/20 text-reading-text/60">
+                                                <div className="flex min-h-[18rem] w-full items-center justify-center rounded-2xl bg-library-azure/15 text-reading-text/60 sm:min-h-[22rem]">
                                                     Nema dostupne naslovnice
                                                 </div>
                                             )}
