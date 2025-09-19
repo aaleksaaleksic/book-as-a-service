@@ -102,7 +102,7 @@ export const Navbar = () => {
         <>
             <header className={dt.components.nav}>
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
-                    <div className="flex items-center gap-3 rounded-full border border-reading-accent/10 bg-reading-surface px-4 py-3 shadow-sm sm:px-6">
+                    <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-white shadow-sm backdrop-blur-sm sm:px-6">
                         <div className="flex items-center gap-3">
                             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                                 <SheetTrigger asChild>
@@ -223,7 +223,7 @@ export const Navbar = () => {
                                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-reading-accent text-white shadow-md">
                                     <BookOpen className="h-5 w-5" />
                                 </span>
-                                <span className="text-lg font-semibold text-reading-text">
+                                <span className="text-lg font-semibold text-white">
                                     ReadBookHub
                                 </span>
                             </Link>
@@ -234,7 +234,7 @@ export const Navbar = () => {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className="text-sm font-medium text-reading-text/70 transition-colors hover:text-reading-text"
+                                    className="text-sm font-medium text-white/70 transition-colors hover:text-white"
                                 >
                                     {item.label}
                                 </Link>
@@ -242,11 +242,11 @@ export const Navbar = () => {
                         </nav>
 
                         <div className="ml-auto flex items-center gap-4">
-                            <div className="hidden md:flex w-64 items-center gap-2 rounded-full border border-reading-accent/10 bg-reading-surface px-4 py-2">
-                                <Search className="h-4 w-4 text-reading-text/70" />
+                            <div className="hidden w-64 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 md:flex">
+                                <Search className="h-4 w-4 text-white/70" />
                                 <Input
                                     placeholder="Pretraži knjige"
-                                    className="h-auto border-none bg-transparent p-0 text-sm focus-visible:ring-0"
+                                    className="h-auto border-none bg-transparent p-0 text-sm text-white placeholder:text-white/60 focus-visible:ring-0"
                                 />
                             </div>
 
@@ -260,11 +260,11 @@ export const Navbar = () => {
                                     <DropdownMenuTrigger asChild>
                                         <Button
                                             variant="ghost"
-                                            className="flex items-center gap-2 rounded-full border border-transparent px-2 py-1.5 hover:border-reading-accent/20 hover:bg-reading-accent/10"
+                                            className="flex items-center gap-2 rounded-full border border-transparent px-2 py-1.5 text-white hover:border-white/10 hover:bg-white/10"
                                         >
                                             {renderAvatar('sm')}
-                                            <span className="hidden text-sm font-medium text-reading-text sm:inline">{fullName}</span>
-                                            <ChevronDown className="h-4 w-4 text-reading-text/60" />
+                                            <span className="hidden text-sm font-medium text-white sm:inline">{fullName}</span>
+                                            <ChevronDown className="h-4 w-4 text-white/60" />
                                         </Button>
                                     </DropdownMenuTrigger>
 
