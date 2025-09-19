@@ -169,8 +169,8 @@ export const Navbar = () => {
                                     )}
 
                                     <div className="mb-6">
-                                        <div className="flex items-center gap-2 rounded-full border border-reading-accent/10 bg-reading-background px-4 py-2">
-                                            <Search className="h-4 w-4 text-reading-text/50" />
+                                        <div className="flex items-center gap-2 rounded-full border border-reading-accent/10 bg-reading-surface px-4 py-2">
+                                            <Search className="h-4 w-4 text-reading-text/70" />
                                             <Input
                                                 placeholder="Pretraži knjige"
                                                 className="h-auto border-none bg-transparent p-0 text-sm focus-visible:ring-0"
@@ -242,8 +242,8 @@ export const Navbar = () => {
                         </nav>
 
                         <div className="ml-auto flex items-center gap-4">
-                            <div className="hidden md:flex w-64 items-center gap-2 rounded-full border border-reading-accent/10 bg-reading-background px-4 py-2">
-                                <Search className="h-4 w-4 text-reading-text/50" />
+                            <div className="hidden md:flex w-64 items-center gap-2 rounded-full border border-reading-accent/10 bg-reading-surface px-4 py-2">
+                                <Search className="h-4 w-4 text-reading-text/70" />
                                 <Input
                                     placeholder="Pretraži knjige"
                                     className="h-auto border-none bg-transparent p-0 text-sm focus-visible:ring-0"

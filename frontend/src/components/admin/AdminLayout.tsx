@@ -151,7 +151,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     );
 
     return (
-        <div className="flex min-h-screen bg-reading-background text-reading-text">
+        <div className="flex min-h-screen bg-reading-surface text-reading-text">
             {/* Desktop Sidebar */}
             <aside className="hidden w-72 flex-col border-r border-reading-accent/10 bg-white/90 shadow-xl backdrop-blur lg:flex">
                 <SidebarContent />
