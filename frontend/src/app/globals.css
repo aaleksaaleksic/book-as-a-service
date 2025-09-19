@@ -123,7 +123,7 @@
     border-color: rgba(228, 179, 76, 0.4);
   }
   .hover\:bg-book-green-100:hover {
-    background-color: rgba(84, 166, 255, 0.16);
+    background-color: #dcfce7;
   }
   .hover\:text-reading-accent:hover {
     color: #E4B34C;
