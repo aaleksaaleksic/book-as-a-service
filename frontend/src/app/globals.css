@@ -4,30 +4,32 @@
 
 @layer base {
   :root {
-    --background: 133 85% 92%; /* #D4EDDA */
-    --foreground: 92 48% 13%;  /* #2D5016 */
-    --card: 0 0% 97%;          /* #F8F9FA */
-    --card-foreground: 92 48% 13%;
-    --popover: 0 0% 97%;
-    --popover-foreground: 92 48% 13%;
-    --primary: 92 48% 46%;     /* #6F9654 */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 133 85% 92%;
-    --secondary-foreground: 92 48% 13%;
-    --muted: 133 85% 92%;
-    --muted-foreground: 92 48% 13%;
-    --accent: 92 48% 46%;
-    --accent-foreground: 0 0% 100%;
+    --background: 217 68% 13%; /* #0B1D3A */
+    --foreground: 44 43% 93%;  /* #F5F1E6 */
+    --card: 44 43% 93%;        /* #F5F1E6 */
+    --card-foreground: 210 28% 20%; /* #1F2933 */
+    --popover: 217 66% 18%;
+    --popover-foreground: 44 43% 93%;
+    --primary: 41 74% 60%;     /* #E4B34C */
+    --primary-foreground: 215 66% 14%; /* #0B1D3A */
+    --secondary: 214 23% 71%;  /* #A5B4C7 */
+    --secondary-foreground: 210 28% 20%;
+    --muted: 207 66% 22%;      /* #133C5D */
+    --muted-foreground: 44 43% 93%;
+    --accent: 207 66% 22%;
+    --accent-foreground: 44 43% 93%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
-    --border: 92 48% 46%;
-    --input: 133 85% 92%;
-    --ring: 92 48% 46%;
-    --radius: 0.5rem;
+    --border: 207 46% 36%;     /* #2F5176 */
+    --input: 207 46% 36%;
+    --ring: 41 74% 60%;
+    --radius: 0.75rem;
   }
 
   body {
     background-color: hsl(var(--background));
+    background-image: radial-gradient(circle at top left, rgba(84, 166, 255, 0.15), transparent 55%),
+      radial-gradient(circle at bottom right, rgba(228, 179, 76, 0.12), transparent 60%);
     color: hsl(var(--foreground));
   }
 }
@@ -85,31 +87,46 @@
 
   /* ReadBookHub custom classes */
   .text-reading-accent {
-    color: #6F9654;
+    color: #E4B34C;
   }
   .text-reading-text {
-    color: #2D5016;
+    color: #1F2933;
+  }
+  .text-reading-contrast {
+    color: #F5F1E6;
   }
   .bg-reading-background {
-    background-color: #D4EDDA;
+    background-color: #0B1D3A;
+  }
+  .bg-reading-background-soft {
+    background-color: #133C5D;
   }
   .bg-reading-surface {
-    background-color: #F8F9FA;
+    background-color: #F5F1E6;
+  }
+  .bg-reading-surface-alt {
+    background-color: #E0D8C7;
   }
   .bg-reading-accent {
-    background-color: #6F9654;
+    background-color: #E4B34C;
   }
   .border-reading-accent\/10 {
-    border-color: rgba(111, 150, 84, 0.1);
+    border-color: rgba(228, 179, 76, 0.1);
+  }
+  .border-reading-accent\/15 {
+    border-color: rgba(228, 179, 76, 0.15);
   }
   .border-reading-accent\/20 {
-    border-color: rgba(111, 150, 84, 0.2);
+    border-color: rgba(228, 179, 76, 0.2);
+  }
+  .border-reading-accent\/40 {
+    border-color: rgba(228, 179, 76, 0.4);
   }
   .hover\:bg-book-green-100:hover {
-    background-color: #D4EDDA;
+    background-color: rgba(84, 166, 255, 0.16);
   }
   .hover\:text-reading-accent:hover {
-    color: #6F9654;
+    color: #E4B34C;
   }
 
   .animate-float-slow {
@@ -125,7 +142,7 @@
   }
 
   .bg-hero-grid {
-    background-image: url("data:image/svg+xml,%3Csvg%20width%3D%22400%22%20height%3D%22400%22%20viewBox%3D%220%200%20400%20400%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22rgba%2816%2C%20185%2C%20129%2C%200.12%29%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%200H400V400H0z%22/%3E%3Cpath%20d%3D%22M0%2040H400%22/%3E%3Cpath%20d%3D%22M0%2080H400%22/%3E%3Cpath%20d%3D%22M0%20120H400%22/%3E%3Cpath%20d%3D%22M0%20160H400%22/%3E%3Cpath%20d%3D%22M0%20200H400%22/%3E%3Cpath%20d%3D%22M0%20240H400%22/%3E%3Cpath%20d%3D%22M0%20280H400%22/%3E%3Cpath%20d%3D%22M0%20320H400%22/%3E%3Cpath%20d%3D%22M0%20360H400%22/%3E%3Cpath%20d%3D%22M40%200V400%22/%3E%3Cpath%20d%3D%22M80%200V400%22/%3E%3Cpath%20d%3D%22M120%200V400%22/%3E%3Cpath%20d%3D%22M160%200V400%22/%3E%3Cpath%20d%3D%22M200%200V400%22/%3E%3Cpath%20d%3D%22M240%200V400%22/%3E%3Cpath%20d%3D%22M280%200V400%22/%3E%3Cpath%20d%3D%22M320%200V400%22/%3E%3Cpath%20d%3D%22M360%200V400%22/%3E%3C/g%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg%20width%3D%22400%22%20height%3D%22400%22%20viewBox%3D%220%200%20400%20400%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22rgba%2884%2C%20166%2C%20255%2C%200.16%29%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%200H400V400H0z%22/%3E%3Cpath%20d%3D%22M0%2040H400%22/%3E%3Cpath%20d%3D%22M0%2080H400%22/%3E%3Cpath%20d%3D%22M0%20120H400%22/%3E%3Cpath%20d%3D%22M0%20160H400%22/%3E%3Cpath%20d%3D%22M0%20200H400%22/%3E%3Cpath%20d%3D%22M0%20240H400%22/%3E%3Cpath%20d%3D%22M0%20280H400%22/%3E%3Cpath%20d%3D%22M0%20320H400%22/%3E%3Cpath%20d%3D%22M0%20360H400%22/%3E%3Cpath%20d%3D%22M40%200V400%22/%3E%3Cpath%20d%3D%22M80%200V400%22/%3E%3Cpath%20d%3D%22M120%200V400%22/%3E%3Cpath%20d%3D%22M160%200V400%22/%3E%3Cpath%20d%3D%22M200%200V400%22/%3E%3Cpath%20d%3D%22M240%200V400%22/%3E%3Cpath%20d%3D%22M280%200V400%22/%3E%3Cpath%20d%3D%22M320%200V400%22/%3E%3Cpath%20d%3D%22M360%200V400%22/%3E%3C/g%3E%3C/svg%3E");
     background-size: 320px 320px;
   }
 }
