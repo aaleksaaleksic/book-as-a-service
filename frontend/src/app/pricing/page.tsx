@@ -7,10 +7,9 @@ import { cn } from '@/lib/utils';
 import { dt } from '@/lib/design-tokens';
 
 const baseFeatures = [
-    'Neograničeno čitanje 12.000+ digitalnih naslova',
-    'Personalizovane preporuke i dinamične liste knjiga',
-    'Sinhronizacija beleški, podsetnika i napretka na svim uređajima',
-    'Ekskluzivna zajednica čitalaca i tematski klubovi',
+    'Neograničeno čitanje digitalnih naslova',
+    'Mogućnost preporuke novih naslova',
+
 ];
 
 const plans = [
@@ -40,11 +39,11 @@ const plans = [
         highlight: 'Ušteda 16% u odnosu na mesečni plan',
         cta: 'Aktiviraj godišnje članstvo',
         href: '/auth/register',
-        note: 'Poklanjamo 3 ekskluzivne kolekcije sezonski – samo za godišnje članove.',
+        note: '',
         features: [
             ...baseFeatures,
-            'Napredne analitike čitanja i personalizovani izazovi svaka tri meseca',
-            'Rani pristup novim naslovima i live Q&A sesijama sa autorima',
+            'Napredne analitike čitanja',
+            'Rani pristup novim naslovima',
         ],
         accent: true,
     },
@@ -53,19 +52,14 @@ const plans = [
 const experienceHighlights = [
     {
         icon: Sparkles,
-        title: 'Personalizovano iskustvo',
+        title: 'Dostupni svi naslovi neograničeno',
         description:
-            'Algoritam prati tvoje ciljeve, raspoloženje i žanrove kako bi ti svakog dana predložio savršeno štivo.',
-    },
-    {
-        icon: BookOpen,
-        title: 'Strukturisani planovi',
-        description: 'Fokusirani planovi čitanja i mikro-ciljevi pomažu ti da održiš kontinuitet u učenju.',
+            '',
     },
     {
         icon: Users,
         title: 'Zajednica koja inspiriše',
-        description: 'Klubovi, diskusije i preporuke od čitalaca koji dele tvoja interesovanja.',
+        description: 'Mogućnost biranja sledećeg naslova za ReadBookHub platformu.',
     },
 ];
 
@@ -78,12 +72,12 @@ const guarantee = [
     {
         icon: Clock,
         title: 'Fleksibilno korišćenje',
-        description: 'Čitaj na telefonu, tabletu ili laptopu – čak i offline.',
+        description: 'Čitaj na tabletu ili laptopu.',
     },
     {
         icon: MessageCircle,
         title: 'Stvarna podrška',
-        description: 'Naši urednici i tim podrške uz tebe su putem chata i e-maila.',
+        description: 'Naši urednici i tim podrške uz tebe su putem e-maila.',
     },
 ];
 
@@ -197,84 +191,6 @@ export default function PricingPage() {
                                 </div>
                             </div>
                         ))}
-                    </div>
-                </section>
-
-                <section className="border-t border-white/10 bg-white/5 px-4 py-20 backdrop-blur-sm sm:px-6 lg:px-12">
-                    <div className="mx-auto max-w-5xl text-center">
-                        <Badge className="mx-auto inline-flex items-center gap-2 rounded-full border border-library-gold/30 bg-library-parchment/40 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.32em] text-library-copper">
-                            U oba plana
-                        </Badge>
-                        <h2 className="mt-6 font-display text-3xl font-semibold sm:text-4xl">Premium iskustvo dizajnirano oko tebe</h2>
-                        <p className="mt-4 text-sm text-reading-contrast/70">
-                            Bez obzira na to koji plan odabereš, dobijaš alate i sadržaj koji te inspirišu da čitaš, učiš i deliš znanje sa zajednicom.
-                        </p>
-                    </div>
-
-                    <div className="mx-auto mt-12 grid max-w-6xl gap-8 md:grid-cols-3">
-                        {experienceHighlights.map((item) => (
-                            <div
-                                key={item.title}
-                                className="group relative overflow-hidden rounded-[28px] border border-library-gold/20 bg-reading-background/60 p-8 shadow-[0_28px_100px_rgba(9,17,39,0.45)] transition-transform hover:-translate-y-2"
-                            >
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-library-gold/25 bg-library-gold/10 text-library-gold">
-                                    <item.icon className="h-6 w-6" />
-                                </div>
-                                <h3 className="mt-6 font-display text-xl font-semibold text-reading-contrast">{item.title}</h3>
-                                <p className="mt-3 text-sm text-reading-contrast/70">{item.description}</p>
-                                <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
-                                    <div className="absolute inset-x-[-30%] bottom-[-60%] h-full rounded-full bg-library-gold/15 blur-3xl" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="px-4 py-20 sm:px-6 lg:px-12">
-                    <div className="mx-auto max-w-5xl rounded-[36px] border border-library-gold/25 bg-white/10 p-10 text-reading-contrast shadow-[0_32px_120px_rgba(9,17,39,0.45)] backdrop-blur">
-                        <div className="grid gap-10 md:grid-cols-[1fr_1fr] md:items-center">
-                            <div>
-                                <Badge className="inline-flex items-center gap-2 rounded-full border border-library-gold/40 bg-library-parchment/40 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-library-copper">
-                                    Miran um dok čitaš
-                                </Badge>
-                                <h2 className="mt-6 font-display text-3xl font-semibold sm:text-4xl">Sigurna pretplata uz tim koji razume čitaoce</h2>
-                                <p className="mt-4 text-sm text-reading-contrast/70">
-                                    Naš fokus je da ti obezbedimo vreme za čitanje, a ne dodatnu administraciju. Sve – od aktivacije do otkazivanja – obavljaš online, uz pravu pomoć kad god ti zatreba.
-                                </p>
-                                <ul className="mt-8 space-y-3 text-sm text-reading-contrast/80">
-                                    {guarantee.map((point) => (
-                                        <li key={point.title} className="flex items-start gap-3">
-                                            <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-library-mint/15 text-library-mint shadow-inner">
-                                                <point.icon className="h-4 w-4" />
-                                            </span>
-                                            <div>
-                                                <p className="font-semibold text-reading-contrast">{point.title}</p>
-                                                <p className="text-reading-contrast/70">{point.description}</p>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="flex h-full flex-col justify-between gap-6 rounded-[28px] border border-dashed border-library-gold/40 bg-library-parchment/10 p-8 text-reading-text">
-                                <div>
-                                    <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-library-copper">
-                                        Bonus za godišnji plan
-                                    </div>
-                                    <h3 className="mt-4 font-display text-2xl font-semibold">Sezonske kolekcije i live Q&A samo za članove</h3>
-                                    <p className="mt-3 text-sm text-reading-text/70">
-                                        Svaka sezona donosi pažljivo kurirane liste knjiga, radionice sa urednicima i interaktivne sesije sa autorima.
-                                    </p>
-                                </div>
-                                <Button
-                                    asChild
-                                    variant="outline"
-                                    className="w-full rounded-full border-library-gold/50 bg-white/80 py-5 text-library-midnight hover:bg-white"
-                                >
-                                    <Link href="/auth/register">Pređi na godišnje članstvo</Link>
-                                </Button>
-                            </div>
-                        </div>
                     </div>
                 </section>
             </main>

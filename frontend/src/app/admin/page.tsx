@@ -187,39 +187,6 @@ export default function AdminDashboardPage() {
                         </AlertDescription>
                     </Alert>
                 )}
-
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Brze akcije</CardTitle>
-                        <CardDescription>
-                            Često korišćene administratorske funkcije
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-3">
-                            <Button asChild variant="outline">
-                                <Link href="/admin/books/new">
-                                    <BookOpen className="h-4 w-4 mr-2" />
-                                    Dodaj novu knjigu
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline">
-                                <Link href="/admin/users">
-                                    <UserPlus className="h-4 w-4 mr-2" />
-                                    Upravljaj korisnicima
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline">
-                                <Link href="/admin/analytics">
-                                    <TrendingUp className="h-4 w-4 mr-2" />
-                                    Vidi analitiku
-                                </Link>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
                 {/* Recent Activity & Popular Books */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Recent Activity */}
