@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Check, Clock, MessageCircle, ShieldCheck, Sparkles, Users, BookOpen } from 'lucide-react';
+import { Check, Clock, MessageCircle, ShieldCheck, Sparkles, Users, BookOpen, Crown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,245 +8,271 @@ import { dt } from '@/lib/design-tokens';
 
 const baseFeatures = [
     'Neograničeno čitanje 12.000+ digitalnih naslova',
-    'Personalizovane preporuke na osnovu tvojih navika',
+    'Personalizovane preporuke i dinamične liste knjiga',
     'Sinhronizacija beleški, podsetnika i napretka na svim uređajima',
-    'Pristup ekskluzivnoj zajednici čitalaca i mesečnim diskusijama',
+    'Ekskluzivna zajednica čitalaca i tematski klubovi',
 ];
 
 const plans = [
     {
         id: 'monthly',
         name: 'Osnovni plan',
-        label: 'Mesečni plan',
-        description: 'Idealno za čitaoce koji žele fleksibilnost i žele da isprobaju ReadBookHub bez dugoročnih obaveza.',
+        badge: 'Mesečno članstvo',
+        description:
+            'Idealno ako želiš punu fleksibilnost i pristup celom katalogu dok istražuješ ReadBookHub.',
         price: '999 RSD',
-        billing: 'mesečno',
-        highlight: 'Psihološka cena ispod 1.000 dinara',
-        cta: 'Pokreni mesečnu pretplatu',
+        billing: '/mesec',
+        highlight: 'Aktiviraj kada želiš, otkaži u par klikova',
+        cta: 'Započni mesečnu pretplatu',
         href: '/auth/register',
-        meta: 'Otkazuješ online u bilo kom trenutku',
+        note: 'Naplata se vrši mesečno – bez skrivenih troškova.',
         features: baseFeatures,
         accent: false,
     },
     {
         id: 'yearly',
         name: 'Godišnji plan',
-        label: 'Sa popustom',
-        description: 'Za strastvene čitaoce koji žele da uštede i dobiju maksimum iz našeg ekosistema sadržaja tokom cele godine.',
+        badge: 'Sa popustom',
+        description:
+            'Za neumorne čitaoce koji žele maksimum sadržaja tokom cele godine uz značajnu uštedu.',
         price: '9.999 RSD',
         billing: 'godišnje (~833 RSD/mesec)',
         highlight: 'Ušteda 16% u odnosu na mesečni plan',
-        cta: 'Uštedi sa godišnjim članstvom',
+        cta: 'Aktiviraj godišnje članstvo',
         href: '/auth/register',
-        meta: 'Uključena 3 meseca ekskluzivnih audio izdanja gratis',
+        note: 'Poklanjamo 3 ekskluzivne kolekcije sezonski – samo za godišnje članove.',
         features: [
             ...baseFeatures,
-            'Napredne analitike čitanja i personalizovani izazovi svakog kvartala',
-            'Prvi pristup novim naslovima i specijalnim kolekcijama',
+            'Napredne analitike čitanja i personalizovani izazovi svaka tri meseca',
+            'Rani pristup novim naslovima i live Q&A sesijama sa autorima',
         ],
         accent: true,
     },
 ] as const;
 
-const includedHighlights = [
+const experienceHighlights = [
     {
         icon: Sparkles,
         title: 'Personalizovano iskustvo',
         description:
-            'Napredni algoritam ti svakodnevno predlaže naslove na osnovu žanrova, raspoloženja i ciljeva čitanja.',
+            'Algoritam prati tvoje ciljeve, raspoloženje i žanrove kako bi ti svakog dana predložio savršeno štivo.',
     },
     {
         icon: BookOpen,
-        title: 'Fokus na rutinu',
-        description:
-            'Planovi čitanja, podsetnici i mikro-ciljevi pomažu ti da čitanje postane navika kojoj se vraćaš svakog dana.',
+        title: 'Strukturisani planovi',
+        description: 'Fokusirani planovi čitanja i mikro-ciljevi pomažu ti da održiš kontinuitet u učenju.',
     },
     {
         icon: Users,
         title: 'Zajednica koja inspiriše',
-        description:
-            'Pridruži se klubovima, razmeni utiske i upoznaj čitaoce koji dele tvoja interesovanja u tech i biznis temama.',
+        description: 'Klubovi, diskusije i preporuke od čitalaca koji dele tvoja interesovanja.',
     },
 ];
 
-const guaranteePoints = [
+const guarantee = [
     {
         icon: ShieldCheck,
         title: 'Bez rizika',
-        description: '3 dana besplatne probne verzije uz mogućnost otkazivanja bez dodatnih pitanja.',
+        description: '3 dana besplatne probne verzije i otkazivanje online kada god poželiš.',
     },
     {
         icon: Clock,
         title: 'Fleksibilno korišćenje',
-        description: 'Čitaj kad ti odgovara – na telefonu, tabletu ili laptopu, čak i offline.',
+        description: 'Čitaj na telefonu, tabletu ili laptopu – čak i offline.',
     },
     {
         icon: MessageCircle,
-        title: 'Podrška u realnom vremenu',
-        description: 'Naš tim je tu za tebe putem chata i e-maila kad god zatreba pomoć ili preporuka.',
+        title: 'Stvarna podrška',
+        description: 'Naši urednici i tim podrške uz tebe su putem chata i e-maila.',
     },
 ];
 
 const sharedButtonClasses =
-    'rounded-full px-8 py-5 text-base font-semibold shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1';
+    'rounded-full px-8 py-5 text-base font-semibold tracking-tight shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1';
 
 export default function PricingPage() {
     return (
-        <div className={cn(dt.layouts.mainPage, 'relative overflow-hidden text-reading-contrast')}>
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-library-highlight/30 to-transparent blur-3xl" />
-            <div className="pointer-events-none absolute bottom-0 left-1/2 h-80 w-[120vw] -translate-x-1/2 rounded-[50%] bg-library-gold/10 blur-3xl" />
+        <div className={cn(dt.layouts.mainPage, 'relative overflow-hidden bg-gradient-to-br from-library-midnight via-[#0b1120] to-[#1a1f2e] text-reading-contrast')}>
+            <div className="pointer-events-none absolute inset-x-0 top-[-20%] h-[420px] bg-[radial-gradient(circle_at_center,_rgba(228,179,76,0.25),_transparent_65%)]" />
+            <div className="pointer-events-none absolute bottom-[-30%] right-[-20%] h-[480px] w-[480px] rounded-full bg-library-highlight/15 blur-3xl" />
+            <div className="pointer-events-none absolute left-[-10%] top-1/3 h-[420px] w-[420px] rounded-full bg-library-gold/10 blur-3xl" />
 
             <main className="relative z-10">
-                <section className="px-4 py-20 sm:px-6 lg:px-8">
+                <section className="px-4 pb-16 pt-24 sm:px-6 lg:px-12">
                     <div className="mx-auto max-w-4xl text-center">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/30 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-slate">
-                            Pricing & Plans
-                        </div>
-                        <h1 className="mt-6 font-display text-4xl font-semibold sm:text-5xl">
-                            Odaberi tempo čitanja koji se uklapa u tvoj život
+                        <Badge className="mx-auto inline-flex items-center gap-2 rounded-full border border-library-gold/30 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-gold">
+                            Premium pretplata
+                        </Badge>
+                        <h1 className="mt-7 font-display text-4xl font-semibold leading-tight sm:text-5xl">
+                            Odaberi tempo čitanja koji ti prirodno leži
                         </h1>
                         <p className="mt-4 text-sm text-reading-contrast/70 sm:text-base">
-                            Bez skrivenih troškova i komplikovanih uslova. Aktiviraš besplatnu probu, istražiš naš katalog i tek onda odlučiš da li ti više odgovara mesečna fleksibilnost ili godišnja ušteda.
+                            Aktiviraj probu, istraži bogati katalog i odluči da li želiš fleksibilnost iz meseca u mesec ili dugoročnu uštedu uz godišnje članstvo.
                         </p>
                     </div>
 
-                    <div className="mx-auto mt-12 grid max-w-5xl gap-8 md:grid-cols-2">
+                    <div className="mx-auto mt-16 grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                         {plans.map((plan) => (
                             <div
                                 key={plan.id}
                                 className={cn(
-                                    'group relative flex h-full flex-col overflow-hidden rounded-[32px] border bg-white/90 p-10 text-left text-reading-text backdrop-blur',
+                                    'relative flex h-full flex-col justify-between overflow-hidden rounded-[32px] border p-10 backdrop-blur',
                                     plan.accent
-                                        ? 'border-library-gold/40 shadow-[0_36px_120px_rgba(12,25,58,0.45)]'
-                                        : 'border-library-gold/20 shadow-[0_28px_80px_rgba(12,25,58,0.25)]'
+                                        ? 'border-library-gold/40 bg-white text-reading-text shadow-[0_40px_140px_rgba(9,17,39,0.55)]'
+                                        : 'border-white/15 bg-white/10 text-reading-contrast shadow-[0_32px_90px_rgba(9,17,39,0.35)]'
                                 )}
                             >
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <Badge className="rounded-full border-library-gold/20 bg-library-parchment/60 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-library-copper">
-                                        {plan.label}
-                                    </Badge>
-                                    {plan.accent && (
-                                        <Badge className="rounded-full border-library-gold/20 bg-library-gold/90 text-library-midnight">
-                                            Najpopularniji izbor
+                                {plan.accent && (
+                                    <div className="absolute left-1/2 top-[-60px] h-[220px] w-[220px] -translate-x-1/2 rounded-full bg-library-gold/30 blur-3xl" />
+                                )}
+
+                                <div className="relative">
+                                    <div className="flex items-center gap-3">
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                'rounded-full border px-4 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.28em]',
+                                                plan.accent
+                                                    ? 'border-library-gold bg-library-gold/10 text-library-midnight'
+                                                    : 'border-white/40 bg-white/5 text-library-gold'
+                                            )}
+                                        >
+                                            {plan.badge}
                                         </Badge>
-                                    )}
-                                </div>
-
-                                <h2 className="mt-8 font-display text-3xl font-semibold text-reading-text">{plan.name}</h2>
-                                <p className="mt-3 text-sm text-reading-text/70">{plan.description}</p>
-
-                                <div className="mt-8 flex items-baseline gap-3">
-                                    <span className="font-display text-5xl font-semibold text-reading-text">{plan.price}</span>
-                                    <span className="text-sm font-medium text-library-copper">{plan.billing}</span>
-                                </div>
-                                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.28em] text-library-highlight/80">
-                                    {plan.highlight}
-                                </p>
-
-                                <ul className="mt-8 space-y-4 text-sm text-reading-text/80">
-                                    {plan.features.map((feature) => (
-                                        <li key={feature} className="flex items-start gap-3">
-                                            <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-library-mint/15 text-library-mint shadow-inner">
-                                                <Check className="h-4 w-4" />
+                                        {plan.accent && (
+                                            <span className="inline-flex items-center gap-2 rounded-full bg-library-gold/20 px-3 py-1 text-xs font-semibold text-library-midnight">
+                                                <Crown className="h-3.5 w-3.5" /> Najviše vrednosti
                                             </span>
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                                        )}
+                                    </div>
+                                    <h2 className={cn('mt-8 font-display text-3xl font-semibold', plan.accent ? 'text-reading-text' : 'text-white')}>
+                                        {plan.name}
+                                    </h2>
+                                    <p className={cn('mt-3 text-sm', plan.accent ? 'text-reading-text/70' : 'text-reading-contrast/70')}>
+                                        {plan.description}
+                                    </p>
 
-                                <div className="mt-10 flex flex-1 flex-col justify-end gap-3">
+                                    <div className="mt-8 flex items-baseline gap-3">
+                                        <span className={cn('font-display text-5xl font-semibold', plan.accent ? 'text-reading-text' : 'text-white')}>
+                                            {plan.price}
+                                        </span>
+                                        <span className={cn('text-sm font-medium', plan.accent ? 'text-library-copper' : 'text-library-gold/90')}>
+                                            {plan.billing}
+                                        </span>
+                                    </div>
+                                    <p className={cn('mt-2 text-xs font-semibold uppercase tracking-[0.28em]', plan.accent ? 'text-library-highlight/80' : 'text-library-gold/80')}>
+                                        {plan.highlight}
+                                    </p>
+
+                                    <ul className="mt-8 space-y-4 text-sm">
+                                        {plan.features.map((feature) => (
+                                            <li key={feature} className="flex items-start gap-3">
+                                                <span
+                                                    className={cn(
+                                                        'mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-library-mint/15 text-library-mint shadow-inner',
+                                                        plan.accent ? 'bg-library-mint/20 text-library-midnight' : ''
+                                                    )}
+                                                >
+                                                    <Check className="h-4 w-4" />
+                                                </span>
+                                                <span className={plan.accent ? 'text-reading-text/80' : 'text-reading-contrast/80'}>{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div className="relative mt-10 flex flex-col gap-3">
                                     <Button
                                         asChild
                                         className={cn(
                                             sharedButtonClasses,
                                             plan.accent
                                                 ? 'bg-library-gold text-library-midnight hover:bg-library-gold/90'
-                                                : 'bg-library-highlight text-white hover:bg-library-highlight/90'
+                                                : 'bg-library-highlight/80 text-white hover:bg-library-highlight'
                                         )}
                                     >
                                         <Link href={plan.href}>{plan.cta}</Link>
                                     </Button>
-                                    <p className="text-xs text-reading-text/60">{plan.meta}</p>
+                                    <p className={cn('text-xs', plan.accent ? 'text-reading-text/60' : 'text-reading-contrast/60')}>{plan.note}</p>
                                 </div>
-
-                                {plan.accent && (
-                                    <div className="pointer-events-none absolute -top-24 right-[-10%] h-48 w-48 rounded-full bg-library-gold/20 blur-3xl transition duration-500 group-hover:scale-110" />
-                                )}
                             </div>
                         ))}
                     </div>
                 </section>
 
-                <section className="border-t border-white/10 bg-white/10 px-4 py-20 backdrop-blur-sm sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-6xl">
-                        <div className="mx-auto max-w-3xl text-center">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/30 bg-library-parchment/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-copper">
-                                Šta dobijaš u oba plana
-                            </div>
-                            <h2 className="mt-6 font-display text-3xl font-semibold text-reading-contrast sm:text-4xl">
-                                Dizajnirano da te vodi od prve strane do poslednje
-                            </h2>
-                            <p className="mt-4 text-sm text-reading-contrast/70">
-                                Uz svaku pretplatu dobijaš iste premium alate koji te podstiču da čitaš, razumeš i deliš znanje sa ostatkom zajednice.
-                            </p>
-                        </div>
+                <section className="border-t border-white/10 bg-white/5 px-4 py-20 backdrop-blur-sm sm:px-6 lg:px-12">
+                    <div className="mx-auto max-w-5xl text-center">
+                        <Badge className="mx-auto inline-flex items-center gap-2 rounded-full border border-library-gold/30 bg-library-parchment/40 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.32em] text-library-copper">
+                            U oba plana
+                        </Badge>
+                        <h2 className="mt-6 font-display text-3xl font-semibold sm:text-4xl">Premium iskustvo dizajnirano oko tebe</h2>
+                        <p className="mt-4 text-sm text-reading-contrast/70">
+                            Bez obzira na to koji plan odabereš, dobijaš alate i sadržaj koji te inspirišu da čitaš, učiš i deliš znanje sa zajednicom.
+                        </p>
+                    </div>
 
-                        <div className="mt-12 grid gap-8 md:grid-cols-3">
-                            {includedHighlights.map((item) => (
-                                <div
-                                    key={item.title}
-                                    className="rounded-[28px] border border-library-gold/20 bg-reading-background/40 p-8 shadow-[0_24px_80px_rgba(12,25,58,0.4)]"
-                                >
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-library-gold/25 bg-library-gold/10 text-library-gold">
-                                        <item.icon className="h-6 w-6" />
-                                    </div>
-                                    <h3 className="mt-6 font-display text-xl font-semibold text-reading-contrast">{item.title}</h3>
-                                    <p className="mt-3 text-sm text-reading-contrast/70">{item.description}</p>
+                    <div className="mx-auto mt-12 grid max-w-6xl gap-8 md:grid-cols-3">
+                        {experienceHighlights.map((item) => (
+                            <div
+                                key={item.title}
+                                className="group relative overflow-hidden rounded-[28px] border border-library-gold/20 bg-reading-background/60 p-8 shadow-[0_28px_100px_rgba(9,17,39,0.45)] transition-transform hover:-translate-y-2"
+                            >
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-library-gold/25 bg-library-gold/10 text-library-gold">
+                                    <item.icon className="h-6 w-6" />
                                 </div>
-                            ))}
-                        </div>
+                                <h3 className="mt-6 font-display text-xl font-semibold text-reading-contrast">{item.title}</h3>
+                                <p className="mt-3 text-sm text-reading-contrast/70">{item.description}</p>
+                                <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
+                                    <div className="absolute inset-x-[-30%] bottom-[-60%] h-full rounded-full bg-library-gold/15 blur-3xl" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </section>
 
-                <section className="px-4 py-20 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-5xl rounded-[36px] border border-library-gold/25 bg-white/10 p-10 text-reading-contrast shadow-[0_28px_90px_rgba(12,25,58,0.4)] backdrop-blur">
-                        <div className="grid gap-10 md:grid-cols-[1fr_1.2fr] md:items-center">
+                <section className="px-4 py-20 sm:px-6 lg:px-12">
+                    <div className="mx-auto max-w-5xl rounded-[36px] border border-library-gold/25 bg-white/10 p-10 text-reading-contrast shadow-[0_32px_120px_rgba(9,17,39,0.45)] backdrop-blur">
+                        <div className="grid gap-10 md:grid-cols-[1fr_1fr] md:items-center">
                             <div>
-                                <h2 className="font-display text-3xl font-semibold sm:text-4xl">Sigurna pretplata uz podršku tima koji razume čitaoce</h2>
+                                <Badge className="inline-flex items-center gap-2 rounded-full border border-library-gold/40 bg-library-parchment/40 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-library-copper">
+                                    Miran um dok čitaš
+                                </Badge>
+                                <h2 className="mt-6 font-display text-3xl font-semibold sm:text-4xl">Sigurna pretplata uz tim koji razume čitaoce</h2>
                                 <p className="mt-4 text-sm text-reading-contrast/70">
-                                    Cilj nam je da ti omogućimo vreme za čitanje, a ne dodatnu administraciju. Zato je ceo proces – od aktivacije do otkazivanja – transparentan, brz i potpuno online.
+                                    Naš fokus je da ti obezbedimo vreme za čitanje, a ne dodatnu administraciju. Sve – od aktivacije do otkazivanja – obavljaš online, uz pravu pomoć kad god ti zatreba.
                                 </p>
+                                <ul className="mt-8 space-y-3 text-sm text-reading-contrast/80">
+                                    {guarantee.map((point) => (
+                                        <li key={point.title} className="flex items-start gap-3">
+                                            <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-library-mint/15 text-library-mint shadow-inner">
+                                                <point.icon className="h-4 w-4" />
+                                            </span>
+                                            <div>
+                                                <p className="font-semibold text-reading-contrast">{point.title}</p>
+                                                <p className="text-reading-contrast/70">{point.description}</p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
 
-                            <div className="grid gap-6 sm:grid-cols-2">
-                                {guaranteePoints.map((point) => (
-                                    <div key={point.title} className="flex h-full flex-col gap-4 rounded-3xl border border-library-gold/20 bg-library-azure/30 p-6">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-library-gold/25 bg-library-gold/15 text-library-gold">
-                                            <point.icon className="h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-display text-lg font-semibold text-reading-contrast">{point.title}</h3>
-                                            <p className="mt-2 text-sm text-reading-contrast/70">{point.description}</p>
-                                        </div>
+                            <div className="flex h-full flex-col justify-between gap-6 rounded-[28px] border border-dashed border-library-gold/40 bg-library-parchment/10 p-8 text-reading-text">
+                                <div>
+                                    <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-library-copper">
+                                        Bonus za godišnji plan
                                     </div>
-                                ))}
-                                <div className="flex h-full flex-col justify-between rounded-3xl border border-dashed border-library-gold/40 bg-library-parchment/20 p-6 text-reading-text">
-                                    <div>
-                                        <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-library-copper">
-                                            Bonus za godišnji plan
-                                        </div>
-                                        <p className="mt-3 text-base font-semibold text-reading-text">
-                                            Svake sezone dobijaš kurirane liste knjiga i live Q&A sesije sa autorima – samo za godišnje članove.
-                                        </p>
-                                    </div>
-                                    <Button
-                                        asChild
-                                        variant="outline"
-                                        className="mt-6 w-full rounded-full border-library-gold/40 bg-white/70 py-5 text-library-midnight hover:bg-white"
-                                    >
-                                        <Link href="/auth/register">Aktiviraj godišnju članarinu</Link>
-                                    </Button>
+                                    <h3 className="mt-4 font-display text-2xl font-semibold">Sezonske kolekcije i live Q&A samo za članove</h3>
+                                    <p className="mt-3 text-sm text-reading-text/70">
+                                        Svaka sezona donosi pažljivo kurirane liste knjiga, radionice sa urednicima i interaktivne sesije sa autorima.
+                                    </p>
                                 </div>
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    className="w-full rounded-full border-library-gold/50 bg-white/80 py-5 text-library-midnight hover:bg-white"
+                                >
+                                    <Link href="/auth/register">Pređi na godišnje članstvo</Link>
+                                </Button>
                             </div>
                         </div>
                     </div>
