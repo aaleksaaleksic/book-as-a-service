@@ -19,7 +19,10 @@ const plans = [
         badge: 'Mesečno članstvo',
         description:
             'Idealno ako želiš punu fleksibilnost i pristup celom katalogu dok istražuješ ReadBookHub.',
-        price: '999 RSD',
+        price: {
+            amount: '999',
+            currency: 'RSD',
+        },
         billing: '/mesec',
         highlight: 'Aktiviraj kada želiš, otkaži u par klikova',
         cta: 'Započni mesečnu pretplatu',
@@ -34,7 +37,10 @@ const plans = [
         badge: 'Sa popustom',
         description:
             'Za neumorne čitaoce koji žele maksimum sadržaja tokom cele godine uz značajnu uštedu.',
-        price: '9.999 RSD',
+        price: {
+            amount: '9.999',
+            currency: 'RSD',
+        },
         billing: 'godišnje (~833 RSD/mesec)',
         highlight: 'Ušteda 16% u odnosu na mesečni plan',
         cta: 'Aktiviraj godišnje članstvo',
@@ -147,10 +153,20 @@ export default function PricingPage() {
                                     </p>
 
                                     <div className="mt-8 flex items-baseline gap-3">
-                                        <span className={cn('font-display text-5xl font-semibold', plan.accent ? 'text-reading-text' : 'text-white')}>
-                                            {plan.price}
-                                        </span>
-                                        <span className={cn('text-sm font-medium', plan.accent ? 'text-library-copper' : 'text-library-gold/90')}>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className={cn('font-display text-5xl font-semibold', plan.accent ? 'text-reading-text' : 'text-white')}>
+                                                {plan.price.amount}
+                                            </span>
+                                            <span className={cn('font-display text-5xl font-semibold', plan.accent ? 'text-reading-text' : 'text-white')}>
+                                                {plan.price.currency}
+                                            </span>
+                                        </div>
+                                        <span
+                                            className={cn(
+                                                'text-sm font-medium whitespace-nowrap',
+                                                plan.accent ? 'text-library-copper' : 'text-library-gold/90'
+                                            )}
+                                        >
                                             {plan.billing}
                                         </span>
                                     </div>
