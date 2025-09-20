@@ -15,12 +15,18 @@ import {
 } from '@/hooks/use-reader';
 import { API_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 
+let pdfWorkerSrc: string | null = null;
+
 const pdfjsLibPromise = import('pdfjs-dist').then(pdfjs => {
-    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    if (typeof window !== 'undefined') {
+        if (!pdfWorkerSrc) {
+            pdfWorkerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+        }
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
+    }
     return pdfjs;
 });
 
