@@ -47,6 +47,8 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
+    const hasAttemptedLoadRef = useRef(false);
+    const skipInitialLoadResetRef = useRef(true);
 
     const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -202,11 +204,19 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     );
 
     useEffect(() => {
-        if (pdfDocument || !data?.canAccess || !data.stream || 'error' in data.stream) {
+        if (
+            pdfDocument ||
+            !data?.canAccess ||
+            !data.stream ||
+            'error' in data.stream ||
+            hasAttemptedLoadRef.current
+        ) {
             return;
         }
 
         const controller = new AbortController();
+
+        hasAttemptedLoadRef.current = true;
 
         loadPdfDocument(data.stream as SecureStreamDescriptor, controller.signal).catch(err => {
             if ((err as Error).name === 'AbortError') {
@@ -224,6 +234,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             controller.abort();
         };
     }, [pdfDocument, data?.canAccess, data?.stream, loadPdfDocument]);
+
+    useEffect(() => {
+        if (skipInitialLoadResetRef.current) {
+            skipInitialLoadResetRef.current = false;
+            return;
+        }
+        hasAttemptedLoadRef.current = false;
+    }, [data?.stream, data?.canAccess]);
 
     useEffect(() => {
         if (!pdfDocument) {
