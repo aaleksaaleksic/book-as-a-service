@@ -1,10 +1,12 @@
 import ReaderView from '@/components/reader/ReaderView';
 
 interface ReaderPageProps {
-    params: { bookId: string };
+    params: Promise<{ bookId: string }>;
 }
 
-export default function ReaderPage({ params }: ReaderPageProps) {
-    const bookId = Number(params.bookId);
-    return <ReaderView bookId={Number.isNaN(bookId) ? 0 : bookId} />;
+export default async function ReaderPage({ params }: ReaderPageProps) {
+    const { bookId } = await params;
+    const parsedBookId = Number(bookId);
+
+    return <ReaderView bookId={Number.isNaN(parsedBookId) ? 0 : parsedBookId} />;
 }
