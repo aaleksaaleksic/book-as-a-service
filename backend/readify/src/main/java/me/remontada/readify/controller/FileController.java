@@ -6,12 +6,15 @@ import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
+import me.remontada.readify.service.PdfStreamingService;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResourceRegion;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,9 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
 /**
  * FileController - REST API za upload i streaming knjiga i cover slika
@@ -45,14 +51,17 @@ public class FileController {
     private final FileStorageService fileStorageService;
     private final BookService bookService;
     private final UserService userService;
+    private final PdfStreamingService pdfStreamingService;
 
     @Autowired
     public FileController(FileStorageService fileStorageService,
                           BookService bookService,
-                          UserService userService) {
+                          UserService userService,
+                          PdfStreamingService pdfStreamingService) {
         this.fileStorageService = fileStorageService;
         this.bookService = bookService;
         this.userService = userService;
+        this.pdfStreamingService = pdfStreamingService;
     }
 
     /**
@@ -88,7 +97,8 @@ public class FileController {
     @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
                                                Authentication authentication,
-                                               HttpServletRequest request) {
+                                               HttpServletRequest request,
+                                               @RequestHeader HttpHeaders headers) {
         try {
             // Dohvatanje trenutnog korisnika
             String userEmail = authentication.getName();
@@ -110,24 +120,48 @@ public class FileController {
 
             // Dohvatanje PDF resursa
             Resource bookResource = fileStorageService.getBookPdf(bookId);
+            ResourceRegion region = pdfStreamingService.getResourceRegion(bookResource, headers);
+
+            long contentLength = bookResource.contentLength();
+            long rangeStart = region.getPosition();
+            long rangeEnd = Math.min(rangeStart + region.getCount() - 1, contentLength - 1);
+
+            String clientIp = request.getRemoteAddr();
+            String sessionHeader = headers.getFirst("X-Readify-Session");
+            String watermarkSignature = buildWatermarkSignature(currentUser.getId(), bookId, sessionHeader);
 
             // Logovanje pristupa (za analytics)
-            log.info("User {} accessing book: {} ({})",
-                    userEmail, book.getTitle(), bookId);
+            log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes)",
+                    userEmail, book.getTitle(), bookId, clientIp, rangeStart, rangeEnd, region.getCount());
 
-            // HTTP Headers za sigurnost i prikaz
-            return ResponseEntity.ok()
+            HttpStatus status = HttpStatus.PARTIAL_CONTENT;
+
+            return ResponseEntity.status(status)
                     .contentType(MediaType.APPLICATION_PDF)
-                    // No-cache za bezbednost
-                    .cacheControl(CacheControl.noCache().noStore().mustRevalidate())
-                    // Inline = prikaži u browseru, ne forsiraj download
+                    .contentLength(region.getCount())
+                    .cacheControl(CacheControl.noStore())
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .header(HttpHeaders.CONTENT_RANGE,
+                            String.format("bytes %d-%d/%d", rangeStart, rangeEnd, contentLength))
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "inline; filename=\"" + sanitizeFilename(book.getTitle()) + ".pdf\"")
-                    // Security headers protiv XSS
                     .header("X-Content-Type-Options", "nosniff")
                     .header("X-Frame-Options", "DENY")
-                    .body(bookResource);
+                    .header("Referrer-Policy", "no-referrer")
+                    .header("Permissions-Policy", "fullscreen=(), geolocation=()")
+                    .header("Pragma", "no-cache")
+                    .header("Expires", "0")
+                    .header("X-Download-Options", "noopen")
+                    .header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self';")
+                    .header("X-Readify-Watermark", watermarkSignature)
+                    .body(region);
 
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid range requested for book {}: {}", bookId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).body(Map.of(
+                    "success", false,
+                    "message", "Requested range not satisfiable"
+            ));
         } catch (Exception e) {
             log.error("Error streaming book content for ID: {}", bookId, e);
             return ResponseEntity.status(400).body(Map.of(
@@ -135,6 +169,17 @@ public class FileController {
                     "message", "Error accessing book: " + e.getMessage()
             ));
         }
+    }
+
+    private String buildWatermarkSignature(Long userId, Long bookId, String sessionHeader) {
+        String token = sessionHeader != null && !sessionHeader.isBlank() ? sessionHeader : UUID.randomUUID().toString();
+        Instant now = Instant.now();
+        String issuedAt = DateTimeFormatter.ISO_INSTANT.format(now);
+        return String.format("uid:%s|book:%s|issued:%s|token:%s",
+                userId != null ? userId : "anonymous",
+                bookId != null ? bookId : "unknown",
+                issuedAt,
+                token);
     }
 
     /**
