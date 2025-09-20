@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useCan,useSubscription} from '@/hooks/useAuth';
+import { useAuth, useCan, useSubscription } from '@/hooks/useAuth';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, Lock, CreditCard, AlertTriangle } from 'lucide-react';
+import { Shield, CreditCard, AlertTriangle } from 'lucide-react';
 import { AUTH_CONFIG } from '@/utils/constants';
 import type { Permission, UserRole } from '@/types/auth';
 
@@ -31,21 +31,43 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({
-                                                        children,
-                                                        requireAuth = true,
-                                                        permissions = [],
-                                                        anyPermissions = [],
-                                                        roles = [],
-                                                        requireSubscription = false,
-                                                        requireActiveSubscription = false,
-                                                        fallback,
-                                                        redirectTo,
-                                                        unauthorizedRedirect,
-                                                    }) => {
+    children,
+    requireAuth = true,
+    permissions = [],
+    anyPermissions = [],
+    roles = [],
+    requireSubscription = false,
+    requireActiveSubscription = false,
+    fallback,
+    redirectTo,
+    unauthorizedRedirect,
+}) => {
     const router = useRouter();
     const { isAuthenticated, isLoading, user } = useAuth();
     const { can, canAny, currentUser } = useCan();
     const { canReadBooks, needsSubscription, isActive, isTrial } = useSubscription();
+
+    useEffect(() => {
+        if (!requireAuth || isLoading || isAuthenticated) {
+            return;
+        }
+
+        if (fallback) {
+            return;
+        }
+
+        if (redirectTo) {
+            router.push(redirectTo);
+            return;
+        }
+
+        if (typeof window !== 'undefined') {
+            const redirectPath = `${AUTH_CONFIG.LOGIN_REDIRECT}?redirect=${encodeURIComponent(window.location.pathname)}`;
+            router.push(redirectPath);
+        } else {
+            router.push(AUTH_CONFIG.LOGIN_REDIRECT);
+        }
+    }, [requireAuth, isLoading, isAuthenticated, redirectTo, fallback, router]);
 
     if (isLoading) {
         return (
@@ -56,17 +78,15 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     }
 
     if (requireAuth && !isAuthenticated) {
-        if (redirectTo) {
-            router.push(redirectTo);
-            return <LoadingSpinner size="lg" />;
-        }
-
         if (fallback) {
             return <>{fallback}</>;
         }
 
-        router.push(`${AUTH_CONFIG.LOGIN_REDIRECT}?redirect=${encodeURIComponent(window.location.pathname)}`);
-        return <LoadingSpinner size="lg" />;
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <LoadingSpinner size="lg" />
+            </div>
+        );
     }
 
     if (roles.length > 0 && user) {

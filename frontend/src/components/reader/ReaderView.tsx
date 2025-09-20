@@ -139,32 +139,54 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     );
 
     const loadPdfDocument = useCallback(
-        async (stream: SecureStreamDescriptor) => {
+        async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
             const pdfjs = await pdfjsLibPromise;
             const token = tokenManager.getToken();
 
             const headers: Record<string, string> = {};
+            setRenderError(null);
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
             if (stream.headers) {
-                Object.assign(headers, stream.headers);
+                Object.entries(stream.headers).forEach(([key, value]) => {
+                    headers[key] = value;
+                });
             }
             if (watermarkSignature) {
                 headers['X-Readify-Watermark'] = watermarkSignature;
             }
 
+            const response = await fetch(`${API_CONFIG.BASE_URL}${stream.url}`, {
+                method: 'GET',
+                headers,
+                credentials: 'include',
+                signal,
+            });
+
+            if (!response.ok) {
+                const error = new Error(`Failed to fetch PDF: ${response.status}`);
+                (error as any).status = response.status;
+                throw error;
+            }
+
+            const pdfArrayBuffer = await response.arrayBuffer();
+            if (signal?.aborted) {
+                return;
+            }
+
             const loadingTask = pdfjs.getDocument({
-                url: `${API_CONFIG.BASE_URL}${stream.url}`,
-                withCredentials: true,
-                httpHeaders: headers,
-                rangeChunkSize: stream.chunkSize || 262144,
-                disableStream: true,
-                disableAutoFetch: true,
+                data: pdfArrayBuffer,
                 isEvalSupported: false,
+                useWorkerFetch: false,
             });
 
             const document = await loadingTask.promise;
+            if (signal?.aborted) {
+                loadingTask.destroy();
+                return;
+            }
+
             setPdfDocument(document);
             setTotalPages(document.numPages);
             setCurrentPage(1);
@@ -184,10 +206,23 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             return;
         }
 
-        loadPdfDocument(data.stream as SecureStreamDescriptor).catch(err => {
+        const controller = new AbortController();
+
+        loadPdfDocument(data.stream as SecureStreamDescriptor, controller.signal).catch(err => {
+            if ((err as Error).name === 'AbortError') {
+                return;
+            }
             console.error('Failed to load PDF document', err);
+            if ((err as any)?.status === 401) {
+                setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
+                return;
+            }
             setRenderError('Greška prilikom učitavanja dokumenta.');
         });
+
+        return () => {
+            controller.abort();
+        };
     }, [pdfDocument, data?.canAccess, data?.stream, loadPdfDocument]);
 
     useEffect(() => {
