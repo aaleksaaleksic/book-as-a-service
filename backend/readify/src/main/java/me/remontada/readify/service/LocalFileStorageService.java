@@ -198,6 +198,12 @@ public class LocalFileStorageService implements FileStorageService {
         return coversDir + "/book-" + bookId + "-cover.jpg";
     }
 
+    @Override
+    public long getBookPdfSize(Long bookId) throws IOException {
+        Resource resource = getBookPdf(bookId);
+        return resource.contentLength();
+    }
+
     /**
      * Validacija fajla - tip i veličina
      */

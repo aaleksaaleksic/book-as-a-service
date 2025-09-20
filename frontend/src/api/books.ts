@@ -6,6 +6,7 @@ import type {
     BookSearchParams,
     ApiResponse,
 } from "./types/books.types";
+import type { BookReadAccessResponse } from "@/types/reader";
 
 export const booksApi = {
     // Javni endpoint
@@ -45,7 +46,7 @@ export const booksApi = {
 
     // Zaštićeni endpoint
     readBook: (client: AxiosInstance, id: number) =>
-        client.get<ApiResponse<any>>(`/api/v1/books/${id}/read`),
+        client.get<BookReadAccessResponse>(`/api/v1/books/${id}/read`),
 
     // Admin endpoint
     createBook: (client: AxiosInstance, data: CreateBookRequest) =>

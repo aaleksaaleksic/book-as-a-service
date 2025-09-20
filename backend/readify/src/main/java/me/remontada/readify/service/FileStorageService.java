@@ -83,4 +83,13 @@ public interface FileStorageService {
      * @return String - relativna putanja
      */
     String getBookCoverPath(Long bookId);
+
+    /**
+     * Izračunava veličinu PDF fajla u bajtovima bez vraćanja celog resursa.
+     *
+     * @param bookId ID knjige
+     * @return veličina PDF fajla u bajtovima
+     * @throws IOException ukoliko fajl ne postoji ili nije čitljiv
+     */
+    long getBookPdfSize(Long bookId) throws IOException;
 }

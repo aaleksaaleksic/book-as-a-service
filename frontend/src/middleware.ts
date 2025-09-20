@@ -11,6 +11,7 @@ const protectedRoutes = {
     '/admin/analytics': ['ADMIN', 'MODERATOR'],
     '/dashboard': ['USER', 'ADMIN', 'MODERATOR'],
     '/reader': ['USER', 'ADMIN', 'MODERATOR'],
+    '/reader/[id]': ['USER', 'ADMIN', 'MODERATOR'],
     '/subscription': ['USER', 'ADMIN', 'MODERATOR'],
 };
 

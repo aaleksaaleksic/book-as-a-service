@@ -6,6 +6,8 @@ import me.remontada.readify.mapper.BookMapper;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
+import me.remontada.readify.service.FileStorageService;
+import me.remontada.readify.service.PdfStreamingService;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,11 +15,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 
 @Slf4j
@@ -27,11 +29,18 @@ public class BookController {
 
     private final BookService bookService;
     private final UserService userService;
+    private final FileStorageService fileStorageService;
+    private final PdfStreamingService pdfStreamingService;
 
     @Autowired
-    public BookController(BookService bookService, UserService userService) {
+    public BookController(BookService bookService,
+                          UserService userService,
+                          FileStorageService fileStorageService,
+                          PdfStreamingService pdfStreamingService) {
         this.bookService = bookService;
         this.userService = userService;
+        this.fileStorageService = fileStorageService;
+        this.pdfStreamingService = pdfStreamingService;
     }
 
 
@@ -302,6 +311,10 @@ public class BookController {
             response.put("contentPreview", book.getContentPreview());
             response.put("canAccess", book.isAccessibleToUser(user));
 
+            if (book.isAccessibleToUser(user)) {
+                enrichWithStreamingMetadata(response, book);
+            }
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -310,6 +323,36 @@ public class BookController {
                     "success", false,
                     "message", "Error accessing book: " + e.getMessage()
             ));
+        }
+    }
+
+    private void enrichWithStreamingMetadata(Map<String, Object> response, Book book) {
+        try {
+            Long bookId = book.getId();
+            long contentLength = fileStorageService.getBookPdfSize(bookId);
+            String secureUrl = fileStorageService.generateSecureBookUrl(bookId, 2);
+
+            String sessionToken = UUID.randomUUID().toString();
+            String issuedAt = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
+            String watermarkText = book.getTitle() + " • " + issuedAt.substring(0, 10);
+
+            Map<String, Object> stream = new HashMap<>();
+            stream.put("url", secureUrl);
+            stream.put("contentLength", contentLength);
+            stream.put("chunkSize", pdfStreamingService.getChunkSize());
+            stream.put("expiresAt", Instant.now().plusSeconds(7200).toString());
+            stream.put("headers", Map.of("X-Readify-Session", sessionToken));
+
+            Map<String, Object> watermark = new HashMap<>();
+            watermark.put("text", watermarkText);
+            watermark.put("signature", String.format("book:%s|issued:%s|token:%s", bookId, issuedAt, sessionToken));
+            watermark.put("issuedAt", issuedAt);
+
+            response.put("stream", stream);
+            response.put("watermark", watermark);
+        } catch (IOException e) {
+            log.error("Failed to enrich streaming metadata for book {}", book.getId(), e);
+            response.put("stream", Map.of("error", "PDF source unavailable"));
         }
     }
 
