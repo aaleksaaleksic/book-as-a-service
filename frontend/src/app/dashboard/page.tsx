@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useBooks } from '@/hooks/use-books';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 const FALLBACK_COVER_IMAGE = '/book-placeholder.svg';
@@ -31,7 +31,7 @@ export default function DashboardPage() {
                         <LoadingSpinner size="lg" variant="book" text="Učitavanje knjiga" />
                     </div>
                 ) : (
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-8 md:grid-cols-2">
                         {(books ?? []).slice(0, 6).map(book => {
                             const coverUrl = book.coverImageUrl
                                 ? resolveApiFileUrl(book.coverImageUrl) ?? book.coverImageUrl
@@ -40,49 +40,70 @@ export default function DashboardPage() {
                             return (
                                 <Card
                                     key={book.id}
-                                    className="group flex h-full flex-col border-white/10 bg-white/5 backdrop-blur transition duration-200 hover:border-library-gold/40"
+                                    className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border border-library-highlight/25 bg-library-parchment/95 p-6 text-reading-text shadow-[0_24px_60px_rgba(6,18,38,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_32px_70px_rgba(6,18,38,0.45)]"
                                 >
-                                    <CardHeader className="space-y-4">
-                                        <div className="relative">
-                                            <div className="absolute inset-0 scale-[0.96] rounded-[24px] bg-library-highlight/20 opacity-0 blur-xl transition group-hover:opacity-100" />
-                                            <div className="relative overflow-hidden rounded-[24px] border border-white/5 bg-white/10 shadow-lg">
-                                                {coverUrl ? (
-                                                    <img
-                                                        src={coverUrl}
-                                                        alt={`Naslovnica za ${book.title}`}
-                                                        className="h-48 w-full object-cover"
-                                                        loading="lazy"
-                                                        onError={event => {
-                                                            const target = event.currentTarget;
-                                                            if (!target.src.endsWith(FALLBACK_COVER_IMAGE)) {
-                                                                target.onerror = null;
-                                                                target.src = FALLBACK_COVER_IMAGE;
-                                                            }
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="flex h-48 items-center justify-center bg-library-fog text-sm text-reading-text/60">
-                                                        Naslovnica u pripremi
-                                                    </div>
-                                                )}
+                                    <div
+                                        className="pointer-events-none absolute -right-16 top-16 hidden h-36 w-36 rounded-full border border-library-gold/25 opacity-20 blur-3xl transition-opacity duration-300 group-hover:opacity-40 md:block"
+                                        aria-hidden="true"
+                                    />
+                                    <div className="relative overflow-hidden rounded-3xl border border-library-highlight/30 bg-library-parchment/80 p-4 shadow-inner">
+                                        {coverUrl ? (
+                                            <div className="flex min-h-[16rem] items-center justify-center sm:min-h-[18rem]">
+                                                <img
+                                                    src={coverUrl}
+                                                    alt={`Naslovnica za ${book.title}`}
+                                                    className="max-h-[16rem] w-auto object-contain drop-shadow-xl sm:max-h-[18rem]"
+                                                    loading="lazy"
+                                                    onError={event => {
+                                                        const target = event.currentTarget;
+                                                        if (!target.src.endsWith(FALLBACK_COVER_IMAGE)) {
+                                                            target.onerror = null;
+                                                            target.src = FALLBACK_COVER_IMAGE;
+                                                        }
+                                                    }}
+                                                />
                                             </div>
+                                        ) : (
+                                            <div className="flex min-h-[16rem] items-center justify-center rounded-2xl bg-library-azure/15 text-sm text-reading-text/60 sm:min-h-[18rem]">
+                                                Naslovnica u pripremi
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-6 flex flex-1 flex-col gap-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <h3 className="font-display text-xl font-semibold text-reading-text">{book.title}</h3>
+                                                <p className="mt-1 text-sm text-reading-text/70">Autor: {book.author}</p>
+                                            </div>
+                                            {book.category && (
+                                                <Badge className="rounded-full bg-library-gold/15 text-library-copper">
+                                                    {book.category}
+                                                </Badge>
+                                            )}
                                         </div>
-                                        <CardTitle className="flex items-center gap-2 text-lg text-white">
-                                            <BookOpen className="h-5 w-5 text-reading-accent" />
-                                            {book.title}
-                                        </CardTitle>
-                                        <p className="font-medium text-white/70">Autor: {book.author}</p>
-                                    </CardHeader>
-                                    <CardContent className="flex flex-1 flex-col gap-4 text-sm text-reading-text/80">
-                                        <p className="line-clamp-3 text-sm text-reading-text/70">{book.description}</p>
-                                        <div className="flex items-center justify-between text-xs text-reading-text/60">
-                                            <span>{book.pages} strana</span>
-                                            <span>{book.isPremium ? 'Premium' : 'Besplatna'}</span>
+
+                                        {book.description && (
+                                            <p className="text-sm text-reading-text/70 line-clamp-3">{book.description}</p>
+                                        )}
+
+                                        <div className="flex flex-wrap items-center gap-3 text-[0.7rem] uppercase tracking-[0.3em] text-reading-text/60">
+                                            <span className="rounded-full border border-library-gold/30 px-3 py-1">
+                                                {book.pages} strana
+                                            </span>
+                                            <span className="rounded-full border border-library-gold/30 px-3 py-1">
+                                                {book.isPremium ? 'Premium naslov' : 'Besplatan pristup'}
+                                            </span>
                                         </div>
-                                        <Button asChild className="mt-auto w-full">
+
+                                        <Button
+                                            asChild
+                                            variant="ghost"
+                                            className="mt-auto w-full rounded-full border border-library-gold/30 bg-library-azure/15 py-4 text-reading-text transition hover:bg-library-highlight/20"
+                                        >
                                             <Link href={`/reader/${book.id}`}>Čitaj</Link>
                                         </Button>
-                                    </CardContent>
+                                    </div>
                                 </Card>
                             );
                         })}
