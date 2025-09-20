@@ -13,8 +13,8 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import { API_CONFIG } from '@/utils/constants';
-import { tokenManager } from '@/lib/api-client';
+import { api } from '@/lib/api-client';
+import { AxiosError } from 'axios';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 
@@ -143,13 +143,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const loadPdfDocument = useCallback(
         async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
             const pdfjs = await pdfjsLibPromise;
-            const token = tokenManager.getToken();
 
             const headers: Record<string, string> = {};
             setRenderError(null);
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
             if (stream.headers) {
                 Object.entries(stream.headers).forEach(([key, value]) => {
                     headers[key] = value;
@@ -159,46 +155,55 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 headers['X-Readify-Watermark'] = watermarkSignature;
             }
 
-            const response = await fetch(`${API_CONFIG.BASE_URL}${stream.url}`, {
-                method: 'GET',
-                headers,
-                credentials: 'include',
-                signal,
-            });
+            try {
+                const response = await api.get<ArrayBuffer>(stream.url, {
+                    responseType: 'arraybuffer',
+                    headers,
+                    withCredentials: true,
+                    signal,
+                });
 
-            if (!response.ok) {
-                const error = new Error(`Failed to fetch PDF: ${response.status}`);
-                (error as any).status = response.status;
+                if (signal?.aborted) {
+                    return;
+                }
+
+                const pdfArrayBuffer = response.data;
+                const loadingTask = pdfjs.getDocument({
+                    data: pdfArrayBuffer,
+                    isEvalSupported: false,
+                    useWorkerFetch: false,
+                });
+
+                const document = await loadingTask.promise;
+                if (signal?.aborted) {
+                    loadingTask.destroy();
+                    return;
+                }
+
+                setPdfDocument(document);
+                setTotalPages(document.numPages);
+                setCurrentPage(1);
+
+                const firstPage = await document.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1 });
+                const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
+                const autoScale = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
+                setScale(autoScale);
+                await renderPage(1, document, autoScale);
+            } catch (error) {
+                if ((error as AxiosError)?.code === 'ERR_CANCELED' || signal?.aborted) {
+                    return;
+                }
+
+                if (error instanceof AxiosError) {
+                    const status = error.response?.status;
+                    const axiosError = new Error(`Failed to fetch PDF: ${status ?? 'unknown'}`);
+                    (axiosError as any).status = status;
+                    throw axiosError;
+                }
+
                 throw error;
             }
-
-            const pdfArrayBuffer = await response.arrayBuffer();
-            if (signal?.aborted) {
-                return;
-            }
-
-            const loadingTask = pdfjs.getDocument({
-                data: pdfArrayBuffer,
-                isEvalSupported: false,
-                useWorkerFetch: false,
-            });
-
-            const document = await loadingTask.promise;
-            if (signal?.aborted) {
-                loadingTask.destroy();
-                return;
-            }
-
-            setPdfDocument(document);
-            setTotalPages(document.numPages);
-            setCurrentPage(1);
-
-            const firstPage = await document.getPage(1);
-            const viewport = firstPage.getViewport({ scale: 1 });
-            const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
-            const autoScale = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
-            setScale(autoScale);
-            await renderPage(1, document, autoScale);
         },
         [clamp, renderPage, watermarkSignature]
     );
