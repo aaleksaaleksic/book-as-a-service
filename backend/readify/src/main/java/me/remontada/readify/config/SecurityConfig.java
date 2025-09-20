@@ -110,6 +110,13 @@ public class SecurityConfig {
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of(
+                "Content-Disposition",
+                "Content-Length",
+                "Content-Range",
+                "Accept-Ranges",
+                "X-Readify-Watermark"
+        ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L); // Cache preflight response for 1 hour
 
