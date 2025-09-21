@@ -13,10 +13,11 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import { API_CONFIG } from '@/utils/constants';
-import { tokenManager } from '@/lib/api-client';
+import { api, tokenManager } from '@/lib/api-client';
+import { AxiosError } from 'axios';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
+import { API_CONFIG } from '@/utils/constants';
 
 let pdfWorkerSrc: string | null = null;
 
@@ -49,6 +50,8 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const renderTaskRef = useRef<RenderTask | null>(null);
     const hasAttemptedLoadRef = useRef(false);
     const skipInitialLoadResetRef = useRef(true);
+    const lastStreamKeyRef = useRef<string | null>(null);
+    const lastCanAccessRef = useRef<boolean | null>(null);
 
     const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -143,10 +146,10 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const loadPdfDocument = useCallback(
         async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
             const pdfjs = await pdfjsLibPromise;
-            const token = tokenManager.getToken();
 
             const headers: Record<string, string> = {};
             setRenderError(null);
+            const token = tokenManager.getToken();
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
@@ -159,46 +162,59 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 headers['X-Readify-Watermark'] = watermarkSignature;
             }
 
-            const response = await fetch(`${API_CONFIG.BASE_URL}${stream.url}`, {
-                method: 'GET',
-                headers,
-                credentials: 'include',
-                signal,
-            });
+            try {
+                const requestUrl = stream.url.startsWith('http')
+                    ? stream.url
+                    : new URL(stream.url, API_CONFIG.BASE_URL).toString();
 
-            if (!response.ok) {
-                const error = new Error(`Failed to fetch PDF: ${response.status}`);
-                (error as any).status = response.status;
+                const response = await api.get<ArrayBuffer>(requestUrl, {
+                    responseType: 'arraybuffer',
+                    headers,
+                    withCredentials: true,
+                    signal,
+                });
+
+                if (signal?.aborted) {
+                    return;
+                }
+
+                const pdfArrayBuffer = response.data;
+                const loadingTask = pdfjs.getDocument({
+                    data: pdfArrayBuffer,
+                    isEvalSupported: false,
+                    useWorkerFetch: false,
+                });
+
+                const document = await loadingTask.promise;
+                if (signal?.aborted) {
+                    loadingTask.destroy();
+                    return;
+                }
+
+                setPdfDocument(document);
+                setTotalPages(document.numPages);
+                setCurrentPage(1);
+
+                const firstPage = await document.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1 });
+                const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
+                const autoScale = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
+                setScale(autoScale);
+                await renderPage(1, document, autoScale);
+            } catch (error) {
+                if ((error as AxiosError)?.code === 'ERR_CANCELED' || signal?.aborted) {
+                    return;
+                }
+
+                if (error instanceof AxiosError) {
+                    const status = error.response?.status;
+                    const axiosError = new Error(`Failed to fetch PDF: ${status ?? 'unknown'}`);
+                    (axiosError as any).status = status;
+                    throw axiosError;
+                }
+
                 throw error;
             }
-
-            const pdfArrayBuffer = await response.arrayBuffer();
-            if (signal?.aborted) {
-                return;
-            }
-
-            const loadingTask = pdfjs.getDocument({
-                data: pdfArrayBuffer,
-                isEvalSupported: false,
-                useWorkerFetch: false,
-            });
-
-            const document = await loadingTask.promise;
-            if (signal?.aborted) {
-                loadingTask.destroy();
-                return;
-            }
-
-            setPdfDocument(document);
-            setTotalPages(document.numPages);
-            setCurrentPage(1);
-
-            const firstPage = await document.getPage(1);
-            const viewport = firstPage.getViewport({ scale: 1 });
-            const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
-            const autoScale = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
-            setScale(autoScale);
-            await renderPage(1, document, autoScale);
         },
         [clamp, renderPage, watermarkSignature]
     );
@@ -240,7 +256,24 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             skipInitialLoadResetRef.current = false;
             return;
         }
-        hasAttemptedLoadRef.current = false;
+
+        const stream = data?.stream;
+        const streamKey =
+            stream && typeof stream === 'object' && !('error' in stream)
+                ? [stream.url, stream.expiresAt ?? '', JSON.stringify(stream.headers ?? {})].join('|')
+                : stream && typeof stream === 'object' && 'error' in stream
+                  ? 'error'
+                  : null;
+        const canAccessValue = typeof data?.canAccess === 'boolean' ? data.canAccess : null;
+
+        const hasStreamChanged = streamKey !== lastStreamKeyRef.current;
+        const hasAccessChanged = canAccessValue !== lastCanAccessRef.current;
+
+        if (hasStreamChanged || hasAccessChanged) {
+            lastStreamKeyRef.current = streamKey;
+            lastCanAccessRef.current = canAccessValue;
+            hasAttemptedLoadRef.current = false;
+        }
     }, [data?.stream, data?.canAccess]);
 
     useEffect(() => {
