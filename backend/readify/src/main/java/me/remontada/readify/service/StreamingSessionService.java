@@ -104,35 +104,74 @@ public class StreamingSessionService {
                                                       Long expectedUserId,
                                                       Long expectedBookId,
                                                       String providedSignature) {
+        return validateSession(token, expectedUserId, expectedBookId, providedSignature, null, null, null);
+    }
+
+    public Optional<StreamingSession> validateSession(String token,
+                                                      Long expectedUserId,
+                                                      Long expectedBookId,
+                                                      String providedSignature,
+                                                      Instant issuedAt,
+                                                      User user,
+                                                      Book book) {
         if (token == null || token.isBlank()) {
             return Optional.empty();
         }
 
         StreamingSession session = sessions.get(token);
-        if (session == null) {
-            return Optional.empty();
-        }
-
         Instant now = Instant.now();
-        if (now.isAfter(session.getExpiresAt())) {
-            sessions.remove(token);
+
+        if (session != null) {
+            if (now.isAfter(session.getExpiresAt())) {
+                sessions.remove(token);
+                return Optional.empty();
+            }
+
+            if (!Objects.equals(expectedUserId, session.getUserId())
+                    || !Objects.equals(expectedBookId, session.getBookId())) {
+                return Optional.empty();
+            }
+
+            if (providedSignature == null || providedSignature.isBlank()) {
+                return Optional.empty();
+            }
+
+            if (!session.getWatermarkSignature().equals(providedSignature)) {
+                return Optional.empty();
+            }
+
+            return Optional.of(session);
+        }
+
+        if (issuedAt == null || providedSignature == null || providedSignature.isBlank()) {
             return Optional.empty();
         }
 
-        if (!Objects.equals(expectedUserId, session.getUserId())
-                || !Objects.equals(expectedBookId, session.getBookId())) {
+        if (now.isAfter(issuedAt.plus(sessionTtl))) {
             return Optional.empty();
         }
 
-        if (providedSignature == null || providedSignature.isBlank()) {
+        String expectedSignature = computeSignature(expectedUserId, expectedBookId, token, issuedAt);
+        if (!expectedSignature.equals(providedSignature)) {
             return Optional.empty();
         }
 
-        if (!session.getWatermarkSignature().equals(providedSignature)) {
+        if (user == null || book == null) {
             return Optional.empty();
         }
 
-        return Optional.of(session);
+        StreamingSession rehydratedSession = new StreamingSession(
+                token,
+                expectedUserId,
+                expectedBookId,
+                issuedAt,
+                issuedAt.plus(sessionTtl),
+                buildWatermarkText(user, book, issuedAt),
+                providedSignature
+        );
+
+        StreamingSession existing = sessions.putIfAbsent(token, rehydratedSession);
+        return Optional.ofNullable(existing != null ? existing : rehydratedSession);
     }
 
     /**
