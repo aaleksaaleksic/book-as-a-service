@@ -16,6 +16,7 @@ import {
 import type { PDFDocumentProxy, RenderTask, PDFLoadingTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG, AUTH_CONFIG } from '@/utils/constants';
+import { tokenManager } from '@/lib/api-client';
 
 let pdfWorkerSrc: string | null = null;
 
@@ -209,6 +210,36 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         [watermarkLabel]
     );
 
+    const getAuthToken = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const managerToken = tokenManager.getToken();
+        if (managerToken) {
+            return managerToken;
+        }
+
+        const storedToken = window.localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
+        if (storedToken) {
+            return storedToken;
+        }
+
+        if (typeof document !== 'undefined') {
+            const cookiePrefix = `${AUTH_CONFIG.TOKEN_KEY}=`;
+            const cookie = document.cookie
+                .split(';')
+                .map(part => part.trim())
+                .find(part => part.startsWith(cookiePrefix));
+
+            if (cookie) {
+                return decodeURIComponent(cookie.substring(cookiePrefix.length));
+            }
+        }
+
+        return null;
+    }, []);
+
     const buildStreamingRequest = useCallback(
         (stream: SecureStreamDescriptor) => {
             const requestUrl = stream.url.startsWith('http')
@@ -219,21 +250,35 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 Accept: 'application/pdf',
             };
 
+            const normalizedHeaderMap = new Map<string, string>();
+
             if (stream.headers) {
                 Object.entries(stream.headers).forEach(([key, value]) => {
-                    headers[key] = value;
+                    if (typeof value === 'string') {
+                        headers[key] = value;
+                        normalizedHeaderMap.set(key.toLowerCase(), value);
+                    }
                 });
             }
 
-            if (typeof window !== 'undefined') {
-                const token = window.localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
-                if (token && !headers.Authorization) {
-                    headers.Authorization = `Bearer ${token}`;
-                }
+            const authToken = getAuthToken();
+            if (authToken && !headers.Authorization) {
+                headers.Authorization = `Bearer ${authToken}`;
             }
 
-            if (watermarkSignature) {
-                headers['X-Readify-Watermark'] = watermarkSignature;
+            const sessionHeader =
+                normalizedHeaderMap.get('x-readify-session') ??
+                (headers['X-Readify-Session'] as string | undefined);
+            if (sessionHeader) {
+                headers['X-Readify-Session'] = sessionHeader;
+            }
+
+            const watermarkHeader =
+                watermarkSignature ??
+                normalizedHeaderMap.get('x-readify-watermark') ??
+                (headers['X-Readify-Watermark'] as string | undefined);
+            if (watermarkHeader) {
+                headers['X-Readify-Watermark'] = watermarkHeader;
             }
 
             const rangeChunkSize =
@@ -243,7 +288,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
             return { requestUrl, headers, rangeChunkSize };
         },
-        [watermarkSignature]
+        [getAuthToken, watermarkSignature]
     );
 
     const loadPdfDocument = useCallback(
