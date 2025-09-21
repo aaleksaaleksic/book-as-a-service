@@ -87,9 +87,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         return 'Readify Secure Reader';
     }, [data?.watermark?.text, user?.email]);
 
-    const watermarkSignature = data?.watermark?.signature;
-    const watermarkIssuedAt = data?.watermark?.issuedAt;
-
     const clamp = useCallback((value: number, min: number, max: number) => {
         return Math.min(max, Math.max(min, value));
     }, []);
@@ -255,62 +252,18 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         [watermarkLabel]
     );
 
-    const getAuthToken = useCallback(() => {
-        if (typeof window === 'undefined') {
-            return null;
-        }
-
-        return tokenManager.getToken();
-    }, []);
-
     const buildStreamingRequest = useCallback(
         (stream: SecureStreamDescriptor) => {
-            const requestUrl = stream.url.startsWith('http')
-                ? stream.url
-                : new URL(stream.url, API_CONFIG.BASE_URL).toString();
-
             const headers: Record<string, string> = {
                 Accept: 'application/pdf',
             };
 
-            const normalizedHeaderMap = new Map<string, string>();
-
-            if (stream.headers) {
-                Object.entries(stream.headers).forEach(([key, value]) => {
-                    if (typeof value === 'string') {
-                        headers[key] = value;
-                        normalizedHeaderMap.set(key.toLowerCase(), value);
-                    }
-                });
-            }
-
-            const authToken = getAuthToken();
-            if (authToken && !headers.Authorization) {
-                headers.Authorization = `Bearer ${authToken}`;
-            }
-
-            const sessionHeader =
-                normalizedHeaderMap.get('x-readify-session') ??
-                (headers['X-Readify-Session'] as string | undefined);
-            if (sessionHeader) {
-                headers['X-Readify-Session'] = sessionHeader;
-            }
-
-            const watermarkHeader =
-                normalizedHeaderMap.get('x-readify-watermark') ??
-                (headers['X-Readify-Watermark'] as string | undefined) ??
-                watermarkSignature;
-            if (watermarkHeader) {
-                headers['X-Readify-Watermark'] = watermarkHeader;
-            }
-
-            const issuedAtHeader =
-                normalizedHeaderMap.get('x-readify-issued-at') ??
-                (headers['X-Readify-Issued-At'] as string | undefined) ??
-                watermarkIssuedAt;
-            if (issuedAtHeader) {
-                headers['X-Readify-Issued-At'] = issuedAtHeader;
-            }
+            const requestUrl =
+                bookId > 0
+                    ? `/api/reader/${bookId}/content`
+                    : stream.url.startsWith('http')
+                        ? stream.url
+                        : new URL(stream.url, API_CONFIG.BASE_URL).toString();
 
             const rangeChunkSize =
                 typeof stream.chunkSize === 'number' && stream.chunkSize > 0
@@ -319,7 +272,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
             return { requestUrl, headers, rangeChunkSize };
         },
-        [getAuthToken, watermarkIssuedAt, watermarkSignature]
+        [bookId]
     );
 
     const refreshStreamingSession = useCallback(
