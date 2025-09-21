@@ -23,6 +23,9 @@ export const useBookReadAccess = (bookId?: number) => {
         },
         enabled: typeof bookId === 'number' && bookId > 0,
         staleTime: 60 * 1000,
+        retry: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
     });
 };
 
