@@ -235,8 +235,13 @@ const proxyPdfRequest = async (
     bookId: number,
     method: 'GET' | 'HEAD'
 ): Promise<NextResponse> => {
-    const cookieStore = await cookies();
-    let token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    let token = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    }
+
 
     if (!token) {
         const authorization = request.headers.get('authorization');
