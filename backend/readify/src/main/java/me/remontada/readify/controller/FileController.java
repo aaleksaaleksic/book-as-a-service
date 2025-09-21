@@ -12,11 +12,11 @@ import me.remontada.readify.service.StreamingSessionService.StreamingSession;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -131,11 +133,28 @@ public class FileController {
                 providedSignature = request.getParameter("watermark");
             }
 
+            Instant issuedAt = null;
+            String issuedAtHeader = headers.getFirst("X-Readify-Issued-At");
+            if (issuedAtHeader == null || issuedAtHeader.isBlank()) {
+                issuedAtHeader = request.getParameter("issuedAt");
+            }
+
+            if (issuedAtHeader != null && !issuedAtHeader.isBlank()) {
+                try {
+                    issuedAt = Instant.parse(issuedAtHeader);
+                } catch (DateTimeParseException e) {
+                    log.warn("Failed to parse issuedAt header for book {}: {}", bookId, issuedAtHeader);
+                }
+            }
+
             Optional<StreamingSession> sessionOpt = streamingSessionService.validateSession(
                     sessionToken,
                     currentUser.getId(),
                     bookId,
-                    providedSignature
+                    providedSignature,
+                    issuedAt,
+                    currentUser,
+                    book
             );
 
             if (sessionOpt.isEmpty()) {

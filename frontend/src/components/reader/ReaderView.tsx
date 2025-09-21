@@ -88,6 +88,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, [data?.watermark?.text, user?.email]);
 
     const watermarkSignature = data?.watermark?.signature;
+    const watermarkIssuedAt = data?.watermark?.issuedAt;
 
     const clamp = useCallback((value: number, min: number, max: number) => {
         return Math.min(max, Math.max(min, value));
@@ -303,6 +304,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 headers['X-Readify-Watermark'] = watermarkHeader;
             }
 
+            const issuedAtHeader =
+                normalizedHeaderMap.get('x-readify-issued-at') ??
+                (headers['X-Readify-Issued-At'] as string | undefined) ??
+                watermarkIssuedAt;
+            if (issuedAtHeader) {
+                headers['X-Readify-Issued-At'] = issuedAtHeader;
+            }
+
             const rangeChunkSize =
                 typeof stream.chunkSize === 'number' && stream.chunkSize > 0
                     ? stream.chunkSize
@@ -310,7 +319,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
             return { requestUrl, headers, rangeChunkSize };
         },
-        [getAuthToken, watermarkSignature]
+        [getAuthToken, watermarkIssuedAt, watermarkSignature]
     );
 
     const refreshStreamingSession = useCallback(
