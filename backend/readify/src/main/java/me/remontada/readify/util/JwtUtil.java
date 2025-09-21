@@ -5,16 +5,15 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.logging.Logger;
 
 @Component
 @Slf4j
@@ -27,7 +26,13 @@ public class JwtUtil {
     private Long expiration;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private io.jsonwebtoken.JwtParser buildParser() {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build();
     }
 
     public String generateToken(String email) {
@@ -53,11 +58,9 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        return buildParser()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     public Boolean isTokenExpired(String token) {
@@ -92,11 +95,9 @@ public class JwtUtil {
 
     public boolean validateRefreshToken(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+            Claims claims = buildParser()
+                    .parseSignedClaims(token)
+                    .getPayload();
 
             String type = claims.get("type", String.class);
             if (!"refresh".equals(type)) {
@@ -112,11 +113,9 @@ public class JwtUtil {
 
     public String extractEmailFromRefreshToken(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+            Claims claims = buildParser()
+                    .parseSignedClaims(token)
+                    .getPayload();
             return claims.getSubject();
         } catch (Exception e) {
             log.error("Error extracting email from refresh token: {}", e.getMessage());
