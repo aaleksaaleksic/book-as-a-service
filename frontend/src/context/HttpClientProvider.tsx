@@ -1,50 +1,19 @@
 "use client";
-import React, { createContext, useContext, useMemo } from "react";
-import axios, { AxiosInstance, AxiosError } from "axios";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
+import type { AxiosInstance, AxiosError } from "axios";
 import { toast } from "@/hooks/use-toast";
-import { AUTH_CONFIG } from "@/utils/constants";
+import { api } from "@/lib/api-client";
 
 const HttpClientContext = createContext<AxiosInstance | null>(null);
 
 export const HttpClientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const client = useMemo(() => {
-        const axiosInstance = axios.create({
-            baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
-            timeout: 10000,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-
-        // Request interceptor - automatically adds JWT token
-        axiosInstance.interceptors.request.use(
-            (config) => {
-                if (typeof window !== "undefined") {
-                    const token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
-                    if (token) {
-                        config.headers.Authorization = `Bearer ${token}`;
-                    }
-                }
-                return config;
-            },
-            (error) => {
-                return Promise.reject(error);
-            }
-        );
-
-        // Response interceptor - handles errors globally
-        axiosInstance.interceptors.response.use(
+    useEffect(() => {
+        const responseInterceptor = api.interceptors.response.use(
             (response) => response,
             async (error: AxiosError<any>) => {
                 const { response } = error;
 
                 if (response?.status === 401) {
-                    // Token expired or invalid - logout user
-                    if (typeof window !== "undefined") {
-                        localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
-                        localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
-                        window.location.href = AUTH_CONFIG.LOGIN_REDIRECT;
-                    }
                     toast({
                         title: "Session Expired",
                         description: "Please login again to continue",
@@ -68,8 +37,12 @@ export const HttpClientProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             }
         );
 
-        return axiosInstance;
+        return () => {
+            api.interceptors.response.eject(responseInterceptor);
+        };
     }, []);
+
+    const client = useMemo(() => api, []);
 
     return <HttpClientContext.Provider value={client}>{children}</HttpClientContext.Provider>;
 };
