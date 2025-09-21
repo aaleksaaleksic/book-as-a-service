@@ -7,6 +7,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useBookReadAccess } from '@/hooks/use-reader';
+import { API_CONFIG } from '@/utils/constants';
 
 interface ReaderViewProps {
     bookId: number;
@@ -18,6 +19,26 @@ function ReaderViewContent({ bookId }: ReaderViewProps) {
     const { data, isLoading, isRefetching, error, refetch } = useBookReadAccess(bookId);
 
     const book = data?.book;
+    const parsedStreamData = useMemo(() => {
+        const stream = data?.stream;
+
+        if (!stream || 'error' in stream || !stream.url) {
+            return null;
+        }
+
+        try {
+            const url = new URL(stream.url, API_CONFIG.BASE_URL);
+            return {
+                sessionToken: url.searchParams.get('sessionToken') ?? undefined,
+                watermark: url.searchParams.get('watermark') ?? undefined,
+                issuedAt: url.searchParams.get('issuedAt') ?? undefined,
+            };
+        } catch (parseError) {
+            console.error('Failed to parse secure stream URL', parseError);
+            return null;
+        }
+    }, [data?.stream]);
+
     const streamError = useMemo(() => {
         const stream = data?.stream;
         if (!stream) {
@@ -32,13 +53,28 @@ function ReaderViewContent({ bookId }: ReaderViewProps) {
         return null;
     }, [data?.stream]);
 
-    const pdfUrl = useMemo(() => {
-        const stream = data?.stream;
-        if (!stream || 'error' in stream) {
+    const proxyStreamUrl = useMemo(() => {
+        if (!parsedStreamData || !bookId) {
             return null;
         }
-        return stream.url ?? null;
-    }, [data?.stream]);
+
+        const query = new URLSearchParams();
+
+        if (parsedStreamData.sessionToken) {
+            query.set('sessionToken', parsedStreamData.sessionToken);
+        }
+
+        if (parsedStreamData.watermark) {
+            query.set('watermark', parsedStreamData.watermark);
+        }
+
+        if (parsedStreamData.issuedAt) {
+            query.set('issuedAt', parsedStreamData.issuedAt);
+        }
+
+        const queryString = query.toString();
+        return `/api/proxy/books/${bookId}/stream${queryString ? `?${queryString}` : ''}`;
+    }, [bookId, parsedStreamData]);
 
     const watermarkLabel = useMemo(() => {
         if (data?.watermark?.text) {
@@ -138,7 +174,7 @@ function ReaderViewContent({ bookId }: ReaderViewProps) {
         );
     }
 
-    if (!pdfUrl) {
+    if (!proxyStreamUrl) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-reading-surface px-6">
                 <div className="max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/80">
@@ -181,8 +217,8 @@ function ReaderViewContent({ bookId }: ReaderViewProps) {
                 <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-10">
                     <div className="relative">
                         <iframe
-                            key={pdfUrl}
-                            src={pdfUrl}
+                            key={proxyStreamUrl}
+                            src={proxyStreamUrl}
                             className="h-[calc(100vh-220px)] w-full rounded-xl border border-white/10 bg-white shadow-2xl"
                             title={`PDF prikaz za ${book.title}`}
                         />
