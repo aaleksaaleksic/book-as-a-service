@@ -64,6 +64,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-email").permitAll()
 
+                        // Book reading (protected)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/*/read").authenticated()
+
+                        // Public book browsing (no authentication needed)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/*").permitAll()
+
 
                         // Public book browsing (no authentication needed)
                         .requestMatchers(HttpMethod.GET, "/api/v1/books").permitAll()
