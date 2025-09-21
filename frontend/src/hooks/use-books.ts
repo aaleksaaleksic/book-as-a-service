@@ -280,13 +280,21 @@ export function useUploadBookFiles() {
                                coverFile
                            }: {
             bookId: number;
-            pdfFile: File;
-            coverFile: File;
+            pdfFile?: File;
+            coverFile?: File;
         }) => {
+            if (!pdfFile && !coverFile) {
+                throw new Error('At least one file must be provided');
+            }
+
             const formData = new FormData();
             formData.append('bookId', bookId.toString());
-            formData.append('pdf', pdfFile);
-            formData.append('cover', coverFile);
+            if (pdfFile) {
+                formData.append('pdf', pdfFile);
+            }
+            if (coverFile) {
+                formData.append('cover', coverFile);
+            }
 
             const response = await client.post('/api/v1/files/upload', formData, {
                 headers: {

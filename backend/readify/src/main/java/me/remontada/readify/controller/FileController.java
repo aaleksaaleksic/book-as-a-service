@@ -7,6 +7,8 @@ import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
 import me.remontada.readify.service.PdfStreamingService;
+import me.remontada.readify.service.StreamingSessionService;
+import me.remontada.readify.service.StreamingSessionService.StreamingSession;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -23,12 +25,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.UUID;
 
 /**
  * FileController - REST API za upload i streaming knjiga i cover slika
@@ -52,16 +52,19 @@ public class FileController {
     private final BookService bookService;
     private final UserService userService;
     private final PdfStreamingService pdfStreamingService;
+    private final StreamingSessionService streamingSessionService;
 
     @Autowired
     public FileController(FileStorageService fileStorageService,
                           BookService bookService,
                           UserService userService,
-                          PdfStreamingService pdfStreamingService) {
+                          PdfStreamingService pdfStreamingService,
+                          StreamingSessionService streamingSessionService) {
         this.fileStorageService = fileStorageService;
         this.bookService = bookService;
         this.userService = userService;
         this.pdfStreamingService = pdfStreamingService;
+        this.streamingSessionService = streamingSessionService;
     }
 
     /**
@@ -118,6 +121,26 @@ public class FileController {
                 ));
             }
 
+            String sessionToken = headers.getFirst("X-Readify-Session");
+            String providedSignature = headers.getFirst("X-Readify-Watermark");
+
+            Optional<StreamingSession> sessionOpt = streamingSessionService.validateSession(
+                    sessionToken,
+                    currentUser.getId(),
+                    bookId,
+                    providedSignature
+            );
+
+            if (sessionOpt.isEmpty()) {
+                log.warn("Rejected streaming request for book {} by user {} due to invalid session", bookId, userEmail);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                        "success", false,
+                        "message", "Invalid or expired streaming session"
+                ));
+            }
+
+            StreamingSession session = sessionOpt.get();
+
             // Dohvatanje PDF resursa
             Resource bookResource = fileStorageService.getBookPdf(bookId);
             ResourceRegion region = pdfStreamingService.getResourceRegion(bookResource, headers);
@@ -127,8 +150,10 @@ public class FileController {
             long rangeEnd = Math.min(rangeStart + region.getCount() - 1, contentLength - 1);
 
             String clientIp = request.getRemoteAddr();
-            String sessionHeader = headers.getFirst("X-Readify-Session");
-            String watermarkSignature = buildWatermarkSignature(currentUser.getId(), bookId, sessionHeader);
+
+            if (streamingSessionService.markReadCountRegistered(session.getToken())) {
+                bookService.incrementReadCount(bookId);
+            }
 
             // Logovanje pristupa (za analytics)
             log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes)",
@@ -153,7 +178,7 @@ public class FileController {
                     .header("Expires", "0")
                     .header("X-Download-Options", "noopen")
                     .header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self';")
-                    .header("X-Readify-Watermark", watermarkSignature)
+                    .header("X-Readify-Watermark", session.getWatermarkSignature())
                     .body(region);
 
         } catch (IllegalArgumentException e) {
@@ -169,17 +194,6 @@ public class FileController {
                     "message", "Error accessing book: " + e.getMessage()
             ));
         }
-    }
-
-    private String buildWatermarkSignature(Long userId, Long bookId, String sessionHeader) {
-        String token = sessionHeader != null && !sessionHeader.isBlank() ? sessionHeader : UUID.randomUUID().toString();
-        Instant now = Instant.now();
-        String issuedAt = DateTimeFormatter.ISO_INSTANT.format(now);
-        return String.format("uid:%s|book:%s|issued:%s|token:%s",
-                userId != null ? userId : "anonymous",
-                bookId != null ? bookId : "unknown",
-                issuedAt,
-                token);
     }
 
     /**

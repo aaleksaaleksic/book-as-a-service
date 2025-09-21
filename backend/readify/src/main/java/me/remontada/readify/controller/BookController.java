@@ -8,6 +8,8 @@ import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
 import me.remontada.readify.service.PdfStreamingService;
+import me.remontada.readify.service.StreamingSessionService;
+import me.remontada.readify.service.StreamingSessionService.StreamingSessionDescriptor;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
@@ -31,16 +31,19 @@ public class BookController {
     private final UserService userService;
     private final FileStorageService fileStorageService;
     private final PdfStreamingService pdfStreamingService;
+    private final StreamingSessionService streamingSessionService;
 
     @Autowired
     public BookController(BookService bookService,
                           UserService userService,
                           FileStorageService fileStorageService,
-                          PdfStreamingService pdfStreamingService) {
+                          PdfStreamingService pdfStreamingService,
+                          StreamingSessionService streamingSessionService) {
         this.bookService = bookService;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
         this.pdfStreamingService = pdfStreamingService;
+        this.streamingSessionService = streamingSessionService;
     }
 
 
@@ -312,7 +315,7 @@ public class BookController {
             response.put("canAccess", book.isAccessibleToUser(user));
 
             if (book.isAccessibleToUser(user)) {
-                enrichWithStreamingMetadata(response, book);
+                enrichWithStreamingMetadata(response, book, user);
             }
 
             return ResponseEntity.ok(response);
@@ -326,27 +329,27 @@ public class BookController {
         }
     }
 
-    private void enrichWithStreamingMetadata(Map<String, Object> response, Book book) {
+    private void enrichWithStreamingMetadata(Map<String, Object> response, Book book, User user) {
         try {
             Long bookId = book.getId();
             long contentLength = fileStorageService.getBookPdfSize(bookId);
             String secureUrl = fileStorageService.generateSecureBookUrl(bookId, 2);
-
-            String sessionToken = UUID.randomUUID().toString();
-            String issuedAt = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
-            String watermarkText = book.getTitle() + " • " + issuedAt.substring(0, 10);
+            StreamingSessionDescriptor session = streamingSessionService.openSession(user, book);
 
             Map<String, Object> stream = new HashMap<>();
             stream.put("url", secureUrl);
             stream.put("contentLength", contentLength);
             stream.put("chunkSize", pdfStreamingService.getChunkSize());
-            stream.put("expiresAt", Instant.now().plusSeconds(7200).toString());
-            stream.put("headers", Map.of("X-Readify-Session", sessionToken));
+            stream.put("expiresAt", session.expiresAt().toString());
+            stream.put("headers", Map.of(
+                    "X-Readify-Session", session.token(),
+                    "X-Readify-Watermark", session.watermarkSignature()
+            ));
 
             Map<String, Object> watermark = new HashMap<>();
-            watermark.put("text", watermarkText);
-            watermark.put("signature", String.format("book:%s|issued:%s|token:%s", bookId, issuedAt, sessionToken));
-            watermark.put("issuedAt", issuedAt);
+            watermark.put("text", session.watermarkText());
+            watermark.put("signature", session.watermarkSignature());
+            watermark.put("issuedAt", session.issuedAt().toString());
 
             response.put("stream", stream);
             response.put("watermark", watermark);
