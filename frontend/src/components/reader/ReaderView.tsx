@@ -13,7 +13,7 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import type { PDFDocumentProxy, RenderTask, PDFLoadingTask } from 'pdfjs-dist/types/src/display/api';
+import type { PDFDocumentProxy, RenderTask, PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG, AUTH_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
@@ -47,7 +47,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
-    const pdfLoadingTaskRef = useRef<PDFLoadingTask | null>(null);
+    const pdfLoadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
     const pdfDocumentRef = useRef<PDFDocumentProxy | null>(null);
     const hasAttemptedLoadRef = useRef(false);
     const sessionAttemptRef = useRef(false);
@@ -240,6 +240,45 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         return null;
     }, []);
 
+    const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+        const refreshToken = tokenManager.getRefreshToken();
+        if (!refreshToken) {
+            return false;
+        }
+
+        try {
+            const response = await fetch(
+                `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}/refresh`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refreshToken }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Refresh request failed with status ${response.status}`);
+            }
+
+            const payload = await response.json();
+            if (payload?.token && payload?.refreshToken) {
+                tokenManager.setToken(payload.token);
+                tokenManager.setRefreshToken(payload.refreshToken);
+                return true;
+            }
+        } catch (error) {
+            console.error('Failed to refresh authentication token for reader', error);
+        }
+
+        tokenManager.clearTokens();
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('auth:logout'));
+        }
+        return false;
+    }, []);
+
     const buildStreamingRequest = useCallback(
         (stream: SecureStreamDescriptor) => {
             const requestUrl = stream.url.startsWith('http')
@@ -292,7 +331,11 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     );
 
     const loadPdfDocument = useCallback(
-        async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
+        async (
+            stream: SecureStreamDescriptor,
+            signal?: AbortSignal,
+            allowRetryOnUnauthorized = true
+        ) => {
             const pdfjs = await pdfjsLibPromise;
             if (isMountedRef.current) {
                 setRenderError(null);
@@ -358,7 +401,20 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 if ((error as Error).name === 'AbortError') {
                     throw error;
                 }
+
                 loadingTask.destroy();
+
+                if ((error as any)?.status === 401 && allowRetryOnUnauthorized) {
+                    const refreshed = await refreshAccessToken();
+                    if (refreshed) {
+                        return loadPdfDocument(stream, signal, false);
+                    }
+                    if (isMountedRef.current) {
+                        setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
+                    }
+                    return;
+                }
+
                 throw error;
             } finally {
                 if (signal) {
@@ -369,7 +425,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 }
             }
         },
-        [buildStreamingRequest, clamp, renderPage]
+        [buildStreamingRequest, clamp, refreshAccessToken, renderPage]
     );
 
     useEffect(() => {
