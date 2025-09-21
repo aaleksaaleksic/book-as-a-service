@@ -230,25 +230,35 @@ const forwardResponse = async (response: Response, method: 'GET' | 'HEAD') => {
     });
 };
 
+const extractAuthToken = async (request: NextRequest): Promise<string | null> => {
+    const authorization = request.headers.get('authorization');
+    if (authorization?.toLowerCase().startsWith('bearer ')) {
+        const headerToken = authorization.slice(7).trim();
+        if (headerToken) {
+            return headerToken;
+        }
+    }
+
+    const cookieToken = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    if (cookieToken) {
+        return cookieToken;
+    }
+
+    const cookieStore = await cookies();
+    const serverCookieToken = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    if (serverCookieToken) {
+        return serverCookieToken;
+    }
+
+    return null;
+};
+
 const proxyPdfRequest = async (
     request: NextRequest,
     bookId: number,
     method: 'GET' | 'HEAD'
 ): Promise<NextResponse> => {
-    let token = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value;
-
-    if (!token) {
-        const cookieStore = await cookies();
-        token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
-    }
-
-
-    if (!token) {
-        const authorization = request.headers.get('authorization');
-        if (authorization?.toLowerCase().startsWith('bearer ')) {
-            token = authorization.slice(7).trim();
-        }
-    }
+    const token = await extractAuthToken(request);
 
     if (!token) {
         throw new ProxyError('Authentication required', 401);
