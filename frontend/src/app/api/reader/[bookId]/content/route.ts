@@ -230,36 +230,49 @@ const forwardResponse = async (response: Response, method: 'GET' | 'HEAD') => {
     });
 };
 
+const normalizeAuthToken = (rawToken?: string | null): string | null => {
+    if (!rawToken) {
+        return null;
+    }
+
+    const trimmed = rawToken.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    if (trimmed.toLowerCase().startsWith('bearer ')) {
+        const withoutPrefix = trimmed.slice(7).trim();
+        return withoutPrefix ? withoutPrefix : null;
+    }
+
+    return trimmed;
+};
+
 const extractAuthToken = async (request: NextRequest): Promise<string | null> => {
-    const authorization = request.headers.get('authorization');
-    const explicitHeaderToken = request.headers.get('x-readify-auth');
-    const headerToken = authorization?.toLowerCase().startsWith('bearer ')
-        ? authorization.slice(7).trim()
-        : null;
+    const explicitHeaderToken = normalizeAuthToken(request.headers.get('x-readify-auth'));
+    if (explicitHeaderToken) {
+        return explicitHeaderToken;
+    }
 
-    const searchParamsToken = request.nextUrl.searchParams.get('authToken');
-
-    let cookieToken = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null;
+    let cookieToken = normalizeAuthToken(request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null);
 
     if (!cookieToken) {
         const cookieStore = await cookies();
-        cookieToken = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null;
-    }
-
-    if (explicitHeaderToken && explicitHeaderToken.trim().length > 0) {
-        return explicitHeaderToken.trim();
+        cookieToken = normalizeAuthToken(cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null);
     }
 
     if (cookieToken) {
         return cookieToken;
     }
 
+    const headerToken = normalizeAuthToken(request.headers.get('authorization'));
     if (headerToken) {
         return headerToken;
     }
 
-    if (searchParamsToken && searchParamsToken.trim().length > 0) {
-        return searchParamsToken.trim();
+    const searchParamsToken = normalizeAuthToken(request.nextUrl.searchParams.get('authToken'));
+    if (searchParamsToken) {
+        return searchParamsToken;
     }
 
     return null;
