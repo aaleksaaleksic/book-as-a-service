@@ -236,7 +236,14 @@ const proxyPdfRequest = async (
     method: 'GET' | 'HEAD'
 ): Promise<NextResponse> => {
     const cookieStore = cookies();
-    const token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    let token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+
+    if (!token) {
+        const authorization = request.headers.get('authorization');
+        if (authorization?.toLowerCase().startsWith('bearer ')) {
+            token = authorization.slice(7).trim();
+        }
+    }
 
     if (!token) {
         throw new ProxyError('Authentication required', 401);
