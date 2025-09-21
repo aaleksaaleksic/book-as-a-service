@@ -258,6 +258,11 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 Accept: 'application/pdf',
             };
 
+            const token = tokenManager.getToken();
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+
             const requestUrl =
                 bookId > 0
                     ? `/api/reader/${bookId}/content`
