@@ -13,8 +13,6 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import axios from 'axios';
-import { api } from '@/lib/api-client';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG } from '@/utils/constants';
@@ -30,25 +28,6 @@ const pdfjsLibPromise = import('pdfjs-dist').then(pdfjs => {
     }
     return pdfjs;
 });
-
-const normalizeHeaders = (input: HeadersInit): Record<string, string> => {
-    if (typeof Headers !== 'undefined' && input instanceof Headers) {
-        const result: Record<string, string> = {};
-        input.forEach((value, key) => {
-            result[key] = value;
-        });
-        return result;
-    }
-
-    if (Array.isArray(input)) {
-        return input.reduce<Record<string, string>>((acc, [key, value]) => {
-            acc[key] = value;
-            return acc;
-        }, {});
-    }
-
-    return { ...(input as Record<string, string>) };
-};
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.75;
@@ -173,6 +152,19 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 });
                 renderTaskRef.current = task;
                 await task.promise;
+                if (watermarkLabel) {
+                    context.save();
+                    context.globalAlpha = 0.12;
+                    context.fillStyle = '#1f2937';
+                    context.translate(canvas.width / 2, canvas.height / 2);
+                    context.rotate((-25 * Math.PI) / 180);
+                    const fontSize = Math.max(24, canvas.width / 12);
+                    context.font = `bold ${fontSize}px sans-serif`;
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    context.fillText(watermarkLabel, 0, 0);
+                    context.restore();
+                }
                 renderTaskRef.current = null;
                 setRenderError(null);
             } catch (err) {
@@ -185,118 +177,37 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 setIsRendering(false);
             }
         },
-        []
+        [watermarkLabel]
     );
 
-    const fetchChunkWithAuth = useCallback(
-        async (requestUrl: string, baseHeaders: HeadersInit, signal?: AbortSignal) => {
-            if (signal?.aborted) {
-                throw new DOMException('Aborted', 'AbortError');
-            }
-
-            const headers = normalizeHeaders(baseHeaders);
-
-            try {
-                const response = await api.get<ArrayBuffer>(requestUrl, {
-                    headers,
-                    responseType: 'arraybuffer',
-                    withCredentials: true,
-                    signal,
-                });
-
-                return response.data;
-            } catch (error) {
-                if (signal?.aborted) {
-                    throw new DOMException('Aborted', 'AbortError');
-                }
-
-                if (axios.isAxiosError(error)) {
-                    if (error.code === 'ERR_CANCELED') {
-                        throw new DOMException('Aborted', 'AbortError');
-                    }
-
-                    const status = error.response?.status ?? 500;
-                    const fetchError = new Error(`Failed to fetch PDF: ${status}`);
-                    (fetchError as any).status = status;
-                    throw fetchError;
-                }
-
-                throw error;
-            }
-        },
-        []
-    );
-
-    const downloadPdfInChunks = useCallback(
-        async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
+    const buildStreamingRequest = useCallback(
+        (stream: SecureStreamDescriptor) => {
             const requestUrl = stream.url.startsWith('http')
                 ? stream.url
                 : new URL(stream.url, API_CONFIG.BASE_URL).toString();
 
-            const baseHeaders: Record<string, string> = {
+            const headers: Record<string, string> = {
                 Accept: 'application/pdf',
             };
 
             if (stream.headers) {
                 Object.entries(stream.headers).forEach(([key, value]) => {
-                    baseHeaders[key] = value;
+                    headers[key] = value;
                 });
             }
 
             if (watermarkSignature) {
-                baseHeaders['X-Readify-Watermark'] = watermarkSignature;
+                headers['X-Readify-Watermark'] = watermarkSignature;
             }
 
-            const totalLength =
-                typeof stream.contentLength === 'number' && stream.contentLength > 0
-                    ? stream.contentLength
-                    : null;
-            const chunkSize =
+            const rangeChunkSize =
                 typeof stream.chunkSize === 'number' && stream.chunkSize > 0
                     ? stream.chunkSize
-                    : 262144; // 256 KiB default
+                    : undefined;
 
-            if (!totalLength) {
-                const buffer = await fetchChunkWithAuth(requestUrl, baseHeaders, signal);
-                return new Uint8Array(buffer);
-            }
-
-            const pdfBytes = new Uint8Array(totalLength);
-            let downloaded = 0;
-
-            while (downloaded < totalLength) {
-                if (signal?.aborted) {
-                    throw new DOMException('Aborted', 'AbortError');
-                }
-
-                const rangeStart = downloaded;
-                const rangeEnd = Math.min(rangeStart + chunkSize - 1, totalLength - 1);
-                const headers = new Headers(baseHeaders);
-                headers.set('Range', `bytes=${rangeStart}-${rangeEnd}`);
-
-                const chunkBuffer = await fetchChunkWithAuth(requestUrl, headers, signal);
-                const chunkBytes = new Uint8Array(chunkBuffer);
-                pdfBytes.set(chunkBytes, rangeStart);
-                downloaded += chunkBytes.byteLength;
-
-                if (chunkBytes.byteLength === 0) {
-                    const error = new Error('Failed to fetch PDF: received empty chunk');
-                    (error as any).status = 500;
-                    throw error;
-                }
-            }
-
-            if (downloaded < totalLength) {
-                const error = new Error(
-                    `Failed to fetch PDF: incomplete download (${downloaded}/${totalLength} bytes)`
-                );
-                (error as any).status = 500;
-                throw error;
-            }
-
-            return pdfBytes;
+            return { requestUrl, headers, rangeChunkSize };
         },
-        [fetchChunkWithAuth, watermarkSignature]
+        [watermarkSignature]
     );
 
     const loadPdfDocument = useCallback(
@@ -304,17 +215,33 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             const pdfjs = await pdfjsLibPromise;
             setRenderError(null);
 
-            const pdfBytes = await downloadPdfInChunks(stream, signal);
+            const { requestUrl, headers, rangeChunkSize } = buildStreamingRequest(stream);
 
             if (signal?.aborted) {
-                return;
+                throw new DOMException('Aborted', 'AbortError');
             }
 
             const loadingTask = pdfjs.getDocument({
-                data: pdfBytes,
+                url: requestUrl,
+                httpHeaders: headers,
+                withCredentials: true,
+                rangeChunkSize,
+                disableAutoFetch: true,
                 isEvalSupported: false,
-                useWorkerFetch: false,
+                useWorkerFetch: true,
             });
+
+            const abortHandler = () => {
+                loadingTask.destroy();
+            };
+
+            if (signal) {
+                if (signal.aborted) {
+                    loadingTask.destroy();
+                    throw new DOMException('Aborted', 'AbortError');
+                }
+                signal.addEventListener('abort', abortHandler);
+            }
 
             try {
                 const document = await loadingTask.promise;
@@ -335,14 +262,18 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 setScale(autoScale);
                 await renderPage(1, document, autoScale);
             } catch (error) {
-                if (signal?.aborted) {
-                    throw new DOMException('Aborted', 'AbortError');
+                if ((error as Error).name === 'AbortError') {
+                    throw error;
                 }
-
+                loadingTask.destroy();
                 throw error;
+            } finally {
+                if (signal) {
+                    signal.removeEventListener('abort', abortHandler);
+                }
             }
         },
-        [clamp, downloadPdfInChunks, renderPage]
+        [buildStreamingRequest, clamp, renderPage]
     );
 
     useEffect(() => {
@@ -642,14 +573,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                                 </div>
                             </div>
                         )}
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <span
-                                className="select-none text-4xl font-bold uppercase tracking-[0.5em] text-white/5"
-                                style={{ transform: 'rotate(-25deg)' }}
-                            >
-                                {watermarkLabel}
-                            </span>
-                        </div>
                     </div>
                 </main>
             </div>
