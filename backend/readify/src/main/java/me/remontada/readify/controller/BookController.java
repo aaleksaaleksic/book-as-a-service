@@ -339,6 +339,7 @@ public class BookController {
             String urlWithSession = UriComponentsBuilder.fromUriString(secureUrl)
                     .queryParam("sessionToken", session.token())
                     .queryParam("watermark", session.watermarkSignature())
+                    .queryParam("issuedAt", session.issuedAt().toString())
                     .build()
                     .toUriString();
 
@@ -349,7 +350,8 @@ public class BookController {
             stream.put("expiresAt", session.expiresAt().toString());
             stream.put("headers", Map.of(
                     "X-Readify-Session", session.token(),
-                    "X-Readify-Watermark", session.watermarkSignature()
+                    "X-Readify-Watermark", session.watermarkSignature(),
+                    "X-Readify-Issued-At", session.issuedAt().toString()
             ));
 
             Map<String, Object> watermark = new HashMap<>();
