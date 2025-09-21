@@ -250,8 +250,6 @@ public class BookServiceImpl implements BookService {
                     (book.getIsPremium() ? "premium" : "") + " book");
         }
 
-        incrementReadCount(bookId);
-
         log.info("User {} accessed book content: {} (ID: {})",
                 user.getEmail(), book.getTitle(), bookId);
 

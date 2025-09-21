@@ -163,35 +163,17 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
             // Upload novih fajlova ako postoje
             if (data.newPdfFile || data.newCoverFile) {
-                // Mora oba fajla za upload endpoint
-                const pdfFile = data.newPdfFile || await fetchExistingPdf(book.id);
-                const coverFile = data.newCoverFile || await fetchExistingCover(book.id);
-
-                if (pdfFile && coverFile) {
-                    await uploadFilesMutation.mutateAsync({
-                        bookId: book.id,
-                        pdfFile,
-                        coverFile
-                    });
-                }
+                await uploadFilesMutation.mutateAsync({
+                    bookId: book.id,
+                    ...(data.newPdfFile ? { pdfFile: data.newPdfFile } : {}),
+                    ...(data.newCoverFile ? { coverFile: data.newCoverFile } : {}),
+                });
             }
 
             router.push('/admin/books');
         } catch (error) {
             console.error('Error updating book:', error);
         }
-    };
-
-    // Helper funkcije za dohvatanje postojećih fajlova (ako treba)
-    const fetchExistingPdf = async (bookId: number): Promise<File | null> => {
-        // Ovo bi trebalo implementirati ako backend zahteva oba fajla
-        // Za sada vraćamo null
-        return null;
-    };
-
-    const fetchExistingCover = async (bookId: number): Promise<File | null> => {
-        // Isto kao gore
-        return null;
     };
 
     const getCoverUrl = () => {

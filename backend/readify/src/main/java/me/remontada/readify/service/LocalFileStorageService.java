@@ -40,6 +40,12 @@ public class LocalFileStorageService implements FileStorageService {
     @Value("${app.storage.max-file-size:73400320}")
     private long maxFileSize;
 
+    @Value("${app.storage.max-pdf-size:${app.storage.max-file-size:73400320}}")
+    private long maxPdfSize;
+
+    @Value("${app.storage.max-image-size:5242880}")
+    private long maxImageSize;
+
     private Path booksPath;
     private Path coversPath;
 
@@ -93,6 +99,8 @@ public class LocalFileStorageService implements FileStorageService {
         if (!isImageFile(contentType)) {
             throw new IllegalArgumentException("Cover must be JPG or PNG image");
         }
+
+        validateImageFile(file);
 
         // Ekstrakcija ekstenzije
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
@@ -212,8 +220,9 @@ public class LocalFileStorageService implements FileStorageService {
             throw new IllegalArgumentException("File cannot be empty");
         }
 
-        if (file.getSize() > maxFileSize) {
-            throw new IllegalArgumentException("File size exceeds maximum allowed size");
+        long limit = Math.min(maxFileSize, maxPdfSize);
+        if (file.getSize() > limit) {
+            throw new IllegalArgumentException("File size exceeds maximum allowed size for PDF documents");
         }
 
         String contentType = file.getContentType();
@@ -231,6 +240,17 @@ public class LocalFileStorageService implements FileStorageService {
                         contentType.equals("image/jpg") ||
                         contentType.equals("image/png")
         );
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+
+        long limit = Math.min(maxFileSize, maxImageSize);
+        if (file.getSize() > limit) {
+            throw new IllegalArgumentException("Image size exceeds maximum allowed size");
+        }
     }
 
     /**
