@@ -13,7 +13,8 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import { tokenManager } from '@/lib/api-client';
+import axios from 'axios';
+import { api } from '@/lib/api-client';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG } from '@/utils/constants';
@@ -29,6 +30,25 @@ const pdfjsLibPromise = import('pdfjs-dist').then(pdfjs => {
     }
     return pdfjs;
 });
+
+const normalizeHeaders = (input: HeadersInit): Record<string, string> => {
+    if (typeof Headers !== 'undefined' && input instanceof Headers) {
+        const result: Record<string, string> = {};
+        input.forEach((value, key) => {
+            result[key] = value;
+        });
+        return result;
+    }
+
+    if (Array.isArray(input)) {
+        return input.reduce<Record<string, string>>((acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+        }, {});
+    }
+
+    return { ...(input as Record<string, string>) };
+};
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.75;
@@ -168,86 +188,43 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         []
     );
 
-    const refreshAuthToken = useCallback(async () => {
-        const refreshToken = tokenManager.getRefreshToken();
-        if (!refreshToken) {
-            return false;
-        }
-
-        try {
-            const response = await fetch(
-                `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}/refresh`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ refreshToken }),
-                    credentials: 'include',
-                }
-            );
-
-            if (!response.ok) {
-                return false;
-            }
-
-            const data = await response.json();
-            if (!data?.token || !data?.refreshToken) {
-                return false;
-            }
-
-            tokenManager.setToken(data.token);
-            tokenManager.setRefreshToken(data.refreshToken);
-            return true;
-        } catch (error) {
-            console.error('Failed to refresh auth token', error);
-            return false;
-        }
-    }, []);
-
     const fetchChunkWithAuth = useCallback(
         async (requestUrl: string, baseHeaders: HeadersInit, signal?: AbortSignal) => {
-            const attemptFetch = async (retry: boolean): Promise<ArrayBuffer> => {
+            if (signal?.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+            }
+
+            const headers = normalizeHeaders(baseHeaders);
+
+            try {
+                const response = await api.get<ArrayBuffer>(requestUrl, {
+                    headers,
+                    responseType: 'arraybuffer',
+                    withCredentials: true,
+                    signal,
+                });
+
+                return response.data;
+            } catch (error) {
                 if (signal?.aborted) {
                     throw new DOMException('Aborted', 'AbortError');
                 }
 
-                const headers = new Headers(baseHeaders);
-                const token = tokenManager.getToken();
-                if (token) {
-                    headers.set('Authorization', `Bearer ${token}`);
-                }
-
-                const response = await fetch(requestUrl, {
-                    method: 'GET',
-                    headers,
-                    credentials: 'include',
-                    signal,
-                });
-
-                if (response.status === 401 && retry) {
-                    const refreshed = await refreshAuthToken();
-                    if (refreshed && !signal?.aborted) {
-                        return attemptFetch(false);
+                if (axios.isAxiosError(error)) {
+                    if (error.code === 'ERR_CANCELED') {
+                        throw new DOMException('Aborted', 'AbortError');
                     }
 
-                    const error = new Error('Failed to fetch PDF: 401');
-                    (error as any).status = 401;
-                    throw error;
+                    const status = error.response?.status ?? 500;
+                    const fetchError = new Error(`Failed to fetch PDF: ${status}`);
+                    (fetchError as any).status = status;
+                    throw fetchError;
                 }
 
-                if (!response.ok) {
-                    const error = new Error(`Failed to fetch PDF: ${response.status}`);
-                    (error as any).status = response.status;
-                    throw error;
-                }
-
-                return await response.arrayBuffer();
-            };
-
-            return attemptFetch(true);
+                throw error;
+            }
         },
-        [refreshAuthToken]
+        []
     );
 
     const downloadPdfInChunks = useCallback(
