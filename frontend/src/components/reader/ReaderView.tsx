@@ -296,9 +296,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             const watermarkHeader =
-                watermarkSignature ??
                 normalizedHeaderMap.get('x-readify-watermark') ??
-                (headers['X-Readify-Watermark'] as string | undefined);
+                (headers['X-Readify-Watermark'] as string | undefined) ??
+                watermarkSignature;
             if (watermarkHeader) {
                 headers['X-Readify-Watermark'] = watermarkHeader;
             }
