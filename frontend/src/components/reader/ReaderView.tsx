@@ -13,10 +13,12 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import { api } from '@/lib/api-client';
+import { api, tokenManager } from '@/lib/api-client';
+
 import { AxiosError } from 'axios';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
+import { API_CONFIG } from '@/utils/constants';
 
 let pdfWorkerSrc: string | null = null;
 
@@ -49,6 +51,8 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const renderTaskRef = useRef<RenderTask | null>(null);
     const hasAttemptedLoadRef = useRef(false);
     const skipInitialLoadResetRef = useRef(true);
+    const lastStreamKeyRef = useRef<string | null>(null);
+    const lastCanAccessRef = useRef<boolean | null>(null);
 
     const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -146,6 +150,11 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
             const headers: Record<string, string> = {};
             setRenderError(null);
+            const token = tokenManager.getToken();
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+
             if (stream.headers) {
                 Object.entries(stream.headers).forEach(([key, value]) => {
                     headers[key] = value;
@@ -156,7 +165,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             try {
-                const response = await api.get<ArrayBuffer>(stream.url, {
+                const requestUrl = stream.url.startsWith('http')
+                    ? stream.url
+                    : new URL(stream.url, API_CONFIG.BASE_URL).toString();
+
+                const response = await api.get<ArrayBuffer>(requestUrl, {
+
                     responseType: 'arraybuffer',
                     headers,
                     withCredentials: true,
@@ -245,7 +259,24 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             skipInitialLoadResetRef.current = false;
             return;
         }
-        hasAttemptedLoadRef.current = false;
+
+        const stream = data?.stream;
+        const streamKey =
+            stream && typeof stream === 'object' && !('error' in stream)
+                ? [stream.url, stream.expiresAt ?? '', JSON.stringify(stream.headers ?? {})].join('|')
+                : stream && typeof stream === 'object' && 'error' in stream
+                  ? 'error'
+                  : null;
+        const canAccessValue = typeof data?.canAccess === 'boolean' ? data.canAccess : null;
+
+        const hasStreamChanged = streamKey !== lastStreamKeyRef.current;
+        const hasAccessChanged = canAccessValue !== lastCanAccessRef.current;
+
+        if (hasStreamChanged || hasAccessChanged) {
+            lastStreamKeyRef.current = streamKey;
+            lastCanAccessRef.current = canAccessValue;
+            hasAttemptedLoadRef.current = false;
+        }
     }, [data?.stream, data?.canAccess]);
 
     useEffect(() => {
