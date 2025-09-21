@@ -13,9 +13,9 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
+import type { PDFDocumentProxy, RenderTask, PDFLoadingTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
-import { API_CONFIG } from '@/utils/constants';
+import { API_CONFIG, AUTH_CONFIG } from '@/utils/constants';
 
 let pdfWorkerSrc: string | null = null;
 
@@ -46,8 +46,13 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
+    const pdfLoadingTaskRef = useRef<PDFLoadingTask | null>(null);
+    const pdfDocumentRef = useRef<PDFDocumentProxy | null>(null);
     const hasAttemptedLoadRef = useRef(false);
     const sessionAttemptRef = useRef(false);
+    const isMountedRef = useRef(true);
+    const sessionIdRef = useRef<number | null>(null);
+    const maxVisitedPageRef = useRef(1);
 
     const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -62,10 +67,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const [maxVisitedPage, setMaxVisitedPage] = useState(1);
 
     const { data, isLoading, error } = useBookReadAccess(bookId);
-    const startSession = useStartReadingSession();
-    const updateProgress = useUpdateReadingProgress();
-    const endSession = useEndReadingSession();
-    const isStartingSession = startSession.isPending;
+    const { mutate: startSessionMutate, isPending: isStartingSession } = useStartReadingSession();
+    const { mutate: updateProgressMutate, isPending: isUpdatingProgress } = useUpdateReadingProgress();
+    const { mutate: endSessionMutate } = useEndReadingSession();
 
     const watermarkLabel = useMemo(() => {
         if (data?.watermark?.text) {
@@ -98,29 +102,42 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, []);
 
     const attemptStartSession = useCallback(() => {
-        if (!data?.canAccess || isStartingSession) {
+        if (!data?.canAccess || isStartingSession || sessionAttemptRef.current) {
             return;
         }
 
         sessionAttemptRef.current = true;
-        setSessionError(null);
+        if (isMountedRef.current) {
+            setSessionError(null);
+        }
 
-        startSession.mutate(
+        startSessionMutate(
             { bookId, deviceType: detectDeviceType() },
             {
                 onSuccess: response => {
+                    if (!isMountedRef.current) {
+                        return;
+                    }
+
                     if (response?.success && response.session?.id) {
+                        sessionIdRef.current = response.session.id;
                         setSessionId(response.session.id);
                     }
                     sessionAttemptRef.current = false;
                 },
                 onError: err => {
                     console.error('Failed to start reading session', err);
-                    setSessionError('Nije moguće pokrenuti sesiju čitanja. Osvežite stranicu i pokušajte ponovo.');
+                    if (isMountedRef.current) {
+                        setSessionError('Nije moguće pokrenuti sesiju čitanja. Osvežite stranicu i pokušajte ponovo.');
+                    }
+                    sessionAttemptRef.current = false;
+                },
+                onSettled: () => {
+                    sessionAttemptRef.current = false;
                 },
             }
         );
-    }, [bookId, data?.canAccess, detectDeviceType, isStartingSession, startSession]);
+    }, [bookId, data?.canAccess, detectDeviceType, isStartingSession, startSessionMutate]);
 
     const renderPage = useCallback(
         async (pageNumber: number, pdf: PDFDocumentProxy, zoom: number) => {
@@ -138,14 +155,17 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 renderTaskRef.current.cancel();
             }
 
+            let task: RenderTask | null = null;
             try {
-                setIsRendering(true);
+                if (isMountedRef.current) {
+                    setIsRendering(true);
+                }
                 const page = await pdf.getPage(pageNumber);
                 const viewport = page.getViewport({ scale: zoom });
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
-                const task = page.render({
+                task = page.render({
                     canvasContext: context,
                     viewport,
                     intent: 'display',
@@ -166,15 +186,24 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     context.restore();
                 }
                 renderTaskRef.current = null;
-                setRenderError(null);
+                if (isMountedRef.current) {
+                    setRenderError(null);
+                }
             } catch (err) {
                 if ((err as any)?.name === 'RenderingCancelledException') {
                     return;
                 }
                 console.error('Failed to render PDF page', err);
-                setRenderError('Nije moguće prikazati stranicu dokumenta.');
+                if (isMountedRef.current) {
+                    setRenderError('Nije moguće prikazati stranicu dokumenta.');
+                }
             } finally {
-                setIsRendering(false);
+                if (renderTaskRef.current && renderTaskRef.current === task) {
+                    renderTaskRef.current = null;
+                }
+                if (isMountedRef.current) {
+                    setIsRendering(false);
+                }
             }
         },
         [watermarkLabel]
@@ -196,6 +225,13 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 });
             }
 
+            if (typeof window !== 'undefined') {
+                const token = window.localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
+                if (token && !headers.Authorization) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+            }
+
             if (watermarkSignature) {
                 headers['X-Readify-Watermark'] = watermarkSignature;
             }
@@ -213,7 +249,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const loadPdfDocument = useCallback(
         async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
             const pdfjs = await pdfjsLibPromise;
-            setRenderError(null);
+            if (isMountedRef.current) {
+                setRenderError(null);
+            }
 
             const { requestUrl, headers, rangeChunkSize } = buildStreamingRequest(stream);
 
@@ -230,6 +268,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 isEvalSupported: false,
                 useWorkerFetch: true,
             });
+            pdfLoadingTaskRef.current = loadingTask;
 
             const abortHandler = () => {
                 loadingTask.destroy();
@@ -246,20 +285,29 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             try {
                 const document = await loadingTask.promise;
 
-                if (signal?.aborted) {
+                if (signal?.aborted || !isMountedRef.current) {
                     loadingTask.destroy();
                     return;
                 }
 
-                setPdfDocument(document);
-                setTotalPages(document.numPages);
-                setCurrentPage(1);
+                if (pdfDocumentRef.current) {
+                    await pdfDocumentRef.current.destroy().catch(() => undefined);
+                }
+
+                pdfDocumentRef.current = document;
+                if (isMountedRef.current) {
+                    setPdfDocument(document);
+                    setTotalPages(document.numPages);
+                    setCurrentPage(1);
+                }
 
                 const firstPage = await document.getPage(1);
                 const viewport = firstPage.getViewport({ scale: 1 });
                 const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
                 const autoScale = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
-                setScale(autoScale);
+                if (isMountedRef.current) {
+                    setScale(autoScale);
+                }
                 await renderPage(1, document, autoScale);
             } catch (error) {
                 if ((error as Error).name === 'AbortError') {
@@ -270,6 +318,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             } finally {
                 if (signal) {
                     signal.removeEventListener('abort', abortHandler);
+                }
+                if (pdfLoadingTaskRef.current === loadingTask) {
+                    pdfLoadingTaskRef.current = null;
                 }
             }
         },
@@ -297,10 +348,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
             console.error('Failed to load PDF document', err);
             if ((err as any)?.status === 401) {
-                setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
+                if (isMountedRef.current) {
+                    setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
+                }
                 return;
             }
-            setRenderError('Greška prilikom učitavanja dokumenta.');
+            if (isMountedRef.current) {
+                setRenderError('Greška prilikom učitavanja dokumenta.');
+            }
         });
 
         return () => {
@@ -310,19 +365,35 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
     useEffect(() => {
         sessionAttemptRef.current = false;
-        setSessionError(null);
+        if (isMountedRef.current) {
+            setSessionError(null);
+        }
     }, [bookId, data?.canAccess]);
 
     useEffect(() => {
         hasAttemptedLoadRef.current = false;
+        if (pdfLoadingTaskRef.current) {
+            pdfLoadingTaskRef.current.destroy();
+            pdfLoadingTaskRef.current = null;
+        }
+        if (pdfDocumentRef.current) {
+            pdfDocumentRef.current.destroy().catch(() => undefined);
+            pdfDocumentRef.current = null;
+        }
         setPdfDocument(null);
         setRenderError(null);
         setCurrentPage(1);
         setTotalPages(0);
+        const session = sessionIdRef.current;
+        if (session) {
+            endSessionMutate({ sessionId: session, pagesRead: maxVisitedPageRef.current });
+        }
+        sessionIdRef.current = null;
         setSessionId(null);
         setMaxVisitedPage(1);
+        maxVisitedPageRef.current = 1;
         setLoadTrigger(prev => prev + 1);
-    }, [bookId]);
+    }, [bookId, endSessionMutate]);
 
     useEffect(() => {
         if (!pdfDocument) {
@@ -336,11 +407,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     useEffect(() => {
         if (currentPage > maxVisitedPage) {
             setMaxVisitedPage(currentPage);
+            maxVisitedPageRef.current = currentPage;
         }
     }, [currentPage, maxVisitedPage]);
 
     useEffect(() => {
-        if (!data?.canAccess || sessionId || isStartingSession || sessionAttemptRef.current) {
+        if (!data?.canAccess || sessionId || isStartingSession) {
             return;
         }
 
@@ -348,29 +420,49 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, [attemptStartSession, data?.canAccess, isStartingSession, sessionId]);
 
     useEffect(() => {
-        if (!sessionId || updateProgress.isPending) {
+        if (!sessionId || isUpdatingProgress) {
             return;
         }
         const timeout = window.setTimeout(() => {
-            updateProgress.mutate({ sessionId, currentPage });
+            updateProgressMutate({ sessionId, currentPage });
         }, 600);
 
         return () => window.clearTimeout(timeout);
-    }, [sessionId, currentPage, updateProgress]);
+    }, [sessionId, currentPage, isUpdatingProgress, updateProgressMutate]);
+
+    useEffect(() => {
+        sessionIdRef.current = sessionId;
+    }, [sessionId]);
+
+    useEffect(() => {
+        maxVisitedPageRef.current = maxVisitedPage;
+    }, [maxVisitedPage]);
 
     useEffect(() => {
         return () => {
+            isMountedRef.current = false;
+
             if (renderTaskRef.current) {
                 renderTaskRef.current.cancel();
+                renderTaskRef.current = null;
             }
-            if (pdfDocument) {
-                pdfDocument.destroy();
+
+            if (pdfLoadingTaskRef.current) {
+                pdfLoadingTaskRef.current.destroy();
+                pdfLoadingTaskRef.current = null;
             }
-            if (sessionId) {
-                endSession.mutate({ sessionId, pagesRead: maxVisitedPage });
+
+            if (pdfDocumentRef.current) {
+                pdfDocumentRef.current.destroy().catch(() => undefined);
+                pdfDocumentRef.current = null;
+            }
+
+            const session = sessionIdRef.current;
+            if (session) {
+                endSessionMutate({ sessionId: session, pagesRead: maxVisitedPageRef.current });
             }
         };
-    }, [pdfDocument, sessionId, maxVisitedPage, endSession]);
+    }, [endSessionMutate]);
 
     const handlePrevious = () => {
         setCurrentPage(prev => (prev > 1 ? prev - 1 : prev));
@@ -392,6 +484,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             return;
         }
         hasAttemptedLoadRef.current = false;
+        if (pdfLoadingTaskRef.current) {
+            pdfLoadingTaskRef.current.destroy();
+            pdfLoadingTaskRef.current = null;
+        }
+        if (pdfDocumentRef.current) {
+            pdfDocumentRef.current.destroy().catch(() => undefined);
+            pdfDocumentRef.current = null;
+        }
         setRenderError(null);
         setPdfDocument(null);
         setLoadTrigger(prev => prev + 1);
@@ -413,7 +513,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         const viewport = page.getViewport({ scale: 1 });
         const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
         const computed = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
-        setScale(computed);
+        if (isMountedRef.current) {
+            setScale(computed);
+        }
     };
 
     const handleBackToLibrary = () => {
