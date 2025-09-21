@@ -122,7 +122,14 @@ public class FileController {
             }
 
             String sessionToken = headers.getFirst("X-Readify-Session");
+            if (sessionToken == null || sessionToken.isBlank()) {
+                sessionToken = request.getParameter("sessionToken");
+            }
+
             String providedSignature = headers.getFirst("X-Readify-Watermark");
+            if (providedSignature == null || providedSignature.isBlank()) {
+                providedSignature = request.getParameter("watermark");
+            }
 
             Optional<StreamingSession> sessionOpt = streamingSessionService.validateSession(
                     sessionToken,
