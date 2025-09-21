@@ -232,9 +232,12 @@ const forwardResponse = async (response: Response, method: 'GET' | 'HEAD') => {
 
 const extractAuthToken = async (request: NextRequest): Promise<string | null> => {
     const authorization = request.headers.get('authorization');
+    const explicitHeaderToken = request.headers.get('x-readify-auth');
     const headerToken = authorization?.toLowerCase().startsWith('bearer ')
         ? authorization.slice(7).trim()
         : null;
+
+    const searchParamsToken = request.nextUrl.searchParams.get('authToken');
 
     let cookieToken = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null;
 
@@ -243,12 +246,20 @@ const extractAuthToken = async (request: NextRequest): Promise<string | null> =>
         cookieToken = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null;
     }
 
+    if (explicitHeaderToken && explicitHeaderToken.trim().length > 0) {
+        return explicitHeaderToken.trim();
+    }
+
     if (cookieToken) {
         return cookieToken;
     }
 
     if (headerToken) {
         return headerToken;
+    }
+
+    if (searchParamsToken && searchParamsToken.trim().length > 0) {
+        return searchParamsToken.trim();
     }
 
     return null;
