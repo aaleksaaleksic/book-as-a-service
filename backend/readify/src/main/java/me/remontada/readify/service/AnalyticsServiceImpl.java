@@ -40,11 +40,23 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public ReadingSession startReadingSession(User user, Book book, String deviceType, String ipAddress) {
 
-        Optional<ReadingSession> existingSession =
-                readingSessionRepository.findByUserAndBookAndSessionActiveTrue(user, book);
+        List<ReadingSession> activeSessions =
+                readingSessionRepository.findByUserAndBookAndSessionActiveTrueOrderBySessionStartDesc(user, book);
 
-        if (existingSession.isPresent()) {
-            return existingSession.get();
+        if (!activeSessions.isEmpty()) {
+            ReadingSession activeSession = activeSessions.get(0);
+
+            if (activeSessions.size() > 1) {
+                logger.warn("Found {} active sessions for user {} and book {}. Closing duplicate sessions.",
+                        activeSessions.size(), user.getId(), book.getId());
+
+                activeSessions.stream().skip(1).forEach(session -> {
+                    session.endSession();
+                    readingSessionRepository.save(session);
+                });
+            }
+
+            return activeSession;
         }
 
         ReadingSession session = new ReadingSession();
