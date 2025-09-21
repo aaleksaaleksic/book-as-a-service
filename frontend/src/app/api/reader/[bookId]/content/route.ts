@@ -235,8 +235,12 @@ const proxyPdfRequest = async (
     bookId: number,
     method: 'GET' | 'HEAD'
 ): Promise<NextResponse> => {
-    const cookieStore = cookies();
-    let token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    let token = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
+    }
 
     if (!token) {
         const authorization = request.headers.get('authorization');
@@ -308,10 +312,18 @@ const handleRequest = async (
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest, context: { params: { bookId: string } }) {
-    return handleRequest(request, context.params, 'GET');
+export async function GET(
+    request: NextRequest,
+    context: { params: Promise<{ bookId: string }> }
+) {
+    const params = await context.params;
+    return handleRequest(request, params, 'GET');
 }
 
-export async function HEAD(request: NextRequest, context: { params: { bookId: string } }) {
-    return handleRequest(request, context.params, 'HEAD');
+export async function HEAD(
+    request: NextRequest,
+    context: { params: Promise<{ bookId: string }> }
+) {
+    const params = await context.params;
+    return handleRequest(request, params, 'HEAD');
 }
