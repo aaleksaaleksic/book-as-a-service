@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -333,11 +334,16 @@ public class BookController {
         try {
             Long bookId = book.getId();
             long contentLength = fileStorageService.getBookPdfSize(bookId);
-            String secureUrl = fileStorageService.generateSecureBookUrl(bookId, 2);
             StreamingSessionDescriptor session = streamingSessionService.openSession(user, book);
+            String secureUrl = fileStorageService.generateSecureBookUrl(bookId, 2);
+            String urlWithSession = UriComponentsBuilder.fromUriString(secureUrl)
+                    .queryParam("sessionToken", session.token())
+                    .queryParam("watermark", session.watermarkSignature())
+                    .build()
+                    .toUriString();
 
             Map<String, Object> stream = new HashMap<>();
-            stream.put("url", secureUrl);
+            stream.put("url", urlWithSession);
             stream.put("contentLength", contentLength);
             stream.put("chunkSize", pdfStreamingService.getChunkSize());
             stream.put("expiresAt", session.expiresAt().toString());
