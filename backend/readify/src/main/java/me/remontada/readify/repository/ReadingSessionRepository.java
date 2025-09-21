@@ -10,12 +10,11 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ReadingSessionRepository extends JpaRepository<ReadingSession, Long> {
 
-    Optional<ReadingSession> findByUserAndBookAndSessionActiveTrue(User user, Book book);
+    List<ReadingSession> findByUserAndBookAndSessionActiveTrueOrderBySessionStartDesc(User user, Book book);
 
     List<ReadingSession> findByUserOrderByCreatedAtDesc(User user);
 
