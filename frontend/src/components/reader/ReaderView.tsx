@@ -14,6 +14,7 @@ import {
     useEndReadingSession,
 } from '@/hooks/use-reader';
 import { api, tokenManager } from '@/lib/api-client';
+
 import { AxiosError } from 'axios';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
@@ -153,6 +154,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
+
             if (stream.headers) {
                 Object.entries(stream.headers).forEach(([key, value]) => {
                     headers[key] = value;
@@ -168,6 +170,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     : new URL(stream.url, API_CONFIG.BASE_URL).toString();
 
                 const response = await api.get<ArrayBuffer>(requestUrl, {
+
                     responseType: 'arraybuffer',
                     headers,
                     withCredentials: true,
