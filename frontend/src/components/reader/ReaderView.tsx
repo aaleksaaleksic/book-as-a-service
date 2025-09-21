@@ -263,19 +263,28 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             const token = tokenManager.getToken();
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-                if (bookId > 0) {
-                    headers['X-Readify-Auth'] = token;
-                }
-            }
-
-            const requestUrl =
+            let requestUrl =
                 bookId > 0
                     ? `/api/reader/${bookId}/content`
                     : stream.url.startsWith('http')
                         ? stream.url
                         : new URL(stream.url, API_CONFIG.BASE_URL).toString();
+
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+                if (bookId > 0) {
+                    headers['X-Readify-Auth'] = token;
+
+                    try {
+                        const url = new URL(requestUrl, typeof window !== 'undefined' ? window.location.origin : undefined);
+                        url.searchParams.set('authToken', token);
+                        requestUrl = url.pathname + url.search;
+                    } catch {
+                        // Ako URL konstrukcija padne (npr. u SSR okruženju),
+                        // nastavljamo bez query parametra – header će pokriti slučaj.
+                    }
+                }
+            }
 
             const rangeChunkSize =
                 typeof stream.chunkSize === 'number' && stream.chunkSize > 0
