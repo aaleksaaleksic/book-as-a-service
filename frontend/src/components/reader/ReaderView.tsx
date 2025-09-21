@@ -67,7 +67,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const [sessionId, setSessionId] = useState<number | null>(null);
     const [maxVisitedPage, setMaxVisitedPage] = useState(1);
 
-    const { data, isLoading, error } = useBookReadAccess(bookId);
+    const {
+        data,
+        isLoading,
+        error,
+        refetch: refetchReadAccess,
+    } = useBookReadAccess(bookId);
     const { mutate: startSessionMutate, isPending: isStartingSession } = useStartReadingSession();
     const { mutate: updateProgressMutate, isPending: isUpdatingProgress } = useUpdateReadingProgress();
     const { mutate: endSessionMutate } = useEndReadingSession();
@@ -330,6 +335,32 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         [getAuthToken, watermarkSignature]
     );
 
+    const refreshStreamingSession = useCallback(
+        async (): Promise<SecureStreamDescriptor | null> => {
+            if (!bookId) {
+                return null;
+            }
+
+            try {
+                const result = await refetchReadAccess({ throwOnError: false });
+                const refreshedData = result.data;
+
+                if (
+                    refreshedData?.canAccess &&
+                    refreshedData.stream &&
+                    !('error' in refreshedData.stream)
+                ) {
+                    return refreshedData.stream as SecureStreamDescriptor;
+                }
+            } catch (err) {
+                console.error('Failed to refresh streaming session metadata', err);
+            }
+
+            return null;
+        },
+        [bookId, refetchReadAccess]
+    );
+
     const loadPdfDocument = useCallback(
         async (stream: SecureStreamDescriptor,
                signal?: AbortSignal,
@@ -401,9 +432,16 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 }
                 loadingTask.destroy();
                 if ((error as any)?.status === 401 && allowRetryOnUnauthorized) {
+                    const refreshedStream = await refreshStreamingSession();
+                    if (refreshedStream) {
+                        return loadPdfDocument(refreshedStream, signal, false);
+                    }
+
                     const refreshed = await refreshAccessToken();
                     if (refreshed) {
-                        return loadPdfDocument(stream, signal, false);
+                        const streamAfterAuth =
+                            (await refreshStreamingSession()) ?? stream;
+                        return loadPdfDocument(streamAfterAuth, signal, false);
                     }
                     if (isMountedRef.current) {
                         setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
@@ -420,7 +458,13 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 }
             }
         },
-        [buildStreamingRequest, clamp, refreshAccessToken, renderPage]
+        [
+            buildStreamingRequest,
+            clamp,
+            refreshAccessToken,
+            refreshStreamingSession,
+            renderPage,
+        ]
     );
 
     useEffect(() => {
