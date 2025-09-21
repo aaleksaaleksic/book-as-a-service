@@ -242,6 +242,7 @@ const proxyPdfRequest = async (
         token = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
     }
 
+
     if (!token) {
         const authorization = request.headers.get('authorization');
         if (authorization?.toLowerCase().startsWith('bearer ')) {
