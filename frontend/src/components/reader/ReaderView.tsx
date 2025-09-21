@@ -48,9 +48,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
     const hasAttemptedLoadRef = useRef(false);
-    const skipInitialLoadResetRef = useRef(true);
-    const lastStreamKeyRef = useRef<string | null>(null);
-    const lastCanAccessRef = useRef<boolean | null>(null);
+    const sessionAttemptRef = useRef(false);
 
     const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -58,6 +56,8 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const [scale, setScale] = useState(1.1);
     const [isRendering, setIsRendering] = useState(false);
     const [renderError, setRenderError] = useState<string | null>(null);
+    const [sessionError, setSessionError] = useState<string | null>(null);
+    const [loadTrigger, setLoadTrigger] = useState(0);
 
     const [sessionId, setSessionId] = useState<number | null>(null);
     const [maxVisitedPage, setMaxVisitedPage] = useState(1);
@@ -66,6 +66,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const startSession = useStartReadingSession();
     const updateProgress = useUpdateReadingProgress();
     const endSession = useEndReadingSession();
+    const isStartingSession = startSession.isPending;
 
     const watermarkLabel = useMemo(() => {
         if (data?.watermark?.text) {
@@ -83,7 +84,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         return Math.min(max, Math.max(min, value));
     }, []);
 
-    const detectDeviceType = (): DeviceType => {
+    const detectDeviceType = useCallback((): DeviceType => {
         if (typeof window === 'undefined') {
             return 'DESKTOP';
         }
@@ -95,7 +96,32 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             return 'TABLET';
         }
         return 'DESKTOP';
-    };
+    }, []);
+
+    const attemptStartSession = useCallback(() => {
+        if (!data?.canAccess || isStartingSession) {
+            return;
+        }
+
+        sessionAttemptRef.current = true;
+        setSessionError(null);
+
+        startSession.mutate(
+            { bookId, deviceType: detectDeviceType() },
+            {
+                onSuccess: response => {
+                    if (response?.success && response.session?.id) {
+                        setSessionId(response.session.id);
+                    }
+                    sessionAttemptRef.current = false;
+                },
+                onError: err => {
+                    console.error('Failed to start reading session', err);
+                    setSessionError('Nije moguće pokrenuti sesiju čitanja. Osvežite stranicu i pokušajte ponovo.');
+                },
+            }
+        );
+    }, [bookId, data?.canAccess, detectDeviceType, isStartingSession, startSession]);
 
     const renderPage = useCallback(
         async (pageNumber: number, pdf: PDFDocumentProxy, zoom: number) => {
@@ -372,32 +398,23 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         return () => {
             controller.abort();
         };
-    }, [pdfDocument, data?.canAccess, data?.stream, loadPdfDocument]);
+    }, [pdfDocument, data?.canAccess, data?.stream, loadPdfDocument, loadTrigger]);
 
     useEffect(() => {
-        if (skipInitialLoadResetRef.current) {
-            skipInitialLoadResetRef.current = false;
-            return;
-        }
+        sessionAttemptRef.current = false;
+        setSessionError(null);
+    }, [bookId, data?.canAccess]);
 
-        const stream = data?.stream;
-        const streamKey =
-            stream && typeof stream === 'object' && !('error' in stream)
-                ? [stream.url, stream.expiresAt ?? '', JSON.stringify(stream.headers ?? {})].join('|')
-                : stream && typeof stream === 'object' && 'error' in stream
-                  ? 'error'
-                  : null;
-        const canAccessValue = typeof data?.canAccess === 'boolean' ? data.canAccess : null;
-
-        const hasStreamChanged = streamKey !== lastStreamKeyRef.current;
-        const hasAccessChanged = canAccessValue !== lastCanAccessRef.current;
-
-        if (hasStreamChanged || hasAccessChanged) {
-            lastStreamKeyRef.current = streamKey;
-            lastCanAccessRef.current = canAccessValue;
-            hasAttemptedLoadRef.current = false;
-        }
-    }, [data?.stream, data?.canAccess]);
+    useEffect(() => {
+        hasAttemptedLoadRef.current = false;
+        setPdfDocument(null);
+        setRenderError(null);
+        setCurrentPage(1);
+        setTotalPages(0);
+        setSessionId(null);
+        setMaxVisitedPage(1);
+        setLoadTrigger(prev => prev + 1);
+    }, [bookId]);
 
     useEffect(() => {
         if (!pdfDocument) {
@@ -415,21 +432,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, [currentPage, maxVisitedPage]);
 
     useEffect(() => {
-        if (!data?.canAccess || sessionId || startSession.isPending) {
+        if (!data?.canAccess || sessionId || isStartingSession || sessionAttemptRef.current) {
             return;
         }
 
-        startSession.mutate(
-            { bookId, deviceType: detectDeviceType() },
-            {
-                onSuccess: response => {
-                    if (response?.success && response.session?.id) {
-                        setSessionId(response.session.id);
-                    }
-                },
-            }
-        );
-    }, [bookId, data?.canAccess, sessionId, startSession]);
+        attemptStartSession();
+    }, [attemptStartSession, data?.canAccess, isStartingSession, sessionId]);
 
     useEffect(() => {
         if (!sessionId || updateProgress.isPending) {
@@ -469,6 +477,24 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             const next = direction === 'in' ? prev + ZOOM_STEP : prev - ZOOM_STEP;
             return clamp(next, MIN_ZOOM, MAX_ZOOM);
         });
+    };
+
+    const handleRetryLoad = () => {
+        if (isRendering) {
+            return;
+        }
+        hasAttemptedLoadRef.current = false;
+        setRenderError(null);
+        setPdfDocument(null);
+        setLoadTrigger(prev => prev + 1);
+    };
+
+    const handleRetrySession = () => {
+        if (isStartingSession) {
+            return;
+        }
+        sessionAttemptRef.current = false;
+        attemptStartSession();
     };
 
     const handleFitToWidth = async () => {
@@ -597,6 +623,22 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     </div>
                 </header>
 
+                {sessionError && (
+                    <div className="bg-red-500/20 px-6 py-3 text-center text-sm text-red-100">
+                        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3">
+                            <span>{sessionError}</span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRetrySession}
+                                disabled={isStartingSession}
+                            >
+                                Pokušaj ponovo
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <main className="flex-1 overflow-auto">
                     <div
                         ref={containerRef}
@@ -614,9 +656,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                             </div>
                         )}
                         {renderError && !isRendering && (
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <div className="rounded-xl bg-red-500/20 px-6 py-3 text-sm text-red-100 shadow-lg">
-                                    {renderError}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                                <div className="flex flex-col items-center gap-4 rounded-xl bg-red-500/20 px-6 py-5 text-center text-sm text-red-100 shadow-lg">
+                                    <span>{renderError}</span>
+                                    <Button variant="secondary" size="sm" onClick={handleRetryLoad}>
+                                        Pokušaj ponovo
+                                    </Button>
                                 </div>
                             </div>
                         )}
