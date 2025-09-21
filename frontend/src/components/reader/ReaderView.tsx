@@ -13,8 +13,9 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
+import { useQueryClient } from '@tanstack/react-query';
 import type { PDFDocumentProxy, RenderTask, PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api';
-import type { SecureStreamDescriptor } from '@/types/reader';
+import type { BookReadAccessResponse, SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG, AUTH_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
 
@@ -43,6 +44,7 @@ interface ReaderViewProps {
 export function ReaderView({ bookId }: ReaderViewProps) {
     const { user } = useAuth();
     const router = useRouter();
+    const queryClient = useQueryClient();
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -51,6 +53,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const pdfDocumentRef = useRef<PDFDocumentProxy | null>(null);
     const hasAttemptedLoadRef = useRef(false);
     const sessionAttemptRef = useRef(false);
+    const streamRecoveryAttemptedRef = useRef(false);
     const isMountedRef = useRef(true);
     const sessionIdRef = useRef<number | null>(null);
     const maxVisitedPageRef = useRef(1);
@@ -67,7 +70,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const [sessionId, setSessionId] = useState<number | null>(null);
     const [maxVisitedPage, setMaxVisitedPage] = useState(1);
 
-    const { data, isLoading, error } = useBookReadAccess(bookId);
+    const { data, isLoading, error, refetch: refetchReadAccess } = useBookReadAccess(bookId);
     const { mutate: startSessionMutate, isPending: isStartingSession } = useStartReadingSession();
     const { mutate: updateProgressMutate, isPending: isUpdatingProgress } = useUpdateReadingProgress();
     const { mutate: endSessionMutate } = useEndReadingSession();
@@ -101,6 +104,33 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         }
         return 'DESKTOP';
     }, []);
+
+    const reacquireStreamDescriptor = useCallback(async (): Promise<SecureStreamDescriptor | null> => {
+        if (!bookId) {
+            return null;
+        }
+
+        try {
+            const result = await refetchReadAccess({ throwOnError: false });
+            const refreshedData =
+                result.data ?? queryClient.getQueryData<BookReadAccessResponse>([
+                    'books',
+                    bookId,
+                    'read-access',
+                ]);
+
+            if (refreshedData?.canAccess && refreshedData.stream) {
+                if ('error' in refreshedData.stream) {
+                    return null;
+                }
+                return refreshedData.stream;
+            }
+        } catch (err) {
+            console.error('Failed to refresh streaming metadata', err);
+        }
+
+        return null;
+    }, [bookId, queryClient, refetchReadAccess]);
 
     const attemptStartSession = useCallback(() => {
         if (!data?.canAccess || isStartingSession || sessionAttemptRef.current) {
@@ -397,6 +427,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     setScale(autoScale);
                 }
                 await renderPage(1, document, autoScale);
+                streamRecoveryAttemptedRef.current = false;
             } catch (error) {
                 if ((error as Error).name === 'AbortError') {
                     throw error;
@@ -404,11 +435,22 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 loadingTask.destroy();
 
-                if ((error as any)?.status === 401 && allowRetryOnUnauthorized) {
-                    const refreshed = await refreshAccessToken();
-                    if (refreshed) {
-                        return loadPdfDocument(stream, signal, false);
+                if ((error as any)?.status === 401) {
+                    if (allowRetryOnUnauthorized) {
+                        const refreshed = await refreshAccessToken();
+                        if (refreshed) {
+                            return loadPdfDocument(stream, signal, false);
+                        }
                     }
+
+                    if (!streamRecoveryAttemptedRef.current) {
+                        const refreshedStream = await reacquireStreamDescriptor();
+                        if (refreshedStream) {
+                            streamRecoveryAttemptedRef.current = true;
+                            return loadPdfDocument(refreshedStream, signal, false);
+                        }
+                    }
+
                     if (isMountedRef.current) {
                         setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
                     }
@@ -425,7 +467,13 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 }
             }
         },
-        [buildStreamingRequest, clamp, refreshAccessToken, renderPage]
+        [
+            buildStreamingRequest,
+            clamp,
+            reacquireStreamDescriptor,
+            refreshAccessToken,
+            renderPage,
+        ]
     );
 
     useEffect(() => {
@@ -440,6 +488,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         }
 
         const controller = new AbortController();
+        streamRecoveryAttemptedRef.current = false;
 
         hasAttemptedLoadRef.current = true;
 
@@ -473,6 +522,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
     useEffect(() => {
         hasAttemptedLoadRef.current = false;
+        streamRecoveryAttemptedRef.current = false;
         if (pdfLoadingTaskRef.current) {
             pdfLoadingTaskRef.current.destroy();
             pdfLoadingTaskRef.current = null;
@@ -585,6 +635,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             return;
         }
         hasAttemptedLoadRef.current = false;
+        streamRecoveryAttemptedRef.current = false;
         if (pdfLoadingTaskRef.current) {
             pdfLoadingTaskRef.current.destroy();
             pdfLoadingTaskRef.current = null;
