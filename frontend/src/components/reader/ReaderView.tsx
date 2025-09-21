@@ -258,9 +258,20 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 Accept: 'application/pdf',
             };
 
+            if (stream.headers && typeof stream.headers === 'object') {
+                for (const [key, value] of Object.entries(stream.headers)) {
+                    if (typeof value === 'string' && key) {
+                        headers[key] = value;
+                    }
+                }
+            }
+
             const token = tokenManager.getToken();
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
+                if (bookId > 0) {
+                    headers['X-Readify-Auth'] = token;
+                }
             }
 
             const requestUrl =
