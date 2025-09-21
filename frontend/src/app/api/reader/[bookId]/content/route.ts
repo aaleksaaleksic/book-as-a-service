@@ -232,22 +232,23 @@ const forwardResponse = async (response: Response, method: 'GET' | 'HEAD') => {
 
 const extractAuthToken = async (request: NextRequest): Promise<string | null> => {
     const authorization = request.headers.get('authorization');
-    if (authorization?.toLowerCase().startsWith('bearer ')) {
-        const headerToken = authorization.slice(7).trim();
-        if (headerToken) {
-            return headerToken;
-        }
+    const headerToken = authorization?.toLowerCase().startsWith('bearer ')
+        ? authorization.slice(7).trim()
+        : null;
+
+    let cookieToken = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null;
+
+    if (!cookieToken) {
+        const cookieStore = await cookies();
+        cookieToken = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null;
     }
 
-    const cookieToken = request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value;
     if (cookieToken) {
         return cookieToken;
     }
 
-    const cookieStore = await cookies();
-    const serverCookieToken = cookieStore.get(AUTH_CONFIG.TOKEN_KEY)?.value;
-    if (serverCookieToken) {
-        return serverCookieToken;
+    if (headerToken) {
+        return headerToken;
     }
 
     return null;
