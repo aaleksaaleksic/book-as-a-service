@@ -13,22 +13,18 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import type { PDFDocumentProxy, RenderTask, PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api';
+import type {
+    PDFDocumentProxy,
+    RenderTask,
+    PDFDocumentLoadingTask,
+} from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
 
-let pdfWorkerSrc: string | null = null;
-
-const pdfjsLibPromise = import('pdfjs-dist').then(pdfjs => {
-    if (typeof window !== 'undefined') {
-        if (!pdfWorkerSrc) {
-            pdfWorkerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
-        }
-        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
-    }
-    return pdfjs;
-});
+const pdfjsLibPromise: Promise<typeof import('pdfjs-dist/webpack.mjs')> = import(
+    'pdfjs-dist/webpack.mjs'
+);
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.75;
@@ -317,13 +313,33 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         [bookId, refetchReadAccess]
     );
 
+    const ensureValidAccessToken = useCallback(async () => {
+        const token = tokenManager.getToken();
+        if (!token) {
+            return true;
+        }
+        if (tokenManager.isTokenExpired(token)) {
+            return refreshAccessToken();
+        }
+        return true;
+    }, [refreshAccessToken]);
+
     const loadPdfDocument = useCallback(
-        async (stream: SecureStreamDescriptor,
-               signal?: AbortSignal,
-               allowRetryOnUnauthorized = true) => {
+        async (
+            stream: SecureStreamDescriptor,
+            signal?: AbortSignal,
+            allowRetryOnUnauthorized = true
+        ) => {
             const pdfjs = await pdfjsLibPromise;
             if (isMountedRef.current) {
                 setRenderError(null);
+            }
+
+            if (!(await ensureValidAccessToken())) {
+                if (isMountedRef.current) {
+                    setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
+                }
+                return;
             }
 
             const { requestUrl, headers, rangeChunkSize } = buildStreamingRequest(stream);
@@ -386,24 +402,48 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 if ((error as Error).name === 'AbortError') {
                     throw error;
                 }
+
+                const statusCode = typeof (error as any)?.status === 'number' ? (error as any).status : null;
+                const message = (error as Error)?.message ?? '';
+                const UnexpectedResponseException = pdfjs.UnexpectedResponseException;
+                const isUnauthorizedError =
+                    statusCode === 401 ||
+                    statusCode === 403 ||
+                    (UnexpectedResponseException &&
+                        error instanceof UnexpectedResponseException &&
+                        ([401, 403] as const).includes((error as any).status)) ||
+                    /401|403|unauthorized|forbidden/i.test(message);
+
                 loadingTask.destroy();
-                if ((error as any)?.status === 401 && allowRetryOnUnauthorized) {
+
+                if (isUnauthorizedError && allowRetryOnUnauthorized) {
                     const refreshedStream = await refreshStreamingSession();
                     if (refreshedStream) {
-                        return loadPdfDocument(refreshedStream, signal, false);
+                        await loadPdfDocument(refreshedStream, signal, false);
+                        return;
                     }
 
                     const refreshed = await refreshAccessToken();
                     if (refreshed) {
                         const streamAfterAuth =
                             (await refreshStreamingSession()) ?? stream;
-                        return loadPdfDocument(streamAfterAuth, signal, false);
+                        await loadPdfDocument(streamAfterAuth, signal, false);
+                        return;
                     }
+
                     if (isMountedRef.current) {
                         setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
                     }
                     return;
                 }
+
+                if (isUnauthorizedError) {
+                    if (isMountedRef.current) {
+                        setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
+                    }
+                    return;
+                }
+
                 throw error;
             } finally {
                 if (signal) {
@@ -417,6 +457,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         [
             buildStreamingRequest,
             clamp,
+            ensureValidAccessToken,
             refreshAccessToken,
             refreshStreamingSession,
             renderPage,
