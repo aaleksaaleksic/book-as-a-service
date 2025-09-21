@@ -13,9 +13,7 @@ import {
     useUpdateReadingProgress,
     useEndReadingSession,
 } from '@/hooks/use-reader';
-import { api, tokenManager } from '@/lib/api-client';
-
-import { AxiosError } from 'axios';
+import { tokenManager } from '@/lib/api-client';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG } from '@/utils/constants';
@@ -144,51 +142,180 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         []
     );
 
-    const loadPdfDocument = useCallback(
-        async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
-            const pdfjs = await pdfjsLibPromise;
+    const refreshAuthToken = useCallback(async () => {
+        const refreshToken = tokenManager.getRefreshToken();
+        if (!refreshToken) {
+            return false;
+        }
 
-            const headers: Record<string, string> = {};
-            setRenderError(null);
-            const token = tokenManager.getToken();
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
+        try {
+            const response = await fetch(
+                `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}/refresh`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refreshToken }),
+                    credentials: 'include',
+                }
+            );
+
+            if (!response.ok) {
+                return false;
             }
 
-            if (stream.headers) {
-                Object.entries(stream.headers).forEach(([key, value]) => {
-                    headers[key] = value;
-                });
-            }
-            if (watermarkSignature) {
-                headers['X-Readify-Watermark'] = watermarkSignature;
+            const data = await response.json();
+            if (!data?.token || !data?.refreshToken) {
+                return false;
             }
 
-            try {
-                const requestUrl = stream.url.startsWith('http')
-                    ? stream.url
-                    : new URL(stream.url, API_CONFIG.BASE_URL).toString();
+            tokenManager.setToken(data.token);
+            tokenManager.setRefreshToken(data.refreshToken);
+            return true;
+        } catch (error) {
+            console.error('Failed to refresh auth token', error);
+            return false;
+        }
+    }, []);
 
-                const response = await api.get<ArrayBuffer>(requestUrl, {
+    const fetchChunkWithAuth = useCallback(
+        async (requestUrl: string, baseHeaders: HeadersInit, signal?: AbortSignal) => {
+            const attemptFetch = async (retry: boolean): Promise<ArrayBuffer> => {
+                if (signal?.aborted) {
+                    throw new DOMException('Aborted', 'AbortError');
+                }
 
-                    responseType: 'arraybuffer',
+                const headers = new Headers(baseHeaders);
+                const token = tokenManager.getToken();
+                if (token) {
+                    headers.set('Authorization', `Bearer ${token}`);
+                }
+
+                const response = await fetch(requestUrl, {
+                    method: 'GET',
                     headers,
-                    withCredentials: true,
+                    credentials: 'include',
                     signal,
                 });
 
-                if (signal?.aborted) {
-                    return;
+                if (response.status === 401 && retry) {
+                    const refreshed = await refreshAuthToken();
+                    if (refreshed && !signal?.aborted) {
+                        return attemptFetch(false);
+                    }
+
+                    const error = new Error('Failed to fetch PDF: 401');
+                    (error as any).status = 401;
+                    throw error;
                 }
 
-                const pdfArrayBuffer = response.data;
-                const loadingTask = pdfjs.getDocument({
-                    data: pdfArrayBuffer,
-                    isEvalSupported: false,
-                    useWorkerFetch: false,
-                });
+                if (!response.ok) {
+                    const error = new Error(`Failed to fetch PDF: ${response.status}`);
+                    (error as any).status = response.status;
+                    throw error;
+                }
 
+                return await response.arrayBuffer();
+            };
+
+            return attemptFetch(true);
+        },
+        [refreshAuthToken]
+    );
+
+    const downloadPdfInChunks = useCallback(
+        async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
+            const requestUrl = stream.url.startsWith('http')
+                ? stream.url
+                : new URL(stream.url, API_CONFIG.BASE_URL).toString();
+
+            const baseHeaders: Record<string, string> = {
+                Accept: 'application/pdf',
+            };
+
+            if (stream.headers) {
+                Object.entries(stream.headers).forEach(([key, value]) => {
+                    baseHeaders[key] = value;
+                });
+            }
+
+            if (watermarkSignature) {
+                baseHeaders['X-Readify-Watermark'] = watermarkSignature;
+            }
+
+            const totalLength =
+                typeof stream.contentLength === 'number' && stream.contentLength > 0
+                    ? stream.contentLength
+                    : null;
+            const chunkSize =
+                typeof stream.chunkSize === 'number' && stream.chunkSize > 0
+                    ? stream.chunkSize
+                    : 262144; // 256 KiB default
+
+            if (!totalLength) {
+                const buffer = await fetchChunkWithAuth(requestUrl, baseHeaders, signal);
+                return new Uint8Array(buffer);
+            }
+
+            const pdfBytes = new Uint8Array(totalLength);
+            let downloaded = 0;
+
+            while (downloaded < totalLength) {
+                if (signal?.aborted) {
+                    throw new DOMException('Aborted', 'AbortError');
+                }
+
+                const rangeStart = downloaded;
+                const rangeEnd = Math.min(rangeStart + chunkSize - 1, totalLength - 1);
+                const headers = new Headers(baseHeaders);
+                headers.set('Range', `bytes=${rangeStart}-${rangeEnd}`);
+
+                const chunkBuffer = await fetchChunkWithAuth(requestUrl, headers, signal);
+                const chunkBytes = new Uint8Array(chunkBuffer);
+                pdfBytes.set(chunkBytes, rangeStart);
+                downloaded += chunkBytes.byteLength;
+
+                if (chunkBytes.byteLength === 0) {
+                    const error = new Error('Failed to fetch PDF: received empty chunk');
+                    (error as any).status = 500;
+                    throw error;
+                }
+            }
+
+            if (downloaded < totalLength) {
+                const error = new Error(
+                    `Failed to fetch PDF: incomplete download (${downloaded}/${totalLength} bytes)`
+                );
+                (error as any).status = 500;
+                throw error;
+            }
+
+            return pdfBytes;
+        },
+        [fetchChunkWithAuth, watermarkSignature]
+    );
+
+    const loadPdfDocument = useCallback(
+        async (stream: SecureStreamDescriptor, signal?: AbortSignal) => {
+            const pdfjs = await pdfjsLibPromise;
+            setRenderError(null);
+
+            const pdfBytes = await downloadPdfInChunks(stream, signal);
+
+            if (signal?.aborted) {
+                return;
+            }
+
+            const loadingTask = pdfjs.getDocument({
+                data: pdfBytes,
+                isEvalSupported: false,
+                useWorkerFetch: false,
+            });
+
+            try {
                 const document = await loadingTask.promise;
+
                 if (signal?.aborted) {
                     loadingTask.destroy();
                     return;
@@ -205,21 +332,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 setScale(autoScale);
                 await renderPage(1, document, autoScale);
             } catch (error) {
-                if ((error as AxiosError)?.code === 'ERR_CANCELED' || signal?.aborted) {
-                    return;
-                }
-
-                if (error instanceof AxiosError) {
-                    const status = error.response?.status;
-                    const axiosError = new Error(`Failed to fetch PDF: ${status ?? 'unknown'}`);
-                    (axiosError as any).status = status;
-                    throw axiosError;
+                if (signal?.aborted) {
+                    throw new DOMException('Aborted', 'AbortError');
                 }
 
                 throw error;
             }
         },
-        [clamp, renderPage, watermarkSignature]
+        [clamp, downloadPdfInChunks, renderPage]
     );
 
     useEffect(() => {
