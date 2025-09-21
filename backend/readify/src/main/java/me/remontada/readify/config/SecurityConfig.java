@@ -24,7 +24,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Enables @PreAuthorize annotations
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -57,10 +57,13 @@ public class SecurityConfig {
                         // Authentication endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
+                        // Allow CORS preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // User registration and verification
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-email").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-phone").permitAll()
+
 
                         // Public book browsing (no authentication needed)
                         .requestMatchers(HttpMethod.GET, "/api/v1/books").permitAll()
@@ -89,6 +92,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/users/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/users/**").authenticated()
 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-phone").authenticated()
+                        
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )

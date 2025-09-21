@@ -7,7 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRange;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
-import org.springframework.http.ResourceRegion;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
