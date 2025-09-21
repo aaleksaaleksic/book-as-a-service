@@ -15,7 +15,7 @@ import {
 } from '@/hooks/use-reader';
 import type { PDFDocumentProxy, RenderTask, PDFDocumentLoadingTask } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
-import { API_CONFIG, AUTH_CONFIG } from '@/utils/constants';
+import { API_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
 
 let pdfWorkerSrc: string | null = null;
@@ -259,29 +259,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             return null;
         }
 
-        const managerToken = tokenManager.getToken();
-        if (managerToken) {
-            return managerToken;
-        }
-
-        const storedToken = window.localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
-        if (storedToken) {
-            return storedToken;
-        }
-
-        if (typeof document !== 'undefined') {
-            const cookiePrefix = `${AUTH_CONFIG.TOKEN_KEY}=`;
-            const cookie = document.cookie
-                .split(';')
-                .map(part => part.trim())
-                .find(part => part.startsWith(cookiePrefix));
-
-            if (cookie) {
-                return decodeURIComponent(cookie.substring(cookiePrefix.length));
-            }
-        }
-
-        return null;
+        return tokenManager.getToken();
     }, []);
 
     const buildStreamingRequest = useCallback(
