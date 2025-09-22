@@ -132,7 +132,8 @@ const getDescriptor = async (
 const createBackendHeaders = (
     descriptor: SecureStreamDescriptor,
     request: NextRequest,
-    token: string
+    token: string,
+    clientMethod: 'GET' | 'HEAD'
 ): Headers => {
     const headers = new Headers();
     headers.set('Accept', 'application/pdf');
@@ -159,6 +160,8 @@ const createBackendHeaders = (
     const range = request.headers.get('range');
     if (range) {
         headers.set('Range', range);
+    } else if (clientMethod === 'HEAD') {
+        headers.set('Range', 'bytes=0-0');
     }
 
     const ifRange = request.headers.get('if-range');
@@ -304,10 +307,12 @@ const proxyPdfRequest = async (
 
     let descriptor = await getDescriptor(bookId, token);
 
+    const backendMethod: 'GET' | 'HEAD' = method === 'HEAD' ? 'GET' : method;
+
     const proxyFetch = async (targetDescriptor: SecureStreamDescriptor) => {
-        const headers = createBackendHeaders(targetDescriptor, request, token);
+        const headers = createBackendHeaders(targetDescriptor, request, token, method);
         const backendResponse = await fetch(normalizeStreamUrl(targetDescriptor.url), {
-            method,
+            method: backendMethod,
             headers,
             cache: 'no-store',
             redirect: 'manual',
