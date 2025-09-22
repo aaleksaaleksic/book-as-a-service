@@ -238,7 +238,7 @@ public class SubscriptionController {
             User currentUser = getCurrentUser(authentication);
             logger.info("Admin {} requesting all subscriptions", currentUser.getEmail());
 
-            List<Subscription> subscriptions = subscriptionService.getAllActiveSubscriptions();
+            List<Subscription> subscriptions = subscriptionService.getLatestSubscriptionsForAllUsers();
 
             List<SubscriptionResponseDTO> subscriptionDTOs = SubscriptionMapper.toResponseDTOList(subscriptions);
 

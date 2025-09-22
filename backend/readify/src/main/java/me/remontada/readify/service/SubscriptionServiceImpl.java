@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -252,6 +253,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public List<Subscription> getAllActiveSubscriptions() {
         logger.debug("Fetching all active subscriptions for admin");
         return subscriptionRepository.findByStatus(SubscriptionStatus.ACTIVE);
+    }
+
+    /**
+     * Get the most recent subscription for every user (admin function)
+     */
+    @Override
+    public List<Subscription> getLatestSubscriptionsForAllUsers() {
+        logger.debug("Fetching latest subscriptions for all users for admin view");
+        List<Subscription> subscriptions = subscriptionRepository.findLatestSubscriptionsForAllUsers();
+
+        subscriptions.sort(Comparator.comparing(Subscription::getCreatedAt,
+                Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+
+        return subscriptions;
     }
 
     /**

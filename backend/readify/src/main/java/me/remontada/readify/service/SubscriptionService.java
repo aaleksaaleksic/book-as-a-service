@@ -29,6 +29,8 @@ public interface SubscriptionService {
     // Admin functions
     List<Subscription> getAllActiveSubscriptions();
 
+    List<Subscription> getLatestSubscriptionsForAllUsers();
+
     long getActiveSubscriptionsCount();
 
     void expireOverdueSubscriptions();

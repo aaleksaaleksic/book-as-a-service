@@ -83,7 +83,21 @@ export default function AdminUsersPage() {
     const subscriptionMap = useMemo(() => {
         const map = new Map<number, AdminSubscription>();
         subscriptionsData?.subscriptions.forEach((subscription) => {
-            map.set(subscription.userId, subscription);
+            if (subscription?.userId == null) return;
+
+            const existing = map.get(subscription.userId);
+
+            if (!existing) {
+                map.set(subscription.userId, subscription);
+                return;
+            }
+
+            const existingTimestamp = existing.createdAt ? new Date(existing.createdAt).getTime() : 0;
+            const currentTimestamp = subscription.createdAt ? new Date(subscription.createdAt).getTime() : 0;
+
+            if (currentTimestamp >= existingTimestamp) {
+                map.set(subscription.userId, subscription);
+            }
         });
         return map;
     }, [subscriptionsData?.subscriptions]);
