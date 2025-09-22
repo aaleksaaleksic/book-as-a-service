@@ -95,37 +95,19 @@ const getCachedDescriptor = (key: string): SecureStreamDescriptor | null => {
 };
 
 const fetchStreamDescriptor = async (bookId: number, token: string): Promise<SecureStreamDescriptor> => {
-    const response = await fetch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKS}/${bookId}/read`,
-        {
-            method: 'GET',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: 'application/json',
-            },
-            cache: 'no-store',
+    // Direct call to backend reader endpoint instead of missing /api/v1/books/{id}/read
+    const backendUrl = `${API_CONFIG.BASE_URL}/api/reader/${bookId}/content?authToken=${encodeURIComponent(token)}`;
+
+    return {
+        url: backendUrl,
+        watermarkSignature: '',
+        issuedAt: new Date().toISOString(),
+        expiresAt: undefined,
+        chunkSize: 2097152, // 2MB chunks for PDF.js to properly parse PDF structure
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-    );
-
-    if (response.status === 401) {
-        throw new ProxyError('Unauthorized', 401);
-    }
-
-    if (!response.ok) {
-        throw new ProxyError('Failed to create streaming session', response.status || 500);
-    }
-
-    const payload = (await response.json()) as BookReadAccessResponse;
-
-    if (!payload.canAccess) {
-        throw new ProxyError('Access to requested book is not allowed', 403);
-    }
-
-    if (!payload.stream || typeof payload.stream !== 'object' || 'error' in payload.stream) {
-        throw new ProxyError('Streaming session is not available', 404);
-    }
-
-    return payload.stream as SecureStreamDescriptor;
+    } as SecureStreamDescriptor;
 };
 
 const getDescriptor = async (
