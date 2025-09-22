@@ -88,6 +88,8 @@ public class SecurityConfig {
                         // Book reading
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/{id}/read").authenticated()
 
+                        .requestMatchers(HttpMethod.GET, "/api/reader/*/content").authenticated()
+
                         // Book management
                         .requestMatchers(HttpMethod.POST, "/api/v1/books").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/books/**").authenticated()
