@@ -95,6 +95,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
+    const lastRenderParamsRef = useRef<{
+        fingerprint: string | null;
+        pageNumber: number;
+        zoom: number;
+        watermark: string | null;
+    } | null>(null);
     const pdfLoadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
     const pdfDocumentRef = useRef<PDFDocumentProxy | null>(null);
     const hasAttemptedLoadRef = useRef(false);
@@ -554,9 +560,26 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     setScale(autoScale);
                 }
 
+                const documentFingerprint = Array.isArray(document.fingerprints)
+                    ? document.fingerprints[0] ?? null
+                    : null;
+                const previousRenderParams = lastRenderParamsRef.current;
+                const currentWatermark = watermarkLabel ?? null;
+                lastRenderParamsRef.current = {
+                    fingerprint: documentFingerprint,
+                    pageNumber: 1,
+                    zoom: autoScale,
+                    watermark: currentWatermark,
+                };
+
                 console.log('Starting page render...');
-                await renderPage(1, document, autoScale);
-                console.log('Page render completed successfully');
+                try {
+                    await renderPage(1, document, autoScale);
+                    console.log('Page render completed successfully');
+                } catch (error) {
+                    lastRenderParamsRef.current = previousRenderParams;
+                    throw error;
+                }
             } catch (error) {
                 if ((error as Error).name === 'AbortError') {
                     throw error;
@@ -637,6 +660,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             refreshAccessToken,
             refreshStreamingSession,
             renderPage,
+            watermarkLabel,
         ]
     );
 
@@ -737,12 +761,38 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
     useEffect(() => {
         if (!pdfDocument) {
+            lastRenderParamsRef.current = null;
             return;
         }
+
+        const documentFingerprint = Array.isArray(pdfDocument.fingerprints)
+            ? pdfDocument.fingerprints[0] ?? null
+            : null;
+        const previousRenderParams = lastRenderParamsRef.current;
+        const currentWatermark = watermarkLabel ?? null;
+        const alreadyRendered =
+            previousRenderParams?.fingerprint === documentFingerprint &&
+            previousRenderParams?.pageNumber === currentPage &&
+            previousRenderParams?.watermark === currentWatermark &&
+            Math.abs((previousRenderParams?.zoom ?? 0) - scale) < 0.001;
+
+        if (alreadyRendered) {
+            return;
+        }
+
+        const nextRenderParams = {
+            fingerprint: documentFingerprint,
+            pageNumber: currentPage,
+            zoom: scale,
+            watermark: currentWatermark,
+        };
+        lastRenderParamsRef.current = nextRenderParams;
+
         renderPage(currentPage, pdfDocument, scale).catch(err => {
+            lastRenderParamsRef.current = previousRenderParams;
             console.error('Render loop error', err);
         });
-    }, [pdfDocument, currentPage, scale, renderPage]);
+    }, [pdfDocument, currentPage, scale, renderPage, watermarkLabel]);
 
     useEffect(() => {
         if (currentPage > maxVisitedPage) {
