@@ -7,6 +7,7 @@ import me.remontada.readify.model.User;
 import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
 import me.remontada.readify.service.PdfStreamingService;
+import me.remontada.readify.service.LocalFileStorageService;
 import me.remontada.readify.service.StreamingSessionService;
 import me.remontada.readify.service.StreamingSessionService.StreamingSession;
 import me.remontada.readify.service.UserService;
@@ -91,6 +92,37 @@ public class FileController {
         } catch (IOException e) {
             log.error("Failed to load cover for book: {}", bookId, e);
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * DEMO ENDPOINT - Direktno vraća PDF iz lokalnog storage-a bez zaštite
+     * Korisno za razvoj da proverimo da li lokalno sačuvani fajl može da se učita u čitaču
+     */
+    @GetMapping("/demo/local/{bookId}")
+    public ResponseEntity<?> getLocalDemoPdf(@PathVariable Long bookId) {
+        if (!(fileStorageService instanceof LocalFileStorageService)) {
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of(
+                    "success", false,
+                    "message", "Local storage demo endpoint is available only with LocalFileStorageService"
+            ));
+        }
+
+        try {
+            Resource pdfResource = fileStorageService.getBookPdf(bookId);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .cacheControl(CacheControl.noCache())
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"demo-book-" + bookId + ".pdf\"")
+                    .body(pdfResource);
+        } catch (IOException e) {
+            log.error("Demo PDF not found in local storage for book {}", bookId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", "Demo PDF file not found in local storage"
+            ));
         }
     }
 

@@ -55,6 +55,9 @@ storage/covers/
 !sample-*.png
 !test-*.pdf
 !test-*.jpg
+!storage/
+!storage/books/
+!storage/books/book-42.pdf
 
 ### Logs ###
 *.log
