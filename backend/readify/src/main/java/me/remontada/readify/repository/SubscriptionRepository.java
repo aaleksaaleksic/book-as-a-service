@@ -49,6 +49,17 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     @Query("SELECT s FROM Subscription s WHERE s.user = :user ORDER BY s.createdAt DESC")
     List<Subscription> findByUserOrderByCreatedAtDesc(@Param("user") User user);
 
+    @Query("""
+            SELECT s FROM Subscription s
+            WHERE s.id IN (
+                SELECT MAX(s2.id)
+                FROM Subscription s2
+                GROUP BY s2.user.id
+            )
+            ORDER BY s.createdAt DESC
+            """)
+    List<Subscription> findLatestSubscriptionsForAllUsers();
+
     /**
      * Check if user has specific subscription type in history
      * Used to prevent multiple trials
