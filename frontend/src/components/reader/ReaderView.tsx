@@ -200,7 +200,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, []);
 
     const attemptStartSession = useCallback(() => {
-        if (!data?.canAccess || isStartingSession || sessionAttemptRef.current) {
+        if (!data?.canAccess || sessionAttemptRef.current) {
             return;
         }
 
@@ -235,7 +235,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 },
             }
         );
-    }, [bookId, data?.canAccess, detectDeviceType, isStartingSession, startSessionMutate]);
+    }, [bookId, data?.canAccess, detectDeviceType, startSessionMutate]);
 
     const renderPage = useCallback(
         async (pageNumber: number, pdf: PDFDocumentProxy, zoom: number) => {
@@ -804,18 +804,17 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     useEffect(() => {
         console.log('Session start useEffect triggered:', {
             canAccess: data?.canAccess,
-            sessionId,
-            isStartingSession
+            sessionId
         });
 
-        if (!data?.canAccess || sessionId || isStartingSession) {
+        if (!data?.canAccess || sessionId) {
             console.log('Session start useEffect skipped');
             return;
         }
 
         console.log('Session start useEffect executing...');
         attemptStartSession();
-    }, [attemptStartSession, data?.canAccess, isStartingSession, sessionId]);
+    }, [attemptStartSession, data?.canAccess, sessionId]);
 
     useEffect(() => {
         console.log('Progress update useEffect triggered:', {
@@ -987,9 +986,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     };
 
     const handleRetrySession = () => {
-        if (isStartingSession) {
-            return;
-        }
         sessionAttemptRef.current = false;
         attemptStartSession();
     };
