@@ -95,19 +95,51 @@ const getCachedDescriptor = (key: string): SecureStreamDescriptor | null => {
 };
 
 const fetchStreamDescriptor = async (bookId: number, token: string): Promise<SecureStreamDescriptor> => {
-    // Direct call to backend reader endpoint instead of missing /api/v1/books/{id}/read
-    const backendUrl = `${API_CONFIG.BASE_URL}/api/reader/${bookId}/content?authToken=${encodeURIComponent(token)}`;
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/books/${bookId}/read`, {
+        method: 'GET',
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+            'X-Readify-Auth': token,
+        },
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        throw new ProxyError('Failed to fetch streaming metadata', response.status);
+    }
+
+    const payload = (await response.json()) as BookReadAccessResponse;
+
+    if (!payload?.canAccess || !payload.stream || typeof payload.stream !== 'object') {
+        throw new ProxyError('Streaming session unavailable for this book', 403);
+    }
+
+    if ('error' in payload.stream) {
+        throw new ProxyError('PDF source unavailable', 503);
+    }
+
+    const stream = payload.stream as SecureStreamDescriptor;
+
+    const headers: Record<string, string> = {};
+    if (stream.headers && typeof stream.headers === 'object') {
+        for (const [key, value] of Object.entries(stream.headers)) {
+            if (typeof value === 'string' && key) {
+                headers[key] = value;
+            }
+        }
+    }
+
+    const contentLength = Number(stream.contentLength);
+    const chunkSize = Number(stream.chunkSize);
 
     return {
-        url: backendUrl,
-        watermarkSignature: '',
-        issuedAt: new Date().toISOString(),
-        expiresAt: undefined,
-        chunkSize: 2097152, // 2MB chunks for PDF.js to properly parse PDF structure
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    } as SecureStreamDescriptor;
+        url: stream.url ?? `${API_CONFIG.BASE_URL}/api/reader/${bookId}/content`,
+        contentLength: Number.isFinite(contentLength) && contentLength > 0 ? contentLength : 0,
+        chunkSize: Number.isFinite(chunkSize) && chunkSize > 0 ? chunkSize : 2097152,
+        expiresAt: stream.expiresAt,
+        headers,
+    } satisfies SecureStreamDescriptor;
 };
 
 const getDescriptor = async (
@@ -132,8 +164,7 @@ const getDescriptor = async (
 const createBackendHeaders = (
     descriptor: SecureStreamDescriptor,
     request: NextRequest,
-    token: string,
-    clientMethod: 'GET' | 'HEAD'
+    token: string
 ): Headers => {
     const headers = new Headers();
     headers.set('Accept', 'application/pdf');
@@ -160,8 +191,6 @@ const createBackendHeaders = (
     const range = request.headers.get('range');
     if (range) {
         headers.set('Range', range);
-    } else if (clientMethod === 'HEAD') {
-        headers.set('Range', 'bytes=0-0');
     }
 
     const ifRange = request.headers.get('if-range');
@@ -307,10 +336,29 @@ const proxyPdfRequest = async (
 
     let descriptor = await getDescriptor(bookId, token);
 
+    if (method === 'HEAD' && descriptor.contentLength > 0) {
+        const headers = new Headers();
+        headers.set('Accept-Ranges', 'bytes');
+        headers.set('Cache-Control', 'no-store');
+        headers.set('Content-Type', 'application/pdf');
+        headers.set('Content-Length', descriptor.contentLength.toString());
+        headers.set('Content-Range', `bytes 0-0/${descriptor.contentLength}`);
+
+        if (descriptor.headers) {
+            Object.entries(descriptor.headers).forEach(([key, value]) => {
+                if (typeof value === 'string' && key.toLowerCase().startsWith('x-readify-')) {
+                    headers.set(key, value);
+                }
+            });
+        }
+
+        return new NextResponse(null, { status: 200, headers });
+    }
+
     const backendMethod: 'GET' | 'HEAD' = method === 'HEAD' ? 'GET' : method;
 
     const proxyFetch = async (targetDescriptor: SecureStreamDescriptor) => {
-        const headers = createBackendHeaders(targetDescriptor, request, token, method);
+        const headers = createBackendHeaders(targetDescriptor, request, token);
         const backendResponse = await fetch(normalizeStreamUrl(targetDescriptor.url), {
             method: backendMethod,
             headers,
