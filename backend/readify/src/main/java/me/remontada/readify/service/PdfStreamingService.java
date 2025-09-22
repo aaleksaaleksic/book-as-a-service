@@ -71,7 +71,9 @@ public class PdfStreamingService {
         }
 
         long rangeLength = end - start + 1;
-        long effectiveLength = Math.min(chunkSize, rangeLength);
+        // Allow larger chunks (up to 2MB) for PDF readers that need more data to parse structure
+        long maxAllowedChunk = Math.max(chunkSize, 2097152L); // 2MB max
+        long effectiveLength = Math.min(maxAllowedChunk, rangeLength);
 
         log.trace("Serving PDF range start={}, requestedLength={}, effectiveLength={}", start, rangeLength, effectiveLength);
 

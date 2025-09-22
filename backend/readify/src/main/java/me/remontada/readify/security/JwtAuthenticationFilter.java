@@ -41,31 +41,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = extractToken(request);
 
             if (token == null) {
+                logger.debug("No token found in request to {}", request.getRequestURI());
                 filterChain.doFilter(request, response);
                 return;
             }
+
+            logger.debug("Extracted token for request to {}: {}", request.getRequestURI(),
+                token.substring(0, Math.min(token.length(), 20)) + "...");
+
             String email = jwtUtil.extractEmail(token);
+            logger.debug("Extracted email from token: {}", email);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 Optional<User> optionalUser = userService.findByEmail(email);
 
-                if (optionalUser.isPresent() && jwtUtil.validateToken(token, email)) {
-                    User user = optionalUser.get();
+                if (optionalUser.isPresent()) {
+                    boolean isValid = jwtUtil.validateToken(token, email);
+                    logger.debug("Token validation result for {}: {}", email, isValid);
 
-                    MyUserDetails userDetails = new MyUserDetails(user);
+                    if (isValid) {
+                        User user = optionalUser.get();
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        MyUserDetails userDetails = new MyUserDetails(user);
 
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        logger.debug("Authentication set for user: {}", email);
+                    } else {
+                        logger.warn("Token validation failed for user: {}", email);
+                    }
+                } else {
+                    logger.warn("User not found for email: {}", email);
                 }
             }
         } catch (Exception ex) {
             // Ako JWT nije validan (npr. istekao, pogrešno potpisan itd.), ne prekidamo ceo request.
             // Time omogućavamo da public endpointi (poput cover slika) ostanu dostupni čak i ako korisnik
             // ima zastareo token u storage-u. Endpointi koji zahtevaju autentikaciju će i dalje vratiti 401.
-            logger.warn("Invalid JWT token received", ex);
+            logger.warn("Invalid JWT token received for request to {}: {}", request.getRequestURI(), ex.getMessage());
         }
         filterChain.doFilter(request, response);
     }
