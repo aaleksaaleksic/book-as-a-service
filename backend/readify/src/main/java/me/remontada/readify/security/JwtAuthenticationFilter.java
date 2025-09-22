@@ -37,15 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
-            String token = authHeader.substring(7);
+            String token = extractToken(request);
+
+            if (token == null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             String email = jwtUtil.extractEmail(token);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -70,5 +68,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.warn("Invalid JWT token received", ex);
         }
         filterChain.doFilter(request, response);
+    }
+
+    private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        String token = extractFromHeader(authHeader);
+
+        if (token != null) {
+            return token;
+        }
+
+        String customHeader = request.getHeader("X-Readify-Auth");
+        token = extractFromHeader(customHeader);
+        if (token != null) {
+            return token;
+        }
+
+        String queryToken = request.getParameter("authToken");
+        return extractFromHeader(queryToken);
+    }
+
+    private String extractFromHeader(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return null;
+        }
+
+        String trimmed = rawValue.trim();
+        if (trimmed.toLowerCase().startsWith("bearer ")) {
+            String withoutPrefix = trimmed.substring(7).trim();
+            return withoutPrefix.isEmpty() ? null : withoutPrefix;
+        }
+
+        return trimmed;
     }
 }
