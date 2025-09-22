@@ -201,13 +201,17 @@ public class ReaderController {
                 bookService.incrementReadCount(bookId);
             }
 
-            // Log access
-            log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes) via legacy /api/reader endpoint",
-                    userEmail, book.getTitle(), bookId, clientIp, rangeStart, rangeEnd, region.getCount());
+            // Determine if this is a full file or partial content request
+            boolean isFullFile = region.getPosition() == 0 && region.getCount() == contentLength;
+            HttpStatus responseStatus = isFullFile ? HttpStatus.OK : HttpStatus.PARTIAL_CONTENT;
 
-            // Return ResourceRegion with minimal headers to avoid conflicts with ResourceRegionHttpMessageConverter
-            // The converter will automatically handle Content-Range, Content-Length, Accept-Ranges headers
-            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+            // Log access
+            log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes) via legacy /api/reader endpoint ({})",
+                    userEmail, book.getTitle(), bookId, clientIp, rangeStart, rangeEnd, region.getCount(),
+                    isFullFile ? "FULL" : "PARTIAL");
+
+            // Return ResourceRegion with appropriate status code
+            return ResponseEntity.status(responseStatus)
                     .contentType(MediaType.APPLICATION_PDF)
                     .cacheControl(CacheControl.noStore())
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + sanitizeFilename(book.getTitle()) + ".pdf\"")

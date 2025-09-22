@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Minus, Plus, Maximize2, ShieldAlert } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -24,7 +24,10 @@ import { tokenManager } from '@/lib/api-client';
 
 const pdfjsLibPromise: Promise<typeof import('pdfjs-dist/webpack.mjs')> = import(
     'pdfjs-dist/webpack.mjs'
-);
+).catch(error => {
+    console.error('Failed to load PDF.js library:', error);
+    throw new Error('PDF reader library failed to load. Please refresh the page and try again.');
+});
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.75;
@@ -34,6 +37,55 @@ type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
 
 interface ReaderViewProps {
     bookId: number;
+}
+
+interface PDFErrorBoundaryState {
+    hasError: boolean;
+    error?: Error;
+}
+
+class PDFErrorBoundary extends Component<{ children: ReactNode; onError: (error: string) => void }, PDFErrorBoundaryState> {
+    constructor(props: { children: ReactNode; onError: (error: string) => void }) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error: Error): PDFErrorBoundaryState {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+        console.error('PDF Error Boundary caught an error:', error, errorInfo);
+
+        const errorName = error?.name ?? '';
+        const message = error?.message ?? '';
+
+        // Check for PDF corruption errors
+        const isPdfCorrupted =
+            errorName === 'InvalidPDFException' ||
+            /invalid.*root.*reference|corrupted.*pdf|malformed.*pdf|invalid.*pdf.*structure/i.test(message) ||
+            /pdf.*header.*not.*found|missing.*pdf.*header|invalid.*pdf.*version/i.test(message);
+
+        if (isPdfCorrupted) {
+            this.props.onError('Ovaj PDF fajl je oštećen ili ima neispravnu strukturu. Kontaktirajte administratora.');
+        } else {
+            this.props.onError('Greška prilikom učitavanja dokumenta. Pokušajte ponovo.');
+        }
+    }
+
+    componentDidUpdate(prevProps: { children: ReactNode; onError: (error: string) => void }) {
+        if (prevProps.children !== this.props.children && this.state.hasError) {
+            this.setState({ hasError: false, error: undefined });
+        }
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return null; // Let parent handle error display
+        }
+
+        return this.props.children;
+    }
 }
 
 export function ReaderView({ bookId }: ReaderViewProps) {
@@ -59,6 +111,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const [renderError, setRenderError] = useState<string | null>(null);
     const [sessionError, setSessionError] = useState<string | null>(null);
     const [loadTrigger, setLoadTrigger] = useState(0);
+    const [pdfInitError, setPdfInitError] = useState<string | null>(null);
 
     const [sessionId, setSessionId] = useState<number | null>(null);
     const [maxVisitedPage, setMaxVisitedPage] = useState(1);
@@ -180,38 +233,75 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
     const renderPage = useCallback(
         async (pageNumber: number, pdf: PDFDocumentProxy, zoom: number) => {
+            console.log('renderPage called:', { pageNumber, zoom, canvasExists: !!canvasRef.current, hasRenderTask: !!renderTaskRef.current });
+
             if (!canvasRef.current) {
+                console.log('No canvas reference found');
+                return;
+            }
+
+            // Use ref to check rendering state to avoid dependency issues
+            if (renderTaskRef.current) {
+                console.log('Already rendering, skipping this render call');
                 return;
             }
 
             const canvas = canvasRef.current;
+            console.log('Canvas element:', canvas, 'dimensions:', canvas.width, 'x', canvas.height);
+
             const context = canvas.getContext('2d', { alpha: false });
             if (!context) {
+                console.log('Failed to get 2D context');
                 return;
             }
+            console.log('Canvas context obtained:', context);
 
             if (renderTaskRef.current) {
+                console.log('Cancelling previous render task');
                 renderTaskRef.current.cancel();
             }
 
             let task: RenderTask | null = null;
             try {
                 if (isMountedRef.current) {
+                    console.log('Setting isRendering to true');
                     setIsRendering(true);
                 }
+                console.log('Getting page', pageNumber, 'from PDF');
                 const page = await pdf.getPage(pageNumber);
+                console.log('Page obtained:', page);
+
                 const viewport = page.getViewport({ scale: zoom });
+                console.log('Viewport created:', { width: viewport.width, height: viewport.height, scale: zoom });
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
+                console.log('Canvas resized to:', canvas.width, 'x', canvas.height);
 
+                console.log('Starting render task...');
                 task = page.render({
                     canvasContext: context,
                     viewport,
-                    intent: 'display',
+                    intent: 'print', // Use print intent to avoid font loading issues
+                    renderInteractiveForms: false,
+                    optionalContentConfigPromise: null,
                 });
                 renderTaskRef.current = task;
-                await task.promise;
+                console.log('Render task created:', task);
+
+                console.log('Waiting for render task to complete...');
+
+                // Add timeout to detect hanging render tasks
+                const renderPromise = task.promise;
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Render task timeout after 30 seconds')), 30000);
+                });
+
+                await Promise.race([renderPromise, timeoutPromise]);
+                console.log('Render task completed successfully');
+
                 if (watermarkLabel) {
+                    console.log('Adding watermark:', watermarkLabel);
                     context.save();
                     context.globalAlpha = 0.12;
                     context.fillStyle = '#1f2937';
@@ -223,11 +313,18 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     context.textBaseline = 'middle';
                     context.fillText(watermarkLabel, 0, 0);
                     context.restore();
+                    console.log('Watermark added');
+                } else {
+                    console.log('No watermark to add');
                 }
+
                 renderTaskRef.current = null;
                 if (isMountedRef.current) {
                     setRenderError(null);
+                    console.log('Setting isRendering to false');
+                    setIsRendering(false);
                 }
+                console.log('renderPage completed successfully');
             } catch (err) {
                 if ((err as any)?.name === 'RenderingCancelledException') {
                     return;
@@ -241,6 +338,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     renderTaskRef.current = null;
                 }
                 if (isMountedRef.current) {
+                    console.log('Finally block: Setting isRendering to false');
                     setIsRendering(false);
                 }
             }
@@ -336,7 +434,17 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             signal?: AbortSignal,
             allowRetryOnUnauthorized = true
         ) => {
-            const pdfjs = await pdfjsLibPromise;
+            let pdfjs;
+            try {
+                pdfjs = await pdfjsLibPromise;
+            } catch (error) {
+                console.error('Failed to load PDF.js library:', error);
+                if (isMountedRef.current) {
+                    setRenderError('Greška prilikom učitavanja PDF čitača. Osvežite stranicu i pokušajte ponovo.');
+                }
+                return;
+            }
+
             if (isMountedRef.current) {
                 setRenderError(null);
             }
@@ -349,24 +457,48 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             const { requestUrl, headers, rangeChunkSize } = buildStreamingRequest(stream);
+            console.log('PDF loading request details:', { requestUrl, headers, rangeChunkSize });
 
             if (signal?.aborted) {
                 throw new DOMException('Aborted', 'AbortError');
             }
 
+            console.log('Fetching PDF data directly...');
+            // Fetch the PDF data directly to avoid PDF.js network issues
+            const response = await fetch(requestUrl, {
+                method: 'GET',
+                headers: headers,
+                credentials: 'include',
+                signal: signal
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+            }
+
+            console.log('PDF data fetched, converting to ArrayBuffer...');
+            const pdfData = await response.arrayBuffer();
+            console.log('PDF ArrayBuffer size:', pdfData.byteLength);
+
+            if (signal?.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+            }
+
+            console.log('Starting PDF.js document loading with ArrayBuffer...');
             const loadingTask = pdfjs.getDocument({
-                url: requestUrl,
-                httpHeaders: headers,
-                withCredentials: true,
-                rangeChunkSize: rangeChunkSize || 2097152, // Default to 2MB if not specified
-                disableAutoFetch: false, // Enable auto-fetch to get PDF structure
-                disableStream: true, // Disable streaming parser for better compatibility
-                disableRange: false, // Keep range requests enabled
+                data: pdfData, // Use raw data instead of URL
+                disableAutoFetch: true,
+                disableStream: false,
+                disableRange: true, // Not needed since we have the full data
                 isEvalSupported: false,
-                useWorkerFetch: true,
-                stopAtErrors: false, // Continue parsing despite minor errors
+                useWorkerFetch: false,
+                stopAtErrors: false,
+                verbosity: 1,
+                cMapUrl: undefined,
+                standardFontDataUrl: undefined,
             });
             pdfLoadingTaskRef.current = loadingTask;
+            console.log('PDF loading task created:', loadingTask);
 
             const abortHandler = () => {
                 loadingTask.destroy();
@@ -381,7 +513,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             try {
+                console.log('Waiting for PDF document to load...');
                 const document = await loadingTask.promise;
+                console.log('PDF document loaded successfully:', document);
+                console.log('PDF document details:', {
+                    numPages: document.numPages,
+                    fingerprints: document.fingerprints,
+                    encrypted: document.encrypted
+                });
 
                 if (signal?.aborted || !isMountedRef.current) {
                     loadingTask.destroy();
@@ -397,16 +536,27 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     setPdfDocument(document);
                     setTotalPages(document.numPages);
                     setCurrentPage(1);
+                    console.log('PDF state updated in React:', { totalPages: document.numPages });
                 }
 
+                console.log('Getting first page...');
                 const firstPage = await document.getPage(1);
+                console.log('First page loaded:', firstPage);
+
                 const viewport = firstPage.getViewport({ scale: 1 });
+                console.log('Viewport details:', { width: viewport.width, height: viewport.height });
+
                 const containerWidth = containerRef.current?.clientWidth ?? viewport.width;
                 const autoScale = clamp((containerWidth - 32) / viewport.width, MIN_ZOOM, MAX_ZOOM);
+                console.log('Auto scale calculated:', autoScale, 'container width:', containerWidth);
+
                 if (isMountedRef.current) {
                     setScale(autoScale);
                 }
+
+                console.log('Starting page render...');
                 await renderPage(1, document, autoScale);
+                console.log('Page render completed successfully');
             } catch (error) {
                 if ((error as Error).name === 'AbortError') {
                     throw error;
@@ -414,7 +564,15 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 const statusCode = typeof (error as any)?.status === 'number' ? (error as any).status : null;
                 const message = (error as Error)?.message ?? '';
+                const errorName = (error as Error)?.name ?? '';
                 const UnexpectedResponseException = pdfjs.UnexpectedResponseException;
+
+                // Check for PDF corruption errors
+                const isPdfCorrupted =
+                    errorName === 'InvalidPDFException' ||
+                    /invalid.*root.*reference|corrupted.*pdf|malformed.*pdf|invalid.*pdf.*structure/i.test(message) ||
+                    /pdf.*header.*not.*found|missing.*pdf.*header|invalid.*pdf.*version/i.test(message);
+
                 const isUnauthorizedError =
                     statusCode === 401 ||
                     statusCode === 403 ||
@@ -424,6 +582,15 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     /401|403|unauthorized|forbidden/i.test(message);
 
                 loadingTask.destroy();
+
+                // Handle PDF corruption errors
+                if (isPdfCorrupted) {
+                    console.error('PDF file is corrupted or has invalid structure:', error);
+                    if (isMountedRef.current) {
+                        setRenderError('Ovaj PDF fajl je oštećen ili ima neispravnu strukturu. Kontaktirajte administratora.');
+                    }
+                    return;
+                }
 
                 if (isUnauthorizedError && allowRetryOnUnauthorized) {
                     const refreshedStream = await refreshStreamingSession();
@@ -474,6 +641,15 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     );
 
     useEffect(() => {
+        console.log('PDF loading useEffect triggered:', {
+            hasPdfDocument: !!pdfDocument,
+            canAccess: data?.canAccess,
+            hasStream: !!data?.stream,
+            hasStreamError: data?.stream && 'error' in data.stream,
+            hasAttempted: hasAttemptedLoadRef.current,
+            loadTrigger
+        });
+
         if (
             pdfDocument ||
             !data?.canAccess ||
@@ -481,9 +657,11 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             'error' in data.stream ||
             hasAttemptedLoadRef.current
         ) {
+            console.log('PDF loading useEffect skipped');
             return;
         }
 
+        console.log('PDF loading useEffect executing...');
         const controller = new AbortController();
 
         hasAttemptedLoadRef.current = true;
@@ -493,6 +671,23 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 return;
             }
             console.error('Failed to load PDF document', err);
+
+            const errorName = (err as Error)?.name ?? '';
+            const message = (err as Error)?.message ?? '';
+
+            // Check for PDF corruption errors
+            const isPdfCorrupted =
+                errorName === 'InvalidPDFException' ||
+                /invalid.*root.*reference|corrupted.*pdf|malformed.*pdf|invalid.*pdf.*structure/i.test(message) ||
+                /pdf.*header.*not.*found|missing.*pdf.*header|invalid.*pdf.*version/i.test(message);
+
+            if (isPdfCorrupted) {
+                if (isMountedRef.current) {
+                    setRenderError('Ovaj PDF fajl je oštećen ili ima neispravnu strukturu. Kontaktirajte administratora.');
+                }
+                return;
+            }
+
             if ((err as any)?.status === 401) {
                 if (isMountedRef.current) {
                     setRenderError('Vaša sesija je istekla. Prijavite se ponovo kako biste nastavili čitanje.');
@@ -557,23 +752,50 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, [currentPage, maxVisitedPage]);
 
     useEffect(() => {
+        console.log('Session start useEffect triggered:', {
+            canAccess: data?.canAccess,
+            sessionId,
+            isStartingSession
+        });
+
         if (!data?.canAccess || sessionId || isStartingSession) {
+            console.log('Session start useEffect skipped');
             return;
         }
 
+        console.log('Session start useEffect executing...');
         attemptStartSession();
     }, [attemptStartSession, data?.canAccess, isStartingSession, sessionId]);
 
     useEffect(() => {
-        if (!sessionId || isUpdatingProgress) {
+        console.log('Progress update useEffect triggered:', {
+            sessionId,
+            currentPage,
+            isUpdatingProgress
+        });
+
+        if (!sessionId) {
+            console.log('Progress update useEffect skipped - no session');
             return;
         }
+
+        // Don't update if already updating (but don't include isUpdatingProgress in deps to avoid loop)
+        if (isUpdatingProgress) {
+            console.log('Progress update useEffect skipped - already updating');
+            return;
+        }
+
+        console.log('Progress update useEffect scheduling update...');
         const timeout = window.setTimeout(() => {
+            console.log('Executing progress update:', { sessionId, currentPage });
             updateProgressMutate({ sessionId, currentPage });
         }, 600);
 
-        return () => window.clearTimeout(timeout);
-    }, [sessionId, currentPage, isUpdatingProgress, updateProgressMutate]);
+        return () => {
+            console.log('Progress update useEffect cleanup');
+            window.clearTimeout(timeout);
+        };
+    }, [sessionId, currentPage, updateProgressMutate]); // Removed isUpdatingProgress from deps
 
     useEffect(() => {
         sessionIdRef.current = sessionId;
@@ -584,7 +806,78 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     }, [maxVisitedPage]);
 
     useEffect(() => {
+        // Immediate check for PDF.js module errors
+        const checkPDFJSErrors = async () => {
+            try {
+                console.log('Checking PDF.js module loading...');
+                // Try to load PDF.js immediately to catch any initialization errors
+                await pdfjsLibPromise;
+                console.log('PDF.js module loaded successfully');
+            } catch (error) {
+                console.error('PDF.js module failed to load during initial check:', error);
+                const errorName = (error as Error)?.name ?? '';
+                const message = (error as Error)?.message ?? '';
+
+                const isPdfCorrupted =
+                    errorName === 'InvalidPDFException' ||
+                    /invalid.*root.*reference|corrupted.*pdf|malformed.*pdf|invalid.*pdf.*structure/i.test(message);
+
+                console.log('Initial PDF.js error - isPdfCorrupted:', isPdfCorrupted, 'errorName:', errorName);
+
+                if (isPdfCorrupted) {
+                    const errorMsg = 'Ovaj PDF fajl je oštećen ili ima neispravnu strukturu. Kontaktirajte administratora.';
+                    console.log('Setting initial PDF corruption error:', errorMsg);
+                    setPdfInitError(errorMsg);
+                } else {
+                    const errorMsg = 'Greška prilikom učitavanja PDF čitača. Osvežite stranicu i pokušajte ponovo.';
+                    console.log('Setting initial PDF loading error:', errorMsg);
+                    setPdfInitError(errorMsg);
+                }
+            }
+        };
+
+        checkPDFJSErrors();
+
+        // Global error handler for unhandled PDF.js promise rejections
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+            const error = event.reason;
+            const errorName = error?.name ?? '';
+            const message = error?.message ?? '';
+
+            console.log('Unhandled rejection detected:', { errorName, message, error });
+
+            // Check if this is a PDF-related error
+            if (errorName === 'InvalidPDFException' || /pdf/i.test(message)) {
+                event.preventDefault(); // Prevent default browser handling
+
+                const isPdfCorrupted =
+                    errorName === 'InvalidPDFException' ||
+                    /invalid.*root.*reference|corrupted.*pdf|malformed.*pdf|invalid.*pdf.*structure/i.test(message) ||
+                    /pdf.*header.*not.*found|missing.*pdf.*header|invalid.*pdf.*version/i.test(message);
+
+                console.error('Unhandled PDF promise rejection caught:', error);
+                console.log('Setting error state - isPdfCorrupted:', isPdfCorrupted, 'isMounted:', isMountedRef.current);
+
+                if (isMountedRef.current) {
+                    if (isPdfCorrupted) {
+                        const errorMsg = 'Ovaj PDF fajl je oštećen ili ima neispravnu strukturu. Kontaktirajte administratora.';
+                        console.log('Setting PDF corruption error:', errorMsg);
+                        setRenderError(errorMsg);
+                        setPdfInitError(errorMsg);
+                    } else {
+                        const errorMsg = 'Greška prilikom učitavanja dokumenta. Pokušajte ponovo.';
+                        console.log('Setting generic PDF error:', errorMsg);
+                        setRenderError(errorMsg);
+                        setPdfInitError(errorMsg);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
         return () => {
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection);
             isMountedRef.current = false;
 
             if (renderTaskRef.current) {
@@ -638,7 +931,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             pdfDocumentRef.current = null;
         }
         setRenderError(null);
+        setPdfInitError(null);
         setPdfDocument(null);
+        setLoadTrigger(prev => prev + 1);
     };
 
     const handleRetrySession = () => {
@@ -799,20 +1094,22 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                         className="relative mx-auto flex max-w-4xl justify-center px-4 py-10"
                         onContextMenu={event => event.preventDefault()}
                     >
-                        <canvas
-                            ref={canvasRef}
-                            className="w-full rounded-xl bg-white shadow-2xl"
-                            aria-label={`Strana ${currentPage} od ${totalPages}`}
-                        />
+                        <PDFErrorBoundary onError={(error) => setRenderError(error)}>
+                            <canvas
+                                ref={canvasRef}
+                                className="w-full rounded-xl bg-white shadow-2xl"
+                                aria-label={`Strana ${currentPage} od ${totalPages}`}
+                            />
+                        </PDFErrorBoundary>
                         {isRendering && (
                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/10">
                                 <LoadingSpinner size="lg" />
                             </div>
                         )}
-                        {renderError && !isRendering && (
+                        {(renderError || pdfInitError) && !isRendering && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
                                 <div className="flex flex-col items-center gap-4 rounded-xl bg-red-500/20 px-6 py-5 text-center text-sm text-red-100 shadow-lg">
-                                    <span>{renderError}</span>
+                                    <span>{renderError || pdfInitError}</span>
                                     <Button variant="secondary" size="sm" onClick={handleRetryLoad}>
                                         Pokušaj ponovo
                                     </Button>
