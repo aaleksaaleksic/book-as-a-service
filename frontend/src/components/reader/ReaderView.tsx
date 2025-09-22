@@ -358,10 +358,13 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 url: requestUrl,
                 httpHeaders: headers,
                 withCredentials: true,
-                rangeChunkSize,
-                disableAutoFetch: true,
+                rangeChunkSize: rangeChunkSize || 2097152, // Default to 2MB if not specified
+                disableAutoFetch: false, // Enable auto-fetch to get PDF structure
+                disableStream: true, // Disable streaming parser for better compatibility
+                disableRange: false, // Keep range requests enabled
                 isEvalSupported: false,
                 useWorkerFetch: true,
+                stopAtErrors: false, // Continue parsing despite minor errors
             });
             pdfLoadingTaskRef.current = loadingTask;
 
