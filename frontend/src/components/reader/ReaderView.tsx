@@ -275,13 +275,10 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 if (bookId > 0) {
                     headers['X-Readify-Auth'] = token;
 
-                    try {
-                        const url = new URL(requestUrl, typeof window !== 'undefined' ? window.location.origin : undefined);
-                        url.searchParams.set('authToken', token);
-                        requestUrl = url.pathname + url.search;
-                    } catch {
-                        // Ako URL konstrukcija padne (npr. u SSR okruženju),
-                        // nastavljamo bez query parametra – header će pokriti slučaj.
+                    // Add token as query parameter for local API routes
+                    if (requestUrl.includes('/api/reader/')) {
+                        const separator = requestUrl.includes('?') ? '&' : '?';
+                        requestUrl = `${requestUrl}${separator}authToken=${encodeURIComponent(token)}`;
                     }
                 }
             }
@@ -514,7 +511,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         if (isMountedRef.current) {
             setSessionError(null);
         }
-    }, [bookId, data?.canAccess]);
+    }, [bookId]);
 
     useEffect(() => {
         hasAttemptedLoadRef.current = false;
@@ -538,7 +535,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         setSessionId(null);
         setMaxVisitedPage(1);
         maxVisitedPageRef.current = 1;
-        setLoadTrigger(prev => prev + 1);
     }, [bookId, endSessionMutate]);
 
     useEffect(() => {
@@ -640,7 +636,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         }
         setRenderError(null);
         setPdfDocument(null);
-        setLoadTrigger(prev => prev + 1);
     };
 
     const handleRetrySession = () => {
