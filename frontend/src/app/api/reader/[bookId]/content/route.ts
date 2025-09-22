@@ -248,6 +248,37 @@ const normalizeAuthToken = (rawToken?: string | null): string | null => {
     return trimmed;
 };
 
+const extractTokenFromSearchParams = (request: NextRequest): string | null => {
+    const tryNormalize = (value: string | null) => normalizeAuthToken(value);
+
+    const paramCandidates = [
+        request.nextUrl.searchParams.get('authToken'),
+        request.nextUrl.searchParams.get('token'),
+        request.nextUrl.searchParams.get('auth_token'),
+    ];
+
+    for (const candidate of paramCandidates) {
+        const normalised = tryNormalize(candidate);
+        if (normalised) {
+            return normalised;
+        }
+    }
+
+    try {
+        const fallbackParams = new URL(request.url).searchParams;
+        for (const key of ['authToken', 'token', 'auth_token']) {
+            const value = tryNormalize(fallbackParams.get(key));
+            if (value) {
+                return value;
+            }
+        }
+    } catch {
+        // noop – malformed URL should not break token extraction
+    }
+
+    return null;
+};
+
 const extractAuthToken = async (request: NextRequest): Promise<string | null> => {
     const explicitHeaderToken = normalizeAuthToken(request.headers.get('x-readify-auth'));
     if (explicitHeaderToken) {
@@ -259,9 +290,9 @@ const extractAuthToken = async (request: NextRequest): Promise<string | null> =>
         return headerToken;
     }
 
-    const searchParamsToken = normalizeAuthToken(request.nextUrl.searchParams.get('authToken'));
-    if (searchParamsToken) {
-        return searchParamsToken;
+    const queryToken = extractTokenFromSearchParams(request);
+    if (queryToken) {
+        return queryToken;
     }
 
     let cookieToken = normalizeAuthToken(request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null);
