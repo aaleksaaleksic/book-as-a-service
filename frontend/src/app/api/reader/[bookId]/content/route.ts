@@ -254,6 +254,16 @@ const extractAuthToken = async (request: NextRequest): Promise<string | null> =>
         return explicitHeaderToken;
     }
 
+    const headerToken = normalizeAuthToken(request.headers.get('authorization'));
+    if (headerToken) {
+        return headerToken;
+    }
+
+    const searchParamsToken = normalizeAuthToken(request.nextUrl.searchParams.get('authToken'));
+    if (searchParamsToken) {
+        return searchParamsToken;
+    }
+
     let cookieToken = normalizeAuthToken(request.cookies.get(AUTH_CONFIG.TOKEN_KEY)?.value ?? null);
 
     if (!cookieToken) {
@@ -263,16 +273,6 @@ const extractAuthToken = async (request: NextRequest): Promise<string | null> =>
 
     if (cookieToken) {
         return cookieToken;
-    }
-
-    const headerToken = normalizeAuthToken(request.headers.get('authorization'));
-    if (headerToken) {
-        return headerToken;
-    }
-
-    const searchParamsToken = normalizeAuthToken(request.nextUrl.searchParams.get('authToken'));
-    if (searchParamsToken) {
-        return searchParamsToken;
     }
 
     return null;
