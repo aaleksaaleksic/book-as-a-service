@@ -55,9 +55,10 @@ public class PdfStreamingService {
         List<HttpRange> ranges = headers.getRange();
 
         if (ranges == null || ranges.isEmpty()) {
-            long effectiveLength = Math.min(chunkSize, contentLength);
-            log.debug("Range header missing, defaulting to first chunk ({} bytes)", effectiveLength);
-            return new ResourceRegion(resource, 0, effectiveLength);
+            // If no range header is present, return the entire file
+            // This supports PDF.js when range requests are disabled
+            log.debug("Range header missing, serving entire file ({} bytes)", contentLength);
+            return new ResourceRegion(resource, 0, contentLength);
         }
 
         HttpRange range = ranges.get(0);
