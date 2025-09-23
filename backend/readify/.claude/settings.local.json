@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Projects/book-as-a-service/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
