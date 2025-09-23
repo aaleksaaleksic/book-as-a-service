@@ -94,20 +94,80 @@ const getCachedDescriptor = (key: string): SecureStreamDescriptor | null => {
     return entry.descriptor;
 };
 
-const fetchStreamDescriptor = async (bookId: number, token: string): Promise<SecureStreamDescriptor> => {
-    // Direct call to backend reader endpoint instead of missing /api/v1/books/{id}/read
-    const backendUrl = `${API_CONFIG.BASE_URL}/api/reader/${bookId}/content?authToken=${encodeURIComponent(token)}`;
+const normalizeHeaders = (headers?: Record<string, unknown> | null) => {
+    if (!headers || typeof headers !== 'object') {
+        return {} as Record<string, string>;
+    }
 
-    return {
-        url: backendUrl,
-        watermarkSignature: '',
-        issuedAt: new Date().toISOString(),
-        expiresAt: undefined,
-        chunkSize: 2097152, // 2MB chunks for PDF.js to properly parse PDF structure
-        headers: {
-            'Authorization': `Bearer ${token}`
+    const normalized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (typeof value === 'string' && key) {
+            normalized[key] = value;
         }
-    } as SecureStreamDescriptor;
+    }
+    return normalized;
+};
+
+const coerceNumber = (value: unknown, fallback: number) => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === 'string') {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return fallback;
+};
+
+const fetchStreamDescriptor = async (bookId: number, token: string): Promise<SecureStreamDescriptor> => {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/books/${bookId}/read`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+        },
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        throw new ProxyError('Failed to fetch streaming metadata', response.status);
+    }
+
+    const payload = (await response.json()) as BookReadAccessResponse;
+
+    if (!payload?.success) {
+        throw new ProxyError(payload?.message ?? 'Streaming metadata unavailable', 502);
+    }
+
+    if (!payload.canAccess) {
+        throw new ProxyError('Access to the requested book is not permitted', 403);
+    }
+
+    const streamDescriptor = payload.stream;
+
+    if (!streamDescriptor || typeof streamDescriptor !== 'object' || 'error' in streamDescriptor) {
+        throw new ProxyError('PDF stream descriptor is missing or invalid', 502);
+    }
+
+    const descriptorHeaders = normalizeHeaders((streamDescriptor as SecureStreamDescriptor).headers ?? null);
+    if (!descriptorHeaders.Authorization) {
+        descriptorHeaders.Authorization = `Bearer ${token}`;
+    }
+
+    const normalizedDescriptor: SecureStreamDescriptor = {
+        url: normalizeStreamUrl((streamDescriptor as SecureStreamDescriptor).url),
+        contentLength: coerceNumber((streamDescriptor as SecureStreamDescriptor).contentLength, 0),
+        chunkSize: Math.max(0, coerceNumber((streamDescriptor as SecureStreamDescriptor).chunkSize, 0)),
+        headers: descriptorHeaders,
+    };
+
+    if ((streamDescriptor as SecureStreamDescriptor).expiresAt) {
+        normalizedDescriptor.expiresAt = (streamDescriptor as SecureStreamDescriptor).expiresAt;
+    }
+
+    return normalizedDescriptor;
 };
 
 const getDescriptor = async (
@@ -156,6 +216,17 @@ const createBackendHeaders = (
     if (!headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${token}`);
     }
+
+    const passthroughHeaders = ['x-readify-session', 'x-readify-watermark', 'x-readify-issued-at'];
+    passthroughHeaders.forEach(headerName => {
+        if (headers.has(headerName)) {
+            return;
+        }
+        const value = request.headers.get(headerName);
+        if (value) {
+            headers.set(headerName, value);
+        }
+    });
 
     const range = request.headers.get('range');
     if (range) {
