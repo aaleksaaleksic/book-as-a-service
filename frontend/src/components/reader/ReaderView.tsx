@@ -24,7 +24,11 @@ import { tokenManager } from '@/lib/api-client';
 
 const pdfjsLibPromise: Promise<typeof import('pdfjs-dist/webpack.mjs')> = import(
     'pdfjs-dist/webpack.mjs'
-).catch(error => {
+).then(pdfjsLib => {
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+    return pdfjsLib;
+}).catch(error => {
     console.error('Failed to load PDF.js library:', error);
     throw new Error('PDF reader library failed to load. Please refresh the page and try again.');
 });
@@ -263,7 +267,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             console.log('Canvas context obtained:', context);
 
             if (renderTaskRef.current) {
-                console.log('Cancelling previous render task');
                 renderTaskRef.current.cancel();
             }
 
@@ -367,24 +370,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             const token = tokenManager.getToken();
-            let requestUrl =
-                bookId > 0
-                    ? `/api/reader/${bookId}/content`
-                    : stream.url.startsWith('http')
-                        ? stream.url
-                        : new URL(stream.url, API_CONFIG.BASE_URL).toString();
+            let requestUrl = stream.url.startsWith('http')
+                ? stream.url
+                : new URL(stream.url, API_CONFIG.BASE_URL).toString();
 
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
-                if (bookId > 0) {
-                    headers['X-Readify-Auth'] = token;
-
-                    // Add token as query parameter for local API routes
-                    if (requestUrl.includes('/api/reader/')) {
-                        const separator = requestUrl.includes('?') ? '&' : '?';
-                        requestUrl = `${requestUrl}${separator}authToken=${encodeURIComponent(token)}`;
-                    }
-                }
             }
 
             let rangeChunkSize: number | undefined;
