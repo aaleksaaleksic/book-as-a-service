@@ -217,6 +217,10 @@ const createBackendHeaders = (
         headers.set('Authorization', `Bearer ${token}`);
     }
 
+    if (!headers.has('X-Readify-Auth')) {
+        headers.set('X-Readify-Auth', token);
+    }
+
     const passthroughHeaders = ['x-readify-session', 'x-readify-watermark', 'x-readify-issued-at'];
     passthroughHeaders.forEach(headerName => {
         if (headers.has(headerName)) {
@@ -382,7 +386,13 @@ const proxyPdfRequest = async (
 
     const proxyFetch = async (targetDescriptor: SecureStreamDescriptor) => {
         const headers = createBackendHeaders(targetDescriptor, request, token, method);
-        const backendResponse = await fetch(normalizeStreamUrl(targetDescriptor.url), {
+
+        const backendUrl = new URL(normalizeStreamUrl(targetDescriptor.url));
+        if (!backendUrl.searchParams.has('authToken')) {
+            backendUrl.searchParams.set('authToken', token);
+        }
+
+        const backendResponse = await fetch(backendUrl, {
             method: backendMethod,
             headers,
             cache: 'no-store',
