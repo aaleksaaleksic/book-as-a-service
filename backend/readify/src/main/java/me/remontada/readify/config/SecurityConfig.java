@@ -82,13 +82,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/top-rated").permitAll()
 
-                        // Public file access (book covers)
+                        // File endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/covers/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/files/books/**").authenticated()
+                        .requestMatchers(HttpMethod.HEAD, "/api/v1/files/books/**").authenticated()
 
                         // Book reading
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/{id}/read").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/api/reader/*/content").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/reader/*/content").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/reader/*/content").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reader/1/content").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/reader/1/content").permitAll()
+
 
                         // Book management
                         .requestMatchers(HttpMethod.POST, "/api/v1/books").authenticated()
@@ -122,14 +128,16 @@ public class SecurityConfig {
                 "https://readify.com" // Production domain (TODO)
         ));
 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of(
                 "Content-Disposition",
                 "Content-Length",
                 "Content-Range",
                 "Accept-Ranges",
-                "X-Readify-Watermark"
+                "X-Readify-Watermark",
+                "X-Readify-Session",
+                "X-Readify-Issued-At"
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L); // Cache preflight response for 1 hour

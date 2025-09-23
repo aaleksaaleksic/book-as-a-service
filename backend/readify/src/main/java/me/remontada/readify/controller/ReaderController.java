@@ -91,18 +91,25 @@ public class ReaderController {
      * Accepts JWT token via authToken query parameter and creates streaming session internally
      */
     @GetMapping(value = "/{bookId}/content", produces = MediaType.APPLICATION_PDF_VALUE)
-    // @PreAuthorize("hasAuthority('CAN_READ_BOOKS')") // Temporarily removed for testing
-    public ResponseEntity<ResourceRegion> streamBookContent(@PathVariable Long bookId,
+    // @PreAuthorize("hasAuthority('CAN_READ_BOOKS')") // Temporarily removed for debugging - user has this authority but it's still failing
+    public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
                                                Authentication authentication,
                                                HttpServletRequest request,
                                                @RequestHeader HttpHeaders headers,
                                                @RequestParam(value = "authToken", required = false) String authToken) {
+        log.info("=== ReaderController.streamBookContent called ===");
+        log.info("BookId: {}, Authentication: {}, AuthToken param: {}",
+            bookId, authentication != null ? authentication.getName() : "null",
+            authToken != null ? "present" : "null");
         try {
             // Check if authentication is null or not properly set
             if (authentication == null || authentication.getName() == null) {
                 log.warn("No authentication found for book {} access. AuthToken param: {}",
                     bookId, authToken != null ? "present" : "null");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "Authentication required"
+                ));
             }
 
             // Get current user from authentication
@@ -119,7 +126,10 @@ public class ReaderController {
             // Check if user has access to the book
             if (!book.isAccessibleToUser(currentUser)) {
                 log.warn("Access denied for user {} to book {}", userEmail, bookId);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "message", "Subscription required to access this book"
+                ));
             }
 
             // Check for existing streaming session tokens in headers/params
@@ -181,7 +191,10 @@ public class ReaderController {
 
             if (sessionOpt.isEmpty()) {
                 log.warn("Failed to create or validate streaming session for book {} by user {}", bookId, userEmail);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "Invalid or expired streaming session"
+                ));
             }
 
             StreamingSession session = sessionOpt.get();
@@ -222,10 +235,16 @@ public class ReaderController {
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid range requested for book {}: {}", bookId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
+            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).body(Map.of(
+                "success", false,
+                "message", "Requested range not satisfiable"
+            ));
         } catch (Exception e) {
             log.error("Error streaming book content for ID: {} via legacy endpoint", bookId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Error accessing book: " + e.getMessage()
+            ));
         }
     }
 

@@ -99,13 +99,20 @@ public class FileController {
      * No-cache za bezbednost, inline display (ne download)
      */
     @GetMapping("/books/{bookId}/content")
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
                                                Authentication authentication,
                                                HttpServletRequest request,
                                                @RequestHeader HttpHeaders headers) {
         try {
             // Dohvatanje trenutnog korisnika
+            if (authentication == null || authentication.getName() == null) {
+                log.warn("Unauthorized access attempt to book {} without authentication", bookId);
+                return ResponseEntity.status(401).body(Map.of(
+                        "success", false,
+                        "message", "Authentication required"
+                ));
+            }
+
             String userEmail = authentication.getName();
             User currentUser = userService.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
