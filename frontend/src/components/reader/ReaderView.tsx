@@ -387,10 +387,13 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 }
             }
 
-            const rangeChunkSize =
-                typeof stream.chunkSize === 'number' && stream.chunkSize > 0
-                    ? stream.chunkSize
-                    : undefined;
+            let rangeChunkSize: number | undefined;
+            if (typeof stream.chunkSize === 'number') {
+                rangeChunkSize = Number.isFinite(stream.chunkSize) && stream.chunkSize > 0 ? stream.chunkSize : undefined;
+            } else if (typeof (stream as any)?.chunkSize === 'string') {
+                const parsedChunkSize = Number((stream as any).chunkSize);
+                rangeChunkSize = Number.isFinite(parsedChunkSize) && parsedChunkSize > 0 ? parsedChunkSize : undefined;
+            }
 
             return { requestUrl, headers, rangeChunkSize };
         },
@@ -469,35 +472,20 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 throw new DOMException('Aborted', 'AbortError');
             }
 
-            console.log('Fetching PDF data directly...');
-            // Fetch the PDF data directly to avoid PDF.js network issues
-            const response = await fetch(requestUrl, {
-                method: 'GET',
-                headers: headers,
-                credentials: 'include',
-                signal: signal
-            });
+            const chunkSize = typeof rangeChunkSize === 'number' && Number.isFinite(rangeChunkSize)
+                ? rangeChunkSize
+                : undefined;
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-            }
-
-            console.log('PDF data fetched, converting to ArrayBuffer...');
-            const pdfData = await response.arrayBuffer();
-            console.log('PDF ArrayBuffer size:', pdfData.byteLength);
-
-            if (signal?.aborted) {
-                throw new DOMException('Aborted', 'AbortError');
-            }
-
-            console.log('Starting PDF.js document loading with ArrayBuffer...');
             const loadingTask = pdfjs.getDocument({
-                data: pdfData, // Use raw data instead of URL
-                disableAutoFetch: true,
+                url: requestUrl,
+                httpHeaders: { ...headers },
+                withCredentials: true,
+                rangeChunkSize: chunkSize,
+                disableAutoFetch: false,
                 disableStream: false,
-                disableRange: true, // Not needed since we have the full data
+                disableRange: false,
                 isEvalSupported: false,
-                useWorkerFetch: false,
+                useWorkerFetch: true,
                 stopAtErrors: false,
                 verbosity: 1,
                 cMapUrl: undefined,
