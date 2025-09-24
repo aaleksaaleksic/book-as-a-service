@@ -3,12 +3,14 @@ package me.remontada.readify.controller;
 import lombok.extern.slf4j.Slf4j;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
+import me.remontada.readify.security.MyUserDetails;
 import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
 import me.remontada.readify.service.PdfStreamingService;
 import me.remontada.readify.service.StreamingSessionService;
 import me.remontada.readify.service.StreamingSessionService.StreamingSession;
 import me.remontada.readify.service.UserService;
+import me.remontada.readify.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceRegion;
@@ -22,10 +24,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
@@ -48,18 +54,23 @@ public class ReaderController {
     private final UserService userService;
     private final PdfStreamingService pdfStreamingService;
     private final StreamingSessionService streamingSessionService;
+    private final JwtUtil jwtUtil;
+
+    private static final String AUTH_COOKIE_NAME = "readbookhub_auth_token";
 
     @Autowired
     public ReaderController(FileStorageService fileStorageService,
                            BookService bookService,
                            UserService userService,
                            PdfStreamingService pdfStreamingService,
-                           StreamingSessionService streamingSessionService) {
+                           StreamingSessionService streamingSessionService,
+                           JwtUtil jwtUtil) {
         this.fileStorageService = fileStorageService;
         this.bookService = bookService;
         this.userService = userService;
         this.pdfStreamingService = pdfStreamingService;
         this.streamingSessionService = streamingSessionService;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -102,22 +113,32 @@ public class ReaderController {
             bookId, authentication != null ? authentication.getName() : "null",
             authToken != null ? "present" : "null");
         try {
-            // Check if authentication is null or not properly set
-            if (authentication == null || authentication.getName() == null) {
-                log.warn("No authentication found for book {} access. AuthToken param: {}",
-                    bookId, authToken != null ? "present" : "null");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                    "success", false,
-                    "message", "Authentication required"
-                ));
+            Authentication effectiveAuth = authentication;
+
+            Optional<User> resolvedUser = Optional.empty();
+
+            if (effectiveAuth == null || effectiveAuth.getName() == null) {
+                resolvedUser = resolveUserFromToken(request, headers, authToken);
+
+                if (resolvedUser.isEmpty()) {
+                    log.warn("No authentication found for book {} access. AuthToken param: {}",
+                            bookId, authToken != null ? "present" : "null");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                            "success", false,
+                            "message", "Authentication required"
+                    ));
+                }
+
+                effectiveAuth = SecurityContextHolder.getContext().getAuthentication();
             }
 
-            // Get current user from authentication
-            String userEmail = authentication.getName();
-            log.info("User {} accessing book {} via legacy endpoint", userEmail, bookId);
+            User currentUser = resolvedUser.orElseGet(() ->
+                    userService.findByEmail(effectiveAuth.getName())
+                            .orElseThrow(() -> new RuntimeException("User not found"))
+            );
 
-            User currentUser = userService.findByEmail(userEmail)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            String userEmail = currentUser.getEmail();
+            log.info("User {} accessing book {} via legacy endpoint", userEmail, bookId);
 
             // Get book and check access
             Book book = bookService.findById(bookId)
@@ -264,5 +285,97 @@ public class ReaderController {
         }
 
         return sanitized.substring(0, Math.min(sanitized.length(), 50));
+    }
+
+    private Optional<User> resolveUserFromToken(HttpServletRequest request,
+                                                HttpHeaders headers,
+                                                String authTokenParam) {
+        String token = extractToken(headers, request, authTokenParam);
+
+        if (token == null) {
+            return Optional.empty();
+        }
+
+        try {
+            String email = jwtUtil.extractEmail(token);
+
+            if (email == null || email.isBlank()) {
+                log.warn("Failed to extract email from token for legacy reader request");
+                return Optional.empty();
+            }
+
+            if (!jwtUtil.validateToken(token, email)) {
+                log.warn("Token validation failed for email {} on legacy reader endpoint", email);
+                return Optional.empty();
+            }
+
+            Optional<User> userOpt = userService.findByEmail(email);
+
+            if (userOpt.isEmpty()) {
+                log.warn("User with email {} not found while resolving legacy reader authentication", email);
+                return Optional.empty();
+            }
+
+            User user = userOpt.get();
+
+            MyUserDetails userDetails = new MyUserDetails(user);
+            UsernamePasswordAuthenticationToken authenticationToken =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+            return Optional.of(user);
+        } catch (Exception e) {
+            log.warn("Failed to resolve authentication from token for legacy reader endpoint: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private String extractToken(HttpHeaders headers,
+                                HttpServletRequest request,
+                                String authTokenParam) {
+        String token = normalizeToken(headers.getFirst(HttpHeaders.AUTHORIZATION));
+
+        if (token == null) {
+            token = normalizeToken(headers.getFirst("X-Readify-Auth"));
+        }
+
+        if (token == null) {
+            token = normalizeToken(authTokenParam);
+        }
+
+        if (token == null) {
+            token = normalizeToken(request.getParameter("authToken"));
+        }
+
+        if (token == null && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if (AUTH_COOKIE_NAME.equals(cookie.getName())) {
+                    token = normalizeToken(cookie.getValue());
+                    if (token != null) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return token;
+    }
+
+    private String normalizeToken(String rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+
+        String trimmed = rawValue.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        if (trimmed.length() >= 7 && trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            trimmed = trimmed.substring(7).trim();
+        }
+
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
