@@ -362,9 +362,8 @@ public class FileController {
 
         // Zameni sve ne-alfanumeričke karaktere sa _
         String sanitized = filename.replaceAll("[^a-zA-Z0-9.-]", "_")
-                .replaceAll("_{2,}", "_");
-
-        sanitized = sanitized.replaceAll("^_+", "");
+                .replaceAll("_{2,}", "_")
+                .replaceAll("^_+", "");
 
         if (sanitized.isBlank()) {
             sanitized = "document";

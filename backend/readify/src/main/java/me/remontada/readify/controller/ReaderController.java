@@ -132,8 +132,9 @@ public class ReaderController {
                 effectiveAuth = SecurityContextHolder.getContext().getAuthentication();
             }
 
+            final Authentication finalAuth = effectiveAuth;
             User currentUser = resolvedUser.orElseGet(() ->
-                    userService.findByEmail(effectiveAuth.getName())
+                    userService.findByEmail(finalAuth.getName())
                             .orElseThrow(() -> new RuntimeException("User not found"))
             );
 
@@ -182,6 +183,10 @@ public class ReaderController {
 
             // Try to validate existing session if session token is provided
             if (sessionToken != null && !sessionToken.isBlank()) {
+                log.debug("Validating session - token: {}, userId: {}, bookId: {}, user: {}, book: {}",
+                    sessionToken, currentUser.getId(), bookId,
+                    currentUser != null ? "present" : "null",
+                    book != null ? "present" : "null");
                 sessionOpt = streamingSessionService.validateSession(
                         sessionToken,
                         currentUser.getId(),
@@ -191,6 +196,7 @@ public class ReaderController {
                         currentUser,
                         book
                 );
+                log.debug("Session validation result: {}", sessionOpt.isPresent() ? "valid" : "invalid");
             }
 
             // If no valid session exists, create a new one
@@ -222,11 +228,7 @@ public class ReaderController {
 
             // Get PDF resource and handle streaming
             Resource bookResource = fileStorageService.getBookPdf(bookId);
-            ResourceRegion region = pdfStreamingService.getResourceRegion(bookResource, headers);
-
             long contentLength = bookResource.contentLength();
-            long rangeStart = region.getPosition();
-            long rangeEnd = Math.min(rangeStart + region.getCount() - 1, contentLength - 1);
 
             String clientIp = request.getRemoteAddr();
 
@@ -235,24 +237,21 @@ public class ReaderController {
                 bookService.incrementReadCount(bookId);
             }
 
-            // Determine if this is a full file or partial content request
-            boolean isFullFile = region.getPosition() == 0 && region.getCount() == contentLength;
-            HttpStatus responseStatus = isFullFile ? HttpStatus.OK : HttpStatus.PARTIAL_CONTENT;
-
             // Log access
             log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes) via legacy /api/reader endpoint ({})",
-                    userEmail, book.getTitle(), bookId, clientIp, rangeStart, rangeEnd, region.getCount(),
-                    isFullFile ? "FULL" : "PARTIAL");
+                    userEmail, book.getTitle(), bookId, clientIp, 0, contentLength - 1, contentLength, "FULL");
 
-            // Return ResourceRegion with appropriate status code
-            return ResponseEntity.status(responseStatus)
+            // Return full resource with appropriate headers
+            return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
+                    .contentLength(contentLength)
                     .cacheControl(CacheControl.noStore())
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + sanitizeFilename(book.getTitle()) + ".pdf\"")
                     .header("X-Readify-Watermark", session.getWatermarkSignature())
                     .header("X-Readify-Session", session.getToken())
                     .header("X-Readify-Issued-At", session.getIssuedAt().toString())
-                    .body(region);
+                    .body(bookResource);
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid range requested for book {}: {}", bookId, e.getMessage());
@@ -276,9 +275,8 @@ public class ReaderController {
         if (filename == null) return "document";
 
         String sanitized = filename.replaceAll("[^a-zA-Z0-9.-]", "_")
-                .replaceAll("_{2,}", "_");
-
-        sanitized = sanitized.replaceAll("^_+", "");
+                .replaceAll("_{2,}", "_")
+                .replaceAll("^_+", "");
 
         if (sanitized.isBlank()) {
             sanitized = "document";
@@ -334,7 +332,9 @@ public class ReaderController {
     private String extractToken(HttpHeaders headers,
                                 HttpServletRequest request,
                                 String authTokenParam) {
-        String token = normalizeToken(headers.getFirst(HttpHeaders.AUTHORIZATION));
+        String authHeader = headers.getFirst(HttpHeaders.AUTHORIZATION);
+        log.debug("Authorization header: {}", authHeader != null ? "present" : "null");
+        String token = normalizeToken(authHeader);
 
         if (token == null) {
             token = normalizeToken(headers.getFirst("X-Readify-Auth"));
