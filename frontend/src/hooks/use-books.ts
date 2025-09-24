@@ -129,12 +129,13 @@ export function useCreateBook() {
                 }
 
                 const bookResponse = await booksApi.createBook(client, bookData);
+                const apiResponse = bookResponse.data;
 
-                if (!bookResponse.data.success) {
-                    throw new Error(bookResponse.data.message || 'Failed to create book');
+                if (!apiResponse.success || !apiResponse.data) {
+                    throw new Error(apiResponse.message || 'Failed to create book');
                 }
 
-                const createdBookId = bookResponse.data.bookId || bookResponse.data.book?.id;
+                const createdBookId = apiResponse.data.id;
 
                 if (!createdBookId) {
                     throw new Error('Book created but no ID returned');
@@ -166,18 +167,18 @@ export function useCreateBook() {
                     }
                 }
 
-                return bookResponse.data;
+                return apiResponse.data;
             } catch (error) {
                 console.error('Create book error:', error);
                 throw error;
             }
         },
-        onSuccess: (data) => {
+        onSuccess: (book) => {
             queryClient.invalidateQueries({ queryKey: ["books"] });
 
             toast({
                 title: "Uspešno!",
-                description: `Knjiga "${data.book?.title || 'Nova knjiga'}" je uspešno kreirana.`,
+                description: `Knjiga "${book?.title || 'Nova knjiga'}" je uspešno kreirana.`,
                 variant: "default",
             });
         },
