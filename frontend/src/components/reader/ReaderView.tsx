@@ -15,7 +15,6 @@ import {
 } from '@/hooks/use-reader';
 import type {
     PDFDocumentProxy,
-    RenderTask,
     PDFDocumentLoadingTask,
 } from 'pdfjs-dist/types/src/display/api';
 import type { SecureStreamDescriptor } from '@/types/reader';
@@ -86,7 +85,11 @@ class PDFWorkerManager {
                 await task.destroy();
             } catch (err) {
                 // Ignore "Worker was terminated" errors as they're expected during cleanup
-                if (!err?.message?.includes('Worker was terminated') && !err?.message?.includes('Worker was destroyed')) {
+                const message =
+                    typeof err === 'object' && err !== null && 'message' in err
+                        ? String((err as { message?: unknown }).message ?? '')
+                        : '';
+                if (!message.includes('Worker was terminated') && !message.includes('Worker was destroyed')) {
                     console.warn('Error destroying loading task:', err);
                 }
             }
@@ -123,6 +126,11 @@ const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2.4;
 
 type DeviceType = 'MOBILE' | 'TABLET' | 'DESKTOP';
+
+interface PdfRenderTask {
+    cancel?: (extraDelay?: number) => void;
+    promise: Promise<void>;
+}
 
 interface ReaderViewProps {
     bookId: number;
@@ -183,7 +191,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const renderTaskRef = useRef<RenderTask | null>(null);
+    const renderTaskRef = useRef<PdfRenderTask | null>(null);
     const lastRenderParamsRef = useRef<{
         fingerprint: string | null;
         pageNumber: number;
@@ -372,11 +380,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             context.fillStyle = '#ffffff';
             context.fillRect(0, 0, canvas.width, canvas.height);
 
-            if (renderTaskRef.current) {
-                renderTaskRef.current.cancel();
+            const previousTask = renderTaskRef.current as PdfRenderTask | null;
+            if (previousTask && typeof previousTask.cancel === 'function') {
+                previousTask.cancel();
             }
 
-            let task: RenderTask | null = null;
+            let task: PdfRenderTask | null = null;
             try {
                 // React StrictMode render guard - check if canvas reference changed
                 if (!canvasRef.current || canvasRef.current !== canvas) {
@@ -407,8 +416,6 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     canvasContext: context,
                     viewport,
                     intent: 'display', // Use display intent for better rendering
-                    renderInteractiveForms: false,
-                    optionalContentConfigPromise: null,
                 });
                 renderTaskRef.current = task;
                 console.log('Render task created:', task);
@@ -494,7 +501,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             const token = tokenManager.getToken();
-            let requestUrl = stream.url.startsWith('http')
+            const requestUrl = stream.url.startsWith('http')
                 ? stream.url
                 : new URL(stream.url, API_CONFIG.BASE_URL).toString();
 
@@ -606,7 +613,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 cMapUrl: undefined,
                 standardFontDataUrl: undefined,
                 // Worker lifecycle options
-                docBaseUrl: null,
+                docBaseUrl: undefined,
                 cMapPacked: true,
                 maxImageSize: -1,
                 disableFontFace: false,
@@ -641,7 +648,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 console.log('PDF document details:', {
                     numPages: document.numPages,
                     fingerprints: document.fingerprints,
-                    encrypted: document.encrypted
+                    encrypted: 'encrypted' in document ? (document as { encrypted?: unknown }).encrypted : undefined
                 });
 
                 if (signal?.aborted || !isMountedRef.current) {
@@ -1102,9 +1109,10 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             window.removeEventListener('unhandledrejection', handleUnhandledRejection);
             isMountedRef.current = false;
 
-            if (renderTaskRef.current) {
+            const activeRenderTask = renderTaskRef.current;
+            if (activeRenderTask) {
                 try {
-                    renderTaskRef.current.cancel();
+                    activeRenderTask.cancel?.();
                 } catch (err) {
                     console.warn('Error canceling render task:', err);
                 }
