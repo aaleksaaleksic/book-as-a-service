@@ -155,7 +155,7 @@ public class LocalFileStorageService implements FileStorageService {
     @Override
     public String generateSecureBookUrl(Long bookId, int expiryHours) {
 
-        return "/api/v1/files/books/" + bookId + "/content";
+        return "/api/reader/" + bookId + "/content";
     }
 
     @Override
