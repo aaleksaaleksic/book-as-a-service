@@ -22,16 +22,101 @@ import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
 
-const pdfjsLibPromise: Promise<typeof import('pdfjs-dist/webpack.mjs')> = import(
-    'pdfjs-dist/webpack.mjs'
-).then(pdfjsLib => {
-    // Configure PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-    return pdfjsLib;
-}).catch(error => {
-    console.error('Failed to load PDF.js library:', error);
-    throw new Error('PDF reader library failed to load. Please refresh the page and try again.');
-});
+// Global worker management to prevent premature destruction in React StrictMode
+class PDFWorkerManager {
+    private static instance: PDFWorkerManager;
+    private loadingTasks = new Set<any>();
+    private activeDocuments = new Map<any, any>(); // PDF document -> loading task mapping
+    private pdfjsLib: typeof import('pdfjs-dist/webpack.mjs') | null = null;
+
+    static getInstance(): PDFWorkerManager {
+        if (!PDFWorkerManager.instance) {
+            PDFWorkerManager.instance = new PDFWorkerManager();
+        }
+        return PDFWorkerManager.instance;
+    }
+
+    async getPDFJS() {
+        if (this.pdfjsLib) {
+            return this.pdfjsLib;
+        }
+
+        this.pdfjsLib = await import('pdfjs-dist/webpack.mjs').then(pdfjsLib => {
+            // Configure PDF.js worker
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.workerPort = null;
+            return pdfjsLib;
+        }).catch(error => {
+            console.error('Failed to load PDF.js library:', error);
+            throw new Error('PDF reader library failed to load. Please refresh the page and try again.');
+        });
+
+        return this.pdfjsLib;
+    }
+
+    registerLoadingTask(task: any) {
+        this.loadingTasks.add(task);
+    }
+
+    registerDocument(document: any, loadingTask: any) {
+        this.activeDocuments.set(document, loadingTask);
+    }
+
+    async unregisterDocument(document: any) {
+        if (!this.activeDocuments.has(document)) {
+            return;
+        }
+
+        const loadingTask = this.activeDocuments.get(document);
+        this.activeDocuments.delete(document);
+
+        if (loadingTask) {
+            await this.unregisterLoadingTask(loadingTask);
+        }
+    }
+
+    async unregisterLoadingTask(task: any) {
+        if (!this.loadingTasks.has(task)) {
+            return; // Task already unregistered
+        }
+
+        this.loadingTasks.delete(task);
+        if (task && typeof task.destroy === 'function') {
+            try {
+                await task.destroy();
+            } catch (err) {
+                // Ignore "Worker was terminated" errors as they're expected during cleanup
+                if (!err?.message?.includes('Worker was terminated') && !err?.message?.includes('Worker was destroyed')) {
+                    console.warn('Error destroying loading task:', err);
+                }
+            }
+        }
+    }
+
+    async cleanup() {
+        // Clean up all active documents first
+        const documents = Array.from(this.activeDocuments.keys());
+        for (const document of documents) {
+            await this.unregisterDocument(document);
+        }
+
+        // Then clean up any remaining loading tasks
+        const tasks = Array.from(this.loadingTasks);
+        this.loadingTasks.clear();
+
+        for (const task of tasks) {
+            try {
+                if (task && typeof task.destroy === 'function') {
+                    await task.destroy();
+                }
+            } catch (err) {
+                console.warn('Error destroying loading task during cleanup:', err);
+            }
+        }
+    }
+}
+
+const workerManager = PDFWorkerManager.getInstance();
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.75;
@@ -112,6 +197,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
     const isMountedRef = useRef(true);
     const sessionIdRef = useRef<number | null>(null);
     const maxVisitedPageRef = useRef(1);
+    const strictModeGuardRef = useRef<string | null>(null);
 
     const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -257,7 +343,23 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
 
             const canvas = canvasRef.current;
-            console.log('Canvas element:', canvas, 'dimensions:', canvas.width, 'x', canvas.height);
+
+            // Wait for canvas to be properly attached to DOM and visible
+            if (!canvas.offsetParent && canvas.parentNode) {
+                console.log('Canvas not visible yet, waiting...');
+                await new Promise(resolve => {
+                    const checkVisibility = () => {
+                        if (canvas.offsetParent || !canvas.parentNode) {
+                            resolve(void 0);
+                        } else {
+                            requestAnimationFrame(checkVisibility);
+                        }
+                    };
+                    checkVisibility();
+                });
+            }
+
+            console.log('Canvas element:', canvas, 'dimensions:', canvas.width, 'x', canvas.height, 'offsetParent:', !!canvas.offsetParent);
 
             const context = canvas.getContext('2d', { alpha: false });
             if (!context) {
@@ -266,12 +368,22 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             }
             console.log('Canvas context obtained:', context);
 
+            // Fill background to ensure canvas is visible
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
             if (renderTaskRef.current) {
                 renderTaskRef.current.cancel();
             }
 
             let task: RenderTask | null = null;
             try {
+                // React StrictMode render guard - check if canvas reference changed
+                if (!canvasRef.current || canvasRef.current !== canvas) {
+                    console.log('Canvas reference changed during render, aborting');
+                    return;
+                }
+
                 if (isMountedRef.current) {
                     console.log('Setting isRendering to true');
                     setIsRendering(true);
@@ -285,13 +397,16 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
+                // Set explicit style dimensions to prevent CSS scaling issues
+                canvas.style.width = `${viewport.width}px`;
+                canvas.style.height = `${viewport.height}px`;
                 console.log('Canvas resized to:', canvas.width, 'x', canvas.height);
 
                 console.log('Starting render task...');
                 task = page.render({
                     canvasContext: context,
                     viewport,
-                    intent: 'print', // Use print intent to avoid font loading issues
+                    intent: 'display', // Use display intent for better rendering
                     renderInteractiveForms: false,
                     optionalContentConfigPromise: null,
                 });
@@ -308,6 +423,15 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 await Promise.race([renderPromise, timeoutPromise]);
                 console.log('Render task completed successfully');
+
+                // Debug: Check if canvas has content
+                const dataUrlSample = canvas.toDataURL().substring(0, 100);
+                console.log('Canvas data URL sample:', dataUrlSample);
+                if (dataUrlSample.includes('AAAAAAA')) {
+                    console.warn('Canvas appears to be blank - rendered content may not be visible');
+                } else {
+                    console.log('Canvas has rendered content');
+                }
 
                 if (watermarkLabel) {
                     console.log('Adding watermark:', watermarkLabel);
@@ -436,7 +560,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         ) => {
             let pdfjs;
             try {
-                pdfjs = await pdfjsLibPromise;
+                pdfjs = await workerManager.getPDFJS();
             } catch (error) {
                 console.error('Failed to load PDF.js library:', error);
                 if (isMountedRef.current) {
@@ -481,17 +605,30 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 verbosity: 1,
                 cMapUrl: undefined,
                 standardFontDataUrl: undefined,
+                // Worker lifecycle options
+                docBaseUrl: null,
+                cMapPacked: true,
+                maxImageSize: -1,
+                disableFontFace: false,
+                useSystemFonts: false,
+                canvasMaxAreaInBytes: -1,
             });
             pdfLoadingTaskRef.current = loadingTask;
+            workerManager.registerLoadingTask(loadingTask);
             console.log('PDF loading task created:', loadingTask);
 
-            const abortHandler = () => {
-                loadingTask.destroy();
+            const abortHandler = async () => {
+                try {
+                    console.log('Aborting PDF loading task...');
+                    await workerManager.unregisterLoadingTask(loadingTask);
+                } catch (err) {
+                    console.warn('Error while destroying loading task:', err);
+                }
             };
 
             if (signal) {
                 if (signal.aborted) {
-                    loadingTask.destroy();
+                    await abortHandler();
                     throw new DOMException('Aborted', 'AbortError');
                 }
                 signal.addEventListener('abort', abortHandler);
@@ -508,15 +645,25 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 });
 
                 if (signal?.aborted || !isMountedRef.current) {
-                    loadingTask.destroy();
+                    try {
+                        await workerManager.unregisterLoadingTask(loadingTask);
+                    } catch (err) {
+                        console.warn('Error destroying loading task after abort:', err);
+                    }
                     return;
                 }
 
                 if (pdfDocumentRef.current) {
-                    await pdfDocumentRef.current.destroy().catch(() => undefined);
+                    try {
+                        await workerManager.unregisterDocument(pdfDocumentRef.current);
+                        await pdfDocumentRef.current.destroy();
+                    } catch (err) {
+                        console.warn('Error destroying previous PDF document:', err);
+                    }
                 }
 
                 pdfDocumentRef.current = document;
+                workerManager.registerDocument(document, loadingTask);
                 if (isMountedRef.current) {
                     setPdfDocument(document);
                     setTotalPages(document.numPages);
@@ -553,6 +700,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 console.log('Starting page render...');
                 try {
+                    // Use requestAnimationFrame to ensure canvas is ready and DOM is painted
+                    await new Promise(resolve => {
+                        requestAnimationFrame(() => {
+                            setTimeout(resolve, 50); // Small delay to ensure canvas is fully ready
+                        });
+                    });
                     await renderPage(1, document, autoScale);
                     console.log('Page render completed successfully');
                 } catch (error) {
@@ -583,7 +736,11 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                         ([401, 403] as const).includes((error as any).status)) ||
                     /401|403|unauthorized|forbidden/i.test(message);
 
-                loadingTask.destroy();
+                try {
+                    await workerManager.unregisterLoadingTask(loadingTask);
+                } catch (err) {
+                    console.warn('Error destroying loading task after error:', err);
+                }
 
                 // Handle PDF corruption errors
                 if (isPdfCorrupted) {
@@ -629,6 +786,8 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 }
                 if (pdfLoadingTaskRef.current === loadingTask) {
                     pdfLoadingTaskRef.current = null;
+                    // Don't unregister loading task here - PDF document still needs worker connection
+                    // Loading task will be unregistered when component unmounts or new PDF loads
                 }
             }
         },
@@ -663,6 +822,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             console.log('PDF loading useEffect skipped');
             return;
         }
+
+        // Guard against React StrictMode double execution
+        const guardId = `${bookId}-${loadTrigger}`;
+        if (strictModeGuardRef.current === guardId) {
+            console.log('PDF loading useEffect skipped - StrictMode guard');
+            return;
+        }
+        strictModeGuardRef.current = guardId;
 
         console.log('PDF loading useEffect executing...');
         const controller = new AbortController();
@@ -716,14 +883,26 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
     useEffect(() => {
         hasAttemptedLoadRef.current = false;
-        if (pdfLoadingTaskRef.current) {
-            pdfLoadingTaskRef.current.destroy();
-            pdfLoadingTaskRef.current = null;
-        }
-        if (pdfDocumentRef.current) {
-            pdfDocumentRef.current.destroy().catch(() => undefined);
-            pdfDocumentRef.current = null;
-        }
+        const cleanupAsync = async () => {
+            if (pdfLoadingTaskRef.current) {
+                try {
+                    await workerManager.unregisterLoadingTask(pdfLoadingTaskRef.current);
+                } catch (err) {
+                    console.warn('Error destroying loading task during cleanup:', err);
+                }
+                pdfLoadingTaskRef.current = null;
+            }
+            if (pdfDocumentRef.current) {
+                try {
+                    await workerManager.unregisterDocument(pdfDocumentRef.current);
+                    await pdfDocumentRef.current.destroy();
+                } catch (err) {
+                    console.warn('Error destroying PDF document during cleanup:', err);
+                }
+                pdfDocumentRef.current = null;
+            }
+        };
+        cleanupAsync();
         setPdfDocument(null);
         setRenderError(null);
         setCurrentPage(1);
@@ -767,10 +946,25 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         };
         lastRenderParamsRef.current = nextRenderParams;
 
-        renderPage(currentPage, pdfDocument, scale).catch(err => {
-            lastRenderParamsRef.current = previousRenderParams;
-            console.error('Render loop error', err);
-        });
+        // Add a small delay to ensure DOM is ready, especially for the initial render
+        const renderTimeout = setTimeout(() => {
+            renderPage(currentPage, pdfDocument, scale).catch(err => {
+                lastRenderParamsRef.current = previousRenderParams;
+                console.error('Render loop error', err);
+
+                // If render fails, try again after a longer delay
+                setTimeout(() => {
+                    console.log('Retrying render after error...');
+                    renderPage(currentPage, pdfDocument, scale).catch(retryErr => {
+                        console.error('Retry render also failed', retryErr);
+                    });
+                }, 500);
+            });
+        }, 100);
+
+        return () => {
+            clearTimeout(renderTimeout);
+        };
     }, [pdfDocument, currentPage, scale, renderPage, watermarkLabel]);
 
     useEffect(() => {
@@ -839,7 +1033,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             try {
                 console.log('Checking PDF.js module loading...');
                 // Try to load PDF.js immediately to catch any initialization errors
-                await pdfjsLibPromise;
+                await workerManager.getPDFJS();
                 console.log('PDF.js module loaded successfully');
             } catch (error) {
                 console.error('PDF.js module failed to load during initial check:', error);
@@ -909,19 +1103,36 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             isMountedRef.current = false;
 
             if (renderTaskRef.current) {
-                renderTaskRef.current.cancel();
+                try {
+                    renderTaskRef.current.cancel();
+                } catch (err) {
+                    console.warn('Error canceling render task:', err);
+                }
                 renderTaskRef.current = null;
             }
 
-            if (pdfLoadingTaskRef.current) {
-                pdfLoadingTaskRef.current.destroy();
-                pdfLoadingTaskRef.current = null;
-            }
+            const cleanupPdfAsync = async () => {
+                if (pdfLoadingTaskRef.current) {
+                    try {
+                        await workerManager.unregisterLoadingTask(pdfLoadingTaskRef.current);
+                    } catch (err) {
+                        console.warn('Error destroying loading task on unmount:', err);
+                    }
+                    pdfLoadingTaskRef.current = null;
+                }
 
-            if (pdfDocumentRef.current) {
-                pdfDocumentRef.current.destroy().catch(() => undefined);
-                pdfDocumentRef.current = null;
-            }
+                if (pdfDocumentRef.current) {
+                    try {
+                        await workerManager.unregisterDocument(pdfDocumentRef.current);
+                        await pdfDocumentRef.current.destroy();
+                    } catch (err) {
+                        console.warn('Error destroying PDF document on unmount:', err);
+                    }
+                    pdfDocumentRef.current = null;
+                }
+            };
+
+            cleanupPdfAsync();
 
             const session = sessionIdRef.current;
             if (session) {
@@ -950,14 +1161,26 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             return;
         }
         hasAttemptedLoadRef.current = false;
-        if (pdfLoadingTaskRef.current) {
-            pdfLoadingTaskRef.current.destroy();
-            pdfLoadingTaskRef.current = null;
-        }
-        if (pdfDocumentRef.current) {
-            pdfDocumentRef.current.destroy().catch(() => undefined);
-            pdfDocumentRef.current = null;
-        }
+        const retryCleanupAsync = async () => {
+            if (pdfLoadingTaskRef.current) {
+                try {
+                    await workerManager.unregisterLoadingTask(pdfLoadingTaskRef.current);
+                } catch (err) {
+                    console.warn('Error destroying loading task during retry:', err);
+                }
+                pdfLoadingTaskRef.current = null;
+            }
+            if (pdfDocumentRef.current) {
+                try {
+                    await workerManager.unregisterDocument(pdfDocumentRef.current);
+                    await pdfDocumentRef.current.destroy();
+                } catch (err) {
+                    console.warn('Error destroying PDF document during retry:', err);
+                }
+                pdfDocumentRef.current = null;
+            }
+        };
+        retryCleanupAsync();
         setRenderError(null);
         setPdfInitError(null);
         setPdfDocument(null);
@@ -1122,7 +1345,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                         <PDFErrorBoundary onError={(error) => setRenderError(error)}>
                             <canvas
                                 ref={canvasRef}
-                                className="w-full rounded-xl bg-white shadow-2xl"
+                                style={{
+                                    maxWidth: '100%',
+                                    height: 'auto',
+                                    display: 'block',
+                                    backgroundColor: '#f5f5f5', // Temporary, to see if canvas is there
+                                    borderRadius: '0.75rem',
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                                }}
                                 aria-label={`Strana ${currentPage} od ${totalPages}`}
                             />
                         </PDFErrorBoundary>
