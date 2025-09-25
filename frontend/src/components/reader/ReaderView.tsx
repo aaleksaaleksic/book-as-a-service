@@ -175,10 +175,17 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     useEffect(() => {
         setPageInput(String(pageNumber));
-        if (onPageChange) {
-            onPageChange(pageNumber);
-        }
-    }, [pageNumber, onPageChange]);
+    }, [pageNumber]);
+
+    const onPageChangeRef = useRef(onPageChange);
+
+    useEffect(() => {
+        onPageChangeRef.current = onPageChange;
+    }, [onPageChange]);
+
+    useEffect(() => {
+        onPageChangeRef.current?.(pageNumber);
+    }, [pageNumber]);
 
     useEffect(() => {
         return () => {
