@@ -21,105 +21,41 @@ import type { SecureStreamDescriptor } from '@/types/reader';
 import { API_CONFIG } from '@/utils/constants';
 import { tokenManager } from '@/lib/api-client';
 
-// Global worker management to prevent premature destruction in React StrictMode
-class PDFWorkerManager {
-    private static instance: PDFWorkerManager;
-    private loadingTasks = new Set<any>();
-    private activeDocuments = new Map<any, any>(); // PDF document -> loading task mapping
-    private pdfjsLib: typeof import('pdfjs-dist/webpack.mjs') | null = null;
+// Global PDF.js instance - initialize once and reuse
+let pdfJSInstance: any = null;
+let workerInitialized = false;
 
-    static getInstance(): PDFWorkerManager {
-        if (!PDFWorkerManager.instance) {
-            PDFWorkerManager.instance = new PDFWorkerManager();
-        }
-        return PDFWorkerManager.instance;
+// Mozilla-style PDF.js initialization - initialize once per session
+async function getPDFJS() {
+    if (pdfJSInstance && workerInitialized) {
+        return pdfJSInstance;
     }
 
-    async getPDFJS() {
-        if (this.pdfjsLib) {
-            return this.pdfjsLib;
+    const pdfjsLib = await import('pdfjs-dist/webpack.mjs');
+    pdfJSInstance = pdfjsLib;
+
+    // Initialize worker only once per session
+    if (!workerInitialized) {
+        // Set worker source following Mozilla pattern
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+
+        // Verify worker is accessible
+        try {
+            await fetch('/pdf.worker.min.js', { method: 'HEAD' });
+            console.log('PDF.js worker file verified at:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+        } catch (error) {
+            console.warn('PDF.js worker file not accessible, using CDN fallback:', error);
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
         }
 
-        this.pdfjsLib = await import('pdfjs-dist/webpack.mjs').then(pdfjsLib => {
-            // Configure PDF.js worker
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-            pdfjsLib.GlobalWorkerOptions.workerPort = null;
-            return pdfjsLib;
-        }).catch(error => {
-            console.error('Failed to load PDF.js library:', error);
-            throw new Error('PDF reader library failed to load. Please refresh the page and try again.');
-        });
-
-        return this.pdfjsLib;
+        workerInitialized = true;
+        console.log('✅ PDF.js library loaded with worker:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+        console.log('🔧 Worker initialization completed successfully');
     }
 
-    registerLoadingTask(task: any) {
-        this.loadingTasks.add(task);
-    }
-
-    registerDocument(document: any, loadingTask: any) {
-        this.activeDocuments.set(document, loadingTask);
-    }
-
-    async unregisterDocument(document: any) {
-        if (!this.activeDocuments.has(document)) {
-            return;
-        }
-
-        const loadingTask = this.activeDocuments.get(document);
-        this.activeDocuments.delete(document);
-
-        if (loadingTask) {
-            await this.unregisterLoadingTask(loadingTask);
-        }
-    }
-
-    async unregisterLoadingTask(task: any) {
-        if (!this.loadingTasks.has(task)) {
-            return; // Task already unregistered
-        }
-
-        this.loadingTasks.delete(task);
-        if (task && typeof task.destroy === 'function') {
-            try {
-                await task.destroy();
-            } catch (err) {
-                // Ignore "Worker was terminated" errors as they're expected during cleanup
-                const message =
-                    typeof err === 'object' && err !== null && 'message' in err
-                        ? String((err as { message?: unknown }).message ?? '')
-                        : '';
-                if (!message.includes('Worker was terminated') && !message.includes('Worker was destroyed')) {
-                    console.warn('Error destroying loading task:', err);
-                }
-            }
-        }
-    }
-
-    async cleanup() {
-        // Clean up all active documents first
-        const documents = Array.from(this.activeDocuments.keys());
-        for (const document of documents) {
-            await this.unregisterDocument(document);
-        }
-
-        // Then clean up any remaining loading tasks
-        const tasks = Array.from(this.loadingTasks);
-        this.loadingTasks.clear();
-
-        for (const task of tasks) {
-            try {
-                if (task && typeof task.destroy === 'function') {
-                    await task.destroy();
-                }
-            } catch (err) {
-                console.warn('Error destroying loading task during cleanup:', err);
-            }
-        }
-    }
+    return pdfjsLib;
 }
 
-const workerManager = PDFWorkerManager.getInstance();
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.75;
@@ -344,6 +280,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 return;
             }
 
+            // Ensure PDF.js is ready before rendering
+            if (!pdf) {
+                console.error('PDF document not ready');
+                return;
+            }
+
             // Use ref to check rendering state to avoid dependency issues
             if (renderTaskRef.current) {
                 console.log('Already rendering, skipping this render call');
@@ -367,18 +309,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 });
             }
 
-            console.log('Canvas element:', canvas, 'dimensions:', canvas.width, 'x', canvas.height, 'offsetParent:', !!canvas.offsetParent);
-
-            const context = canvas.getContext('2d', { alpha: false });
-            if (!context) {
-                console.log('Failed to get 2D context');
-                return;
-            }
-            console.log('Canvas context obtained:', context);
-
-            // Fill background to ensure canvas is visible
-            context.fillStyle = '#ffffff';
-            context.fillRect(0, 0, canvas.width, canvas.height);
+            console.log('Canvas element:', canvas, 'offsetParent:', !!canvas.offsetParent);
 
             const previousTask = renderTaskRef.current as PdfRenderTask | null;
             if (previousTask && typeof previousTask.cancel === 'function') {
@@ -398,65 +329,101 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     setIsRendering(true);
                 }
                 console.log('Getting page', pageNumber, 'from PDF');
-                const page = await pdf.getPage(pageNumber);
-                console.log('Page obtained:', page);
 
+                // Mozilla approach - clean page loading with better error handling
+                let page;
+                try {
+                    page = await pdf.getPage(pageNumber);
+                } catch (error) {
+                    const errorMessage = (error as Error)?.message || '';
+                    console.error('Failed to get PDF page:', errorMessage);
+
+                    // Don't attempt to reinitialize worker on every error - this causes loops
+                    // Instead, just throw the error and let higher-level error handling deal with it
+                    if (errorMessage.includes('sendWithPromise') || errorMessage.includes('worker')) {
+                        throw new Error('PDF worker communication error - please refresh the page');
+                    }
+                    throw error;
+                }
+
+                // Get viewport and calculate HiDPI scaling following Mozilla pattern
                 const viewport = page.getViewport({ scale: zoom });
-                console.log('Viewport created:', { width: viewport.width, height: viewport.height, scale: zoom });
+                console.log('📐 Viewport dimensions:', { width: viewport.width, height: viewport.height, zoom });
 
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                // Set explicit style dimensions to prevent CSS scaling issues
-                canvas.style.width = `${viewport.width}px`;
-                canvas.style.height = `${viewport.height}px`;
-                console.log('Canvas resized to:', canvas.width, 'x', canvas.height);
+                const rawOutputScale = window.devicePixelRatio || 1;
+                const outputScale = Math.max(1, Math.min(rawOutputScale, 2)); // Limit to max 2 to prevent oversized canvas
+                console.log('🖥️ Device pixel ratio:', rawOutputScale, '-> limited outputScale:', outputScale);
 
-                console.log('Starting render task...');
-                task = page.render({
+                // 1) Set physical canvas dimensions in device pixels (HiDPI)
+                canvas.width = Math.floor(viewport.width * outputScale);
+                canvas.height = Math.floor(viewport.height * outputScale);
+
+                // 2) Set CSS dimensions in CSS pixels
+                canvas.style.width = `${Math.floor(viewport.width)}px`;
+                canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+                // 3) Get 2D context AFTER setting canvas dimensions
+                const context = canvas.getContext('2d', { alpha: false });
+                if (!context) {
+                    console.log('Failed to get 2D context');
+                    return;
+                }
+                console.log('🎨 Canvas context obtained with dimensions:', canvas.width, 'x', canvas.height, 'outputScale:', outputScale);
+                console.log('🎨 Canvas CSS dimensions:', canvas.style.width, 'x', canvas.style.height);
+                console.log('🎨 Canvas max area check:', canvas.width * canvas.height, 'pixels');
+
+                // 4) Prepare render context with transform for HiDPI
+                const renderContext = {
                     canvasContext: context,
-                    viewport,
-                    intent: 'display', // Use display intent for better rendering
-                });
+                    viewport: viewport,
+                    transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined,
+                };
+
+                task = page.render(renderContext);
                 renderTaskRef.current = task;
-                console.log('Render task created:', task);
 
-                console.log('Waiting for render task to complete...');
+                // Simple await as per Mozilla documentation
+                await task.promise;
 
-                // Add timeout to detect hanging render tasks
-                const renderPromise = task.promise;
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Render task timeout after 30 seconds')), 30000);
-                });
-
-                await Promise.race([renderPromise, timeoutPromise]);
-                console.log('Render task completed successfully');
+                // Clean up page resources for memory management
+                try {
+                    if (typeof page.cleanup === 'function') {
+                        page.cleanup();
+                        console.log('Page cleanup completed');
+                    }
+                } catch (cleanupError) {
+                    console.warn('Page cleanup failed:', cleanupError);
+                }
 
                 // Debug: Check if canvas has content
                 const dataUrlSample = canvas.toDataURL().substring(0, 100);
-                console.log('Canvas data URL sample:', dataUrlSample);
-                if (dataUrlSample.includes('AAAAAAA')) {
-                    console.warn('Canvas appears to be blank - rendered content may not be visible');
+                console.log('🔍 Canvas data URL sample:', dataUrlSample);
+                if (dataUrlSample.includes('AAAAAAA') || dataUrlSample.includes('R0lGODlhAQABAIAAAAAAAP')) {
+                    console.warn('❌ Canvas appears to be blank - rendered content may not be visible');
+                    console.log('❌ This could indicate: viewport issues, PDF corruption, or rendering failure');
                 } else {
-                    console.log('Canvas has rendered content');
+                    console.log('✅ Canvas has rendered content - PDF render successful');
                 }
 
-                if (watermarkLabel) {
-                    console.log('Adding watermark:', watermarkLabel);
-                    context.save();
-                    context.globalAlpha = 0.12;
-                    context.fillStyle = '#1f2937';
-                    context.translate(canvas.width / 2, canvas.height / 2);
-                    context.rotate((-25 * Math.PI) / 180);
-                    const fontSize = Math.max(24, canvas.width / 12);
-                    context.font = `bold ${fontSize}px sans-serif`;
-                    context.textAlign = 'center';
-                    context.textBaseline = 'middle';
-                    context.fillText(watermarkLabel, 0, 0);
-                    context.restore();
-                    console.log('Watermark added');
-                } else {
-                    console.log('No watermark to add');
-                }
+                // TEMPORARILY DISABLED: Watermark rendering for debugging
+                console.log('🚧 Watermark rendering disabled for debugging purposes');
+                // if (watermarkLabel) {
+                //     console.log('Adding watermark:', watermarkLabel);
+                //     context.save();
+                //     context.globalAlpha = 0.12;
+                //     context.fillStyle = '#1f2937';
+                //     context.translate(canvas.width / 2, canvas.height / 2);
+                //     context.rotate((-25 * Math.PI) / 180);
+                //     const fontSize = Math.max(24, canvas.width / 12);
+                //     context.font = `bold ${fontSize}px sans-serif`;
+                //     context.textAlign = 'center';
+                //     context.textBaseline = 'middle';
+                //     context.fillText(watermarkLabel, 0, 0);
+                //     context.restore();
+                //     console.log('Watermark added');
+                // } else {
+                //     console.log('No watermark to add');
+                // }
 
                 renderTaskRef.current = null;
                 if (isMountedRef.current) {
@@ -469,9 +436,19 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 if ((err as any)?.name === 'RenderingCancelledException') {
                     return;
                 }
+
                 console.error('Failed to render PDF page', err);
+
+                // Handle PDF rendering errors with better user feedback
+                const errorMessage = (err as Error)?.message || '';
+                console.error('PDF rendering error:', err);
+
                 if (isMountedRef.current) {
-                    setRenderError('Nije moguće prikazati stranicu dokumenta.');
+                    if (errorMessage.includes('sendWithPromise') || errorMessage.includes('worker') || errorMessage.includes('Worker communication error')) {
+                        setRenderError('PDF worker greška. Molimo osvežite stranicu za normalan rad.');
+                    } else {
+                        setRenderError('Nije moguće prikazati stranicu dokumenta. Pokušajte ponovo.');
+                    }
                 }
             } finally {
                 if (renderTaskRef.current && renderTaskRef.current === task) {
@@ -567,7 +544,9 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         ) => {
             let pdfjs;
             try {
-                pdfjs = await workerManager.getPDFJS();
+                console.log('Loading PDF.js...');
+                pdfjs = await getPDFJS();
+                console.log('PDF.js loaded successfully');
             } catch (error) {
                 console.error('Failed to load PDF.js library:', error);
                 if (isMountedRef.current) {
@@ -598,21 +577,37 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 ? rangeChunkSize
                 : undefined;
 
+            // Mozilla approach - let PDF.js create its own worker, but ensure clean state
+            console.log('Creating PDF loading task with dedicated parameters');
+
+            // Worker should already be initialized by getPDFJS()
+            console.log('🔧 Using worker source:', pdfjs.GlobalWorkerOptions.workerSrc);
+            console.log('🔧 Worker initialized status:', workerInitialized);
+
+            // 🧪 DEBUG: Test with Mozilla sample PDF if URL param present
+            const useTestPdf = new URLSearchParams(window.location.search).has('testPdf');
+            const finalUrl = useTestPdf
+                ? 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf'
+                : requestUrl;
+
+            console.log('🧪 PDF URL decision:', { useTestPdf, finalUrl });
+
+            // Mozilla recommended document loading options
             const loadingTask = pdfjs.getDocument({
-                url: requestUrl,
-                httpHeaders: { ...headers },
-                withCredentials: true,
+                url: finalUrl,
+                httpHeaders: useTestPdf ? {} : { ...headers }, // No custom headers for test PDF
+                withCredentials: !useTestPdf, // No credentials for test PDF
                 rangeChunkSize: chunkSize,
                 disableAutoFetch: false,
                 disableStream: false,
                 disableRange: false,
-                isEvalSupported: false,
-                useWorkerFetch: true,
+                // Removed isEvalSupported: false - can cause blank text rendering
+                // Removed useWorkerFetch: true - let PDF.js choose the method
                 stopAtErrors: false,
                 verbosity: 1,
                 cMapUrl: undefined,
                 standardFontDataUrl: undefined,
-                // Worker lifecycle options
+                // Clean state options
                 docBaseUrl: undefined,
                 cMapPacked: true,
                 maxImageSize: -1,
@@ -621,13 +616,12 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                 canvasMaxAreaInBytes: -1,
             });
             pdfLoadingTaskRef.current = loadingTask;
-            workerManager.registerLoadingTask(loadingTask);
             console.log('PDF loading task created:', loadingTask);
 
             const abortHandler = async () => {
                 try {
                     console.log('Aborting PDF loading task...');
-                    await workerManager.unregisterLoadingTask(loadingTask);
+                    await loadingTask.destroy();
                 } catch (err) {
                     console.warn('Error while destroying loading task:', err);
                 }
@@ -639,9 +633,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     throw new DOMException('Aborted', 'AbortError');
                 }
                 signal.addEventListener('abort', abortHandler);
-            }
-
-            try {
+            }try {
                 console.log('Waiting for PDF document to load...');
                 const document = await loadingTask.promise;
                 console.log('PDF document loaded successfully:', document);
@@ -653,7 +645,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 if (signal?.aborted || !isMountedRef.current) {
                     try {
-                        await workerManager.unregisterLoadingTask(loadingTask);
+                        await loadingTask.destroy();
                     } catch (err) {
                         console.warn('Error destroying loading task after abort:', err);
                     }
@@ -662,15 +654,14 @@ export function ReaderView({ bookId }: ReaderViewProps) {
 
                 if (pdfDocumentRef.current) {
                     try {
-                        await workerManager.unregisterDocument(pdfDocumentRef.current);
                         await pdfDocumentRef.current.destroy();
                     } catch (err) {
                         console.warn('Error destroying previous PDF document:', err);
                     }
                 }
 
+
                 pdfDocumentRef.current = document;
-                workerManager.registerDocument(document, loadingTask);
                 if (isMountedRef.current) {
                     setPdfDocument(document);
                     setTotalPages(document.numPages);
@@ -744,7 +735,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     /401|403|unauthorized|forbidden/i.test(message);
 
                 try {
-                    await workerManager.unregisterLoadingTask(loadingTask);
+                    await loadingTask.destroy();
                 } catch (err) {
                     console.warn('Error destroying loading task after error:', err);
                 }
@@ -893,15 +884,15 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         const cleanupAsync = async () => {
             if (pdfLoadingTaskRef.current) {
                 try {
-                    await workerManager.unregisterLoadingTask(pdfLoadingTaskRef.current);
+                    await pdfLoadingTaskRef.current.destroy();
                 } catch (err) {
                     console.warn('Error destroying loading task during cleanup:', err);
                 }
                 pdfLoadingTaskRef.current = null;
             }
+
             if (pdfDocumentRef.current) {
                 try {
-                    await workerManager.unregisterDocument(pdfDocumentRef.current);
                     await pdfDocumentRef.current.destroy();
                 } catch (err) {
                     console.warn('Error destroying PDF document during cleanup:', err);
@@ -1040,7 +1031,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             try {
                 console.log('Checking PDF.js module loading...');
                 // Try to load PDF.js immediately to catch any initialization errors
-                await workerManager.getPDFJS();
+                await getPDFJS();
                 console.log('PDF.js module loaded successfully');
             } catch (error) {
                 console.error('PDF.js module failed to load during initial check:', error);
@@ -1076,7 +1067,7 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             console.log('Unhandled rejection detected:', { errorName, message, error });
 
             // Check if this is a PDF-related error
-            if (errorName === 'InvalidPDFException' || /pdf/i.test(message)) {
+            if (errorName === 'InvalidPDFException' || /pdf/i.test(message) || message.includes('sendWithPromise') || message.includes('worker')) {
                 event.preventDefault(); // Prevent default browser handling
 
                 const isPdfCorrupted =
@@ -1084,11 +1075,16 @@ export function ReaderView({ bookId }: ReaderViewProps) {
                     /invalid.*root.*reference|corrupted.*pdf|malformed.*pdf|invalid.*pdf.*structure/i.test(message) ||
                     /pdf.*header.*not.*found|missing.*pdf.*header|invalid.*pdf.*version/i.test(message);
 
+                const isWorkerError = message.includes('sendWithPromise') || message.includes('worker');
+
                 console.error('Unhandled PDF promise rejection caught:', error);
-                console.log('Setting error state - isPdfCorrupted:', isPdfCorrupted, 'isMounted:', isMountedRef.current);
+                console.log('Setting error state - isPdfCorrupted:', isPdfCorrupted, 'isWorkerError:', isWorkerError, 'isMounted:', isMountedRef.current);
 
                 if (isMountedRef.current) {
-                    if (isPdfCorrupted) {
+                    if (isWorkerError) {
+                        console.log('Worker error detected in global handler');
+                        setRenderError('PDF worker greška. Molimo osvežite stranicu za normalan rad.');
+                    } else if (isPdfCorrupted) {
                         const errorMsg = 'Ovaj PDF fajl je oštećen ili ima neispravnu strukturu. Kontaktirajte administratora.';
                         console.log('Setting PDF corruption error:', errorMsg);
                         setRenderError(errorMsg);
@@ -1122,16 +1118,16 @@ export function ReaderView({ bookId }: ReaderViewProps) {
             const cleanupPdfAsync = async () => {
                 if (pdfLoadingTaskRef.current) {
                     try {
-                        await workerManager.unregisterLoadingTask(pdfLoadingTaskRef.current);
+                        await pdfLoadingTaskRef.current.destroy();
                     } catch (err) {
                         console.warn('Error destroying loading task on unmount:', err);
                     }
                     pdfLoadingTaskRef.current = null;
                 }
 
+
                 if (pdfDocumentRef.current) {
                     try {
-                        await workerManager.unregisterDocument(pdfDocumentRef.current);
                         await pdfDocumentRef.current.destroy();
                     } catch (err) {
                         console.warn('Error destroying PDF document on unmount:', err);
@@ -1172,15 +1168,15 @@ export function ReaderView({ bookId }: ReaderViewProps) {
         const retryCleanupAsync = async () => {
             if (pdfLoadingTaskRef.current) {
                 try {
-                    await workerManager.unregisterLoadingTask(pdfLoadingTaskRef.current);
+                    await pdfLoadingTaskRef.current.destroy();
                 } catch (err) {
                     console.warn('Error destroying loading task during retry:', err);
                 }
                 pdfLoadingTaskRef.current = null;
             }
+
             if (pdfDocumentRef.current) {
                 try {
-                    await workerManager.unregisterDocument(pdfDocumentRef.current);
                     await pdfDocumentRef.current.destroy();
                 } catch (err) {
                     console.warn('Error destroying PDF document during retry:', err);
