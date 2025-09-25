@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, use } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
@@ -17,11 +17,12 @@ import {
 } from "@/hooks/use-reader";
 
 interface ReaderPageProps {
-    params: { bookId: string };
+    params: Promise<{ bookId: string }>;
 }
 
 const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
-    const bookId = Number(params.bookId);
+    const resolvedParams = use(params);
+    const bookId = Number(resolvedParams.bookId);
 
     if (!Number.isFinite(bookId) || Number.isNaN(bookId)) {
         notFound();

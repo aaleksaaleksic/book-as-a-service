@@ -8,9 +8,22 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { pdfjs, Document, Page } from "react-pdf";
-import type { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
+import dynamic from "next/dynamic";
 import type { DocumentProps } from "react-pdf";
+import type { OnDocumentLoadSuccess } from "react-pdf/dist/shared/types.js";
+
+const Document = dynamic(() => import("react-pdf").then(mod => ({ default: mod.Document })), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-full min-h-[60vh] items-center justify-center">
+            <div className="text-center">Loading PDF viewer...</div>
+        </div>
+    ),
+});
+
+const Page = dynamic(() => import("react-pdf").then(mod => ({ default: mod.Page })), {
+    ssr: false,
+});
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,15 +34,19 @@ import { cn } from "@/lib/utils";
 import { tokenManager } from "@/lib/api-client";
 import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
 
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 
 // Configure pdf.js worker once for the entire application (ReactPDF recommendation)
-if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url
-    ).toString();
+if (typeof window !== "undefined") {
+    import("react-pdf").then(({ pdfjs }) => {
+        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+            pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+                "pdfjs-dist/build/pdf.worker.min.mjs",
+                import.meta.url
+            ).toString();
+        }
+    });
 }
 
 const MIN_SCALE = 0.75;
@@ -89,8 +106,9 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const [progress, setProgress] = useState<number>(0);
     const [fallbackData, setFallbackData] = useState<Uint8Array | null>(null);
     const [isFallbackLoading, setIsFallbackLoading] = useState<boolean>(false);
+    const [isClient, setIsClient] = useState<boolean>(false);
 
-    const pdfRef = useRef<PDFDocumentProxy | null>(null);
+    const pdfRef = useRef<Parameters<OnDocumentLoadSuccess>[0] | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const hasTriedFallbackRef = useRef<boolean>(false);
 
@@ -121,6 +139,10 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             {}
         );
     }, [authorizedHeaders]);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const pdfSource: PdfSource = useMemo(() => {
         if (!secureStream) {
@@ -221,13 +243,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         } satisfies DocumentProps["options"];
     }, [baseDocumentOptions, streamDocumentOptions]);
 
-    const handleDocumentLoadSuccess = useCallback((pdf: PDFDocumentProxy) => {
-        if (pdfRef.current && pdfRef.current !== pdf) {
+    const handleDocumentLoadSuccess: OnDocumentLoadSuccess = useCallback((document) => {
+        if (pdfRef.current && pdfRef.current !== document) {
             pdfRef.current.destroy().catch(() => undefined);
         }
-        pdfRef.current = pdf;
-        setNumPages(pdf.numPages);
-        setPageNumber(current => Math.min(current, pdf.numPages));
+        pdfRef.current = document;
+        setNumPages(document.numPages);
+        setPageNumber(current => Math.min(current, document.numPages));
         setIsDocumentLoading(false);
         setLoadError(null);
     }, []);
@@ -358,8 +380,15 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     }, []);
 
     const handleSliderChange = useCallback((value: number[]) => {
-        if (value[0]) {
-            setScale(Number(value[0].toFixed(2)));
+        if (value[0] !== undefined && value[0] !== null) {
+            const newScale = Number(value[0].toFixed(2));
+            setScale(prevScale => {
+                // Use a more precise comparison to avoid infinite loops
+                if (Math.abs(prevScale - newScale) < 0.001) {
+                    return prevScale;
+                }
+                return newScale;
+            });
         }
     }, []);
 
@@ -370,7 +399,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         return pdfSource;
     }, [fallbackData, pdfSource]);
 
-    const shouldRenderDocument = documentFile && !loadError;
+    const shouldRenderDocument = documentFile && !loadError && isClient;
 
     return (
         <section
@@ -499,7 +528,11 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     </div>
                 )}
 
-                {shouldRenderDocument ? (
+                {!isClient ? (
+                    <div className="flex h-full min-h-[60vh] items-center justify-center">
+                        <LoadingSpinner size="lg" text="Inicijalizujemo čitač" />
+                    </div>
+                ) : shouldRenderDocument ? (
                     <Document
                         key={
                             fallbackData
