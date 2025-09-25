@@ -124,6 +124,35 @@ const createAuthorizedHeaders = (stream?: SecureStreamDescriptor | null) => {
     return headers;
 };
 
+const normalizeHeaders = (headers?: Record<string, string>) =>
+    Object.entries(headers ?? {})
+        .map(([key, value]) => [key.toLowerCase(), value] as const)
+        .sort(([a], [b]) => a.localeCompare(b));
+
+const createStreamSignature = (
+    stream?: SecureStreamDescriptor | { error: string } | null
+) => {
+    if (!stream) {
+        return "no-stream";
+    }
+
+    if ("error" in stream) {
+        return `error:${stream.error ?? "unknown"}`;
+    }
+
+    const headerSignature = normalizeHeaders(stream.headers)
+        .map(([key, value]) => `${key}:${value}`)
+        .join("|");
+
+    return [
+        stream.url,
+        stream.contentLength,
+        stream.chunkSize,
+        stream.expiresAt ?? "",
+        headerSignature,
+    ].join("::");
+};
+
 const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     bookId,
     bookTitle,
@@ -156,12 +185,64 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const abortControllerRef = useRef<AbortController | null>(null);
     const hasTriedFallbackRef = useRef<boolean>(false);
 
+    const streamSignature = useMemo(() => createStreamSignature(stream), [stream]);
+
+    const streamStatus = useMemo(
+        () => {
+            if (!stream) {
+                return {
+                    signature: "no-stream",
+                    errorMessage:
+                        "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.",
+                    hasStream: false,
+                } as const;
+            }
+
+            if ("error" in stream) {
+                return {
+                    signature: streamSignature,
+                    errorMessage:
+                        stream.error || "Pristup knjizi je trenutno onemogućen.",
+                    hasStream: false,
+                } as const;
+            }
+
+            return {
+                signature: streamSignature,
+                errorMessage: null,
+                hasStream: true,
+            } as const;
+        },
+        [stream, streamSignature]
+    );
+
+    const {
+        errorMessage: streamErrorMessage,
+        hasStream: hasSecureStream,
+        signature: streamStatusSignature,
+    } = streamStatus;
+
+    const previousStreamRef = useRef<SecureStreamDescriptor | null>(null);
+    const previousSignatureRef = useRef<string>("no-stream");
+
     const secureStream = useMemo<SecureStreamDescriptor | null>(() => {
         if (!stream || "error" in stream) {
+            previousStreamRef.current = null;
+            previousSignatureRef.current = "no-stream";
             return null;
         }
+
+        if (
+            previousStreamRef.current &&
+            previousSignatureRef.current === streamSignature
+        ) {
+            return previousStreamRef.current;
+        }
+
+        previousSignatureRef.current = streamSignature;
+        previousStreamRef.current = stream;
         return stream;
-    }, [stream]);
+    }, [stream, streamSignature]);
 
     const authorizedHeaders = useMemo(() => {
         if (!secureStream) {
@@ -207,11 +288,11 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     useEffect(() => {
         setLoadError(prev => {
-            if (!stream) {
-                return "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.";
-            }
-            if (stream && "error" in stream) {
-                return stream.error || "Pristup knjizi je trenutno onemogućen.";
+            if (!hasSecureStream) {
+                return (
+                    streamErrorMessage ||
+                    "Trenutno nije moguće učitati bezbedan tok za ovu knjigu."
+                );
             }
             if (prev && !hasTriedFallbackRef.current) {
                 return prev;
@@ -224,7 +305,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         setPageInput("1");
         setProgress(0);
         setIsDocumentLoading(true);
-    }, [bookId, stream]);
+    }, [bookId, hasSecureStream, streamErrorMessage, streamStatusSignature]);
 
 
     const onPageChangeRef = useRef(onPageChange);
@@ -325,9 +406,11 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         (error: Error) => {
             console.error("PDF load error", error);
             setIsDocumentLoading(false);
-            if (!stream || "error" in stream) {
+            if (!hasSecureStream || !secureStream) {
                 setLoadError(
-                    error.message || "Došlo je do greške prilikom učitavanja dokumenta."
+                    streamErrorMessage ||
+                        error.message ||
+                        "Došlo je do greške prilikom učitavanja dokumenta."
                 );
                 return;
             }
@@ -341,10 +424,6 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     abortControllerRef.current = controller;
 
                     try {
-                        if (!secureStream) {
-                            throw new Error("Nema dostupnog toka za preuzimanje dokumenta.");
-                        }
-
                         const headers = createAuthorizedHeaders(secureStream);
                         const response = await fetch(secureStream.url, {
                             method: "GET",
@@ -381,7 +460,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 );
             }
         },
-        [stream, secureStream]
+        [secureStream, hasSecureStream, streamErrorMessage]
     );
 
     const handleProgress = useCallback(({ loaded, total }: { loaded: number; total: number }) => {
@@ -573,7 +652,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                         key={
                             fallbackData
                                 ? `${bookId}-fallback`
-                                : `${bookId}-${secureStream ? secureStream.url : "unknown"}`
+                                : `${bookId}-${streamStatusSignature}`
                         }
                         file={documentFile}
                         options={documentOptions}
