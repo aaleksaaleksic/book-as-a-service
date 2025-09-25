@@ -73,19 +73,37 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
 
     useEffect(() => {
         return () => {
+            // Clear progress update timeout
+            if (progressUpdateTimeoutRef.current) {
+                clearTimeout(progressUpdateTimeoutRef.current);
+            }
+
             if (sessionId) {
                 endSession.mutate({ sessionId, pagesRead: lastPageRef.current });
             }
         };
     }, [endSession, sessionId]);
 
+    // Debounced progress update to avoid infinite loops
+    const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
+
     const handlePageChange = useCallback(
         (page: number) => {
             lastPageRef.current = page;
+
             if (!sessionId) {
                 return;
             }
-            updateProgress.mutate({ sessionId, currentPage: page });
+
+            // Clear previous timeout
+            if (progressUpdateTimeoutRef.current) {
+                clearTimeout(progressUpdateTimeoutRef.current);
+            }
+
+            // Debounce progress updates by 1 second
+            progressUpdateTimeoutRef.current = setTimeout(() => {
+                updateProgress.mutate({ sessionId, currentPage: page });
+            }, 1000);
         },
         [sessionId, updateProgress]
     );

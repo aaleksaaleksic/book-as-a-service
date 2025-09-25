@@ -42,6 +42,61 @@ const MIN_SCALE = 0.75;
 const MAX_SCALE = 2.5;
 const SCALE_STEP = 0.25;
 
+// Memoized zoom controls component to prevent re-renders
+const ZoomControls = memo(({
+    scale,
+    onZoomIn,
+    onZoomOut,
+    onSliderChange,
+    onResetZoom
+}: {
+    scale: number;
+    onZoomIn: () => void;
+    onZoomOut: () => void;
+    onSliderChange: (value: number[]) => void;
+    onResetZoom: () => void;
+}) => (
+    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/20 p-1">
+        <Button
+            size="icon"
+            variant="ghost"
+            onClick={onZoomOut}
+            disabled={scale <= MIN_SCALE}
+            aria-label="Smanji zoom"
+        >
+            <Minus className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center gap-2 px-2">
+            <Slider
+                value={[scale]}
+                onValueChange={onSliderChange}
+                min={MIN_SCALE}
+                max={MAX_SCALE}
+                step={0.05}
+                className="w-36"
+                aria-label="Povećaj ili smanji prikaz"
+            />
+            <span className="w-12 text-right text-sm font-medium tabular-nums text-muted-foreground">
+                {Math.round(scale * 100)}%
+            </span>
+        </div>
+        <Button
+            size="icon"
+            variant="ghost"
+            onClick={onZoomIn}
+            disabled={scale >= MAX_SCALE}
+            aria-label="Povećaj zoom"
+        >
+            <Plus className="h-4 w-4" />
+        </Button>
+        <Button size="icon" variant="ghost" onClick={onResetZoom} aria-label="Resetuj zoom">
+            <RotateCcw className="h-4 w-4" />
+        </Button>
+    </div>
+));
+
+ZoomControls.displayName = "ZoomControls";
+
 export interface ReaderViewProps {
     bookId: number;
     bookTitle?: string;
@@ -171,18 +226,19 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         setIsDocumentLoading(true);
     }, [bookId, stream]);
 
-    useEffect(() => {
-        setPageInput(String(pageNumber));
-    }, [pageNumber]);
 
     const onPageChangeRef = useRef(onPageChange);
+    const userInitiatedChangeRef = useRef(false);
 
     useEffect(() => {
         onPageChangeRef.current = onPageChange;
     }, [onPageChange]);
 
     useEffect(() => {
-        onPageChangeRef.current?.(pageNumber);
+        if (userInitiatedChangeRef.current) {
+            onPageChangeRef.current?.(pageNumber);
+            userInitiatedChangeRef.current = false;
+        }
     }, [pageNumber]);
 
     useEffect(() => {
@@ -254,7 +310,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         }
         pdfRef.current = document;
         setNumPages(document.numPages);
-        setPageNumber(current => Math.min(current, document.numPages));
+        setPageNumber(current => {
+            if (current > document.numPages) {
+                setPageInput(String(document.numPages));
+                return document.numPages;
+            }
+            return current;
+        });
         setIsDocumentLoading(false);
         setLoadError(null);
     }, []);
@@ -335,6 +397,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     return prev;
                 }
                 const clamped = Math.max(1, Math.min(nextPage, numPages || nextPage));
+                setPageInput(String(clamped));
+                userInitiatedChangeRef.current = true;
                 return clamped;
             });
         },
@@ -356,11 +420,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const handlePageInputBlur = useCallback(() => {
         const parsed = Number(pageInput);
         if (!Number.isNaN(parsed)) {
-            goToPage(parsed);
+            const clamped = Math.max(1, Math.min(parsed, numPages || parsed));
+            goToPage(clamped);
+            setPageInput(String(clamped));
         } else {
             setPageInput(String(pageNumber));
         }
-    }, [goToPage, pageInput, pageNumber]);
+    }, [goToPage, pageInput, pageNumber, numPages]);
 
     const handlePageInputKeyDown = useCallback(
         (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -469,48 +535,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                         </Button>
                     </div>
 
-                    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/20 p-1">
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={handleZoomOut}
-                            disabled={scale <= MIN_SCALE}
-                            aria-label="Smanji zoom"
-                        >
-                            <Minus className="h-4 w-4" />
-                        </Button>
-                        <div className="flex items-center gap-2 px-2">
-                            <Slider
-                                value={[scale]}
-                                onValueChange={handleSliderChange}
-                                min={MIN_SCALE}
-                                max={MAX_SCALE}
-                                step={0.05}
-                                className="w-36"
-                                aria-label="Povećaj ili smanji prikaz"
-                            />
-                            <span className="w-12 text-right text-sm font-medium tabular-nums text-muted-foreground">
-                                {Math.round(scale * 100)}%
-                            </span>
-                        </div>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={handleZoomIn}
-                            disabled={scale >= MAX_SCALE}
-                            aria-label="Povećaj zoom"
-                        >
-                            <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={handleResetZoom}
-                            aria-label="Resetuj zoom"
-                        >
-                            <RotateCcw className="h-4 w-4" />
-                        </Button>
-                    </div>
+                    <ZoomControls
+                        scale={scale}
+                        onZoomIn={handleZoomIn}
+                        onZoomOut={handleZoomOut}
+                        onSliderChange={handleSliderChange}
+                        onResetZoom={handleResetZoom}
+                    />
 
                     {isDocumentLoading && !loadError && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -559,7 +590,6 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                         className="mx-auto flex flex-col items-center gap-4"
                     >
                         <Page
-                            key={`${pageNumber}-${scale}`}
                             pageNumber={pageNumber}
                             scale={scale}
                             renderAnnotationLayer
