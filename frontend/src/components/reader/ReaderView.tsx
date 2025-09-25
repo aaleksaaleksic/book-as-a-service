@@ -9,7 +9,7 @@ import React, {
     useState,
 } from "react";
 import { pdfjs, Document, Page } from "react-pdf";
-import type { PDFDocumentProxy } from "pdfjs-dist/types/src/pdf";
+import type { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import type { DocumentProps } from "react-pdf";
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from "lucide-react";
 
@@ -94,36 +94,41 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const abortControllerRef = useRef<AbortController | null>(null);
     const hasTriedFallbackRef = useRef<boolean>(false);
 
-    const authorizedHeaders = useMemo(() => {
+    const secureStream = useMemo<SecureStreamDescriptor | null>(() => {
         if (!stream || "error" in stream) {
             return null;
         }
-        return createAuthorizedHeaders(stream);
+        return stream;
     }, [stream]);
 
+    const authorizedHeaders = useMemo(() => {
+        if (!secureStream) {
+            return null;
+        }
+        return createAuthorizedHeaders(secureStream);
+    }, [secureStream]);
+
+    const authorizedHeadersRecord = useMemo(() => {
+        if (!authorizedHeaders) {
+            return undefined;
+        }
+
+        return Array.from(authorizedHeaders.entries()).reduce<Record<string, string>>(
+            (acc, [key, value]) => {
+                acc[key] = value;
+                return acc;
+            },
+            {}
+        );
+    }, [authorizedHeaders]);
+
     const pdfSource: PdfSource = useMemo(() => {
-        if (!stream || "error" in stream) {
+        if (!secureStream) {
             return null;
         }
 
-        const headersRecord = authorizedHeaders
-            ? Array.from(authorizedHeaders.entries()).reduce<Record<string, string>>(
-                (acc, [key, value]) => {
-                    acc[key] = value;
-                    return acc;
-                },
-                {}
-            )
-            : undefined;
-
-        return {
-            url: stream.url,
-            httpHeaders: headersRecord,
-            withCredentials: false,
-            length: stream.contentLength,
-            rangeChunkSize: stream.chunkSize,
-        } satisfies DocumentProps["file"];
-    }, [stream, authorizedHeaders]);
+        return secureStream.url;
+    }, [secureStream]);
 
     useEffect(() => {
         setLoadError(prev => {
@@ -167,7 +172,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         };
     }, []);
 
-    const documentOptions = useMemo(() => {
+    const baseDocumentOptions = useMemo(() => {
         const options: DocumentProps["options"] = {};
         const cMapUrl = process.env.NEXT_PUBLIC_PDF_CMAP_URL;
         const standardFontDataUrl = process.env.NEXT_PUBLIC_PDF_STANDARD_FONT_URL;
@@ -184,8 +189,37 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             options.wasmUrl = wasmUrl;
         }
 
-        return options;
+        return Object.keys(options).length ? options : undefined;
     }, []);
+
+    const streamDocumentOptions = useMemo(() => {
+        if (!secureStream) {
+            return undefined;
+        }
+
+        const options: DocumentProps["options"] = {};
+
+        if (authorizedHeadersRecord) {
+            options.httpHeaders = authorizedHeadersRecord;
+        }
+
+        options.withCredentials = false;
+        options.length = secureStream.contentLength;
+        options.rangeChunkSize = secureStream.chunkSize;
+
+        return Object.keys(options).length ? options : undefined;
+    }, [secureStream, authorizedHeadersRecord]);
+
+    const documentOptions = useMemo(() => {
+        if (!baseDocumentOptions && !streamDocumentOptions) {
+            return undefined;
+        }
+
+        return {
+            ...(baseDocumentOptions ?? {}),
+            ...(streamDocumentOptions ?? {}),
+        } satisfies DocumentProps["options"];
+    }, [baseDocumentOptions, streamDocumentOptions]);
 
     const handleDocumentLoadSuccess = useCallback((pdf: PDFDocumentProxy) => {
         if (pdfRef.current && pdfRef.current !== pdf) {
@@ -218,8 +252,12 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     abortControllerRef.current = controller;
 
                     try {
-                        const headers = createAuthorizedHeaders(stream);
-                        const response = await fetch(stream.url, {
+                        if (!secureStream) {
+                            throw new Error("Nema dostupnog toka za preuzimanje dokumenta.");
+                        }
+
+                        const headers = createAuthorizedHeaders(secureStream);
+                        const response = await fetch(secureStream.url, {
                             method: "GET",
                             headers: headers ?? undefined,
                             signal: controller.signal,
@@ -254,7 +292,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 );
             }
         },
-        [stream]
+        [stream, secureStream]
     );
 
     const handleProgress = useCallback(({ loaded, total }: { loaded: number; total: number }) => {
@@ -463,9 +501,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
                 {shouldRenderDocument ? (
                     <Document
-                        key={fallbackData ? `${bookId}-fallback` : `${bookId}-${stream ? stream.url : "unknown"}`}
+                        key={
+                            fallbackData
+                                ? `${bookId}-fallback`
+                                : `${bookId}-${secureStream ? secureStream.url : "unknown"}`
+                        }
                         file={documentFile}
-                        options={Object.keys(documentOptions ?? {}).length ? documentOptions : undefined}
+                        options={documentOptions}
                         loading={
                             <div className="flex h-full min-h-[60vh] items-center justify-center">
                                 <LoadingSpinner size="lg" text="Učitavanje dokumenta" />
