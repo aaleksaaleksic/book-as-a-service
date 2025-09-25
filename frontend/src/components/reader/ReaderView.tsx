@@ -37,17 +37,6 @@ import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Configure pdf.js worker once for the entire application (ReactPDF recommendation)
-if (typeof window !== "undefined") {
-    import("react-pdf").then(({ pdfjs }) => {
-        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-            pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-                "pdfjs-dist/build/pdf.worker.min.mjs",
-                import.meta.url
-            ).toString();
-        }
-    });
-}
 
 const MIN_SCALE = 0.75;
 const MAX_SCALE = 2.5;
@@ -142,6 +131,15 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     useEffect(() => {
         setIsClient(true);
+
+        // Configure PDF.js worker on client side only
+        const configurePdfWorker = async () => {
+            const { pdfjs } = await import("react-pdf");
+            // Use CDN version that matches the react-pdf version
+            pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.3.93/build/pdf.worker.min.mjs`;
+        };
+
+        configurePdfWorker().catch(console.error);
     }, []);
 
     const pdfSource: PdfSource = useMemo(() => {
