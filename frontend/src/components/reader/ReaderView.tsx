@@ -270,18 +270,20 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     // FIX 6: Update loadError only when stream changes
     useEffect(() => {
         if (!hasSecureStream) {
-            setLoadError(streamErrorMessage || "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.");
+            const nextError = streamErrorMessage ||
+                "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.";
+            setLoadError(prev => (prev === nextError ? prev : nextError));
         } else if (!hasTriedFallbackRef.current) {
-            setLoadError(null);
+            setLoadError(prev => (prev === null ? prev : null));
         }
 
-        // Reset other states when stream changes
-        setFallbackData(null);
+        // Reset other states when stream changes while avoiding redundant updates
+        setFallbackData(prev => (prev === null ? prev : null));
         hasTriedFallbackRef.current = false;
-        setPageNumber(1);
-        setPageInput("1");
-        setProgress(0);
-        setIsDocumentLoading(true);
+        setPageNumber(prev => (prev === 1 ? prev : 1));
+        setPageInput(prev => (prev === "1" ? prev : "1"));
+        setProgress(prev => (prev === 0 ? prev : 0));
+        setIsDocumentLoading(prev => (prev === true ? prev : true));
     }, [hasSecureStream, streamErrorMessage, streamSignature]);
 
     const onPageChangeRef = useRef(onPageChange);
@@ -299,9 +301,11 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     }, [pageNumber]);
 
     useEffect(() => {
-        if (!isEditingInput) {
-            setPageInput(String(pageNumber));
+        if (isEditingInput) {
+            return;
         }
+        const nextValue = String(pageNumber);
+        setPageInput(prev => (prev === nextValue ? prev : nextValue));
     }, [pageNumber, isEditingInput]);
 
     // Cleanup on unmount
@@ -375,25 +379,28 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         pdfRef.current = document;
 
         if (document.numPages > 0) {
-            setNumPages(document.numPages);
-            setPageNumber(current => Math.min(current, document.numPages));
+            setNumPages(prev => (prev === document.numPages ? prev : document.numPages));
+            setPageNumber(current => {
+                const clamped = Math.min(current, document.numPages);
+                return current === clamped ? current : clamped;
+            });
         }
 
-        setIsDocumentLoading(false);
-        setLoadError(null);
+        setIsDocumentLoading(prev => (prev === false ? prev : false));
+        setLoadError(prev => (prev === null ? prev : null));
     }, []);
 
     const handleDocumentLoadError = useCallback(
         (error: Error) => {
             console.error("PDF load error", error);
-            setIsDocumentLoading(false);
+            setIsDocumentLoading(prev => (prev === false ? prev : false));
 
             if (!hasSecureStream || !secureStream) {
-                setLoadError(
+                const fallbackMessage =
                     streamErrorMessage ||
                     error.message ||
-                    "Došlo je do greške prilikom učitavanja dokumenta."
-                );
+                    "Došlo je do greške prilikom učitavanja dokumenta.";
+                setLoadError(prev => (prev === fallbackMessage ? prev : fallbackMessage));
                 return;
             }
 
@@ -422,24 +429,27 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
                         const arrayBuffer = await response.arrayBuffer();
                         setFallbackData(new Uint8Array(arrayBuffer));
-                        setLoadError(null);
-                        setIsDocumentLoading(false);
+                        setLoadError(prev => (prev === null ? prev : null));
+                        setIsDocumentLoading(prev => (prev === false ? prev : false));
                     } catch (fallbackError) {
                         console.error("Fallback PDF download failed", fallbackError);
-                        setLoadError(
-                            "Neuspešno učitavanje knjige. Proverite internet vezu i pokušajte ponovo."
-                        );
+                        setLoadError(prev => (
+                            prev ===
+                                "Neuspešno učitavanje knjige. Proverite internet vezu i pokušajte ponovo."
+                                ? prev
+                                : "Neuspešno učitavanje knjige. Proverite internet vezu i pokušajte ponovo."
+                        ));
                     } finally {
-                        setIsFallbackLoading(false);
+                        setIsFallbackLoading(prev => (prev === false ? prev : false));
                         abortControllerRef.current = null;
                     }
                 };
 
                 void tryFallback();
             } else {
-                setLoadError(
-                    error.message || "Neuspešno učitavanje knjige. Pokušajte ponovo kasnije."
-                );
+                const fallbackMessage =
+                    error.message || "Neuspešno učitavanje knjige. Pokušajte ponovo kasnije.";
+                setLoadError(prev => (prev === fallbackMessage ? prev : fallbackMessage));
             }
         },
         [secureStream, hasSecureStream, streamErrorMessage]
@@ -447,7 +457,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     const handleProgress = useCallback(({ loaded, total }: { loaded: number; total: number }) => {
         if (total > 0) {
-            setProgress(Math.round((loaded / total) * 100));
+            const nextProgress = Math.round((loaded / total) * 100);
+            setProgress(prev => (prev === nextProgress ? prev : nextProgress));
         }
     }, []);
 
