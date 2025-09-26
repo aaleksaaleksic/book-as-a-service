@@ -89,9 +89,11 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
 
     const handlePageChange = useCallback(
         (page: number) => {
+            console.log("📋 Parent received onPageChange:", page, "at", new Date().toISOString());
             lastPageRef.current = page;
 
             if (!sessionId) {
+                console.log("⏸️ No sessionId, skipping API call");
                 return;
             }
 
@@ -102,8 +104,11 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
 
             // Debounce progress updates by 1 second
             progressUpdateTimeoutRef.current = setTimeout(() => {
+                console.log("📡 Calling updateProgress API for page:", page);
                 updateProgress.mutate({ sessionId, currentPage: page });
             }, 1000);
+
+            console.log("✅ Parent handlePageChange completed for page:", page);
         },
         [sessionId, updateProgress]
     );
