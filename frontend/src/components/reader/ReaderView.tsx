@@ -37,19 +37,18 @@ import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-
 const MIN_SCALE = 0.75;
 const MAX_SCALE = 2.5;
 const SCALE_STEP = 0.25;
 
 // Memoized zoom controls component to prevent re-renders
 const ZoomControls = memo(({
-    scale,
-    onZoomIn,
-    onZoomOut,
-    onSliderChange,
-    onResetZoom
-}: {
+                               scale,
+                               onZoomIn,
+                               onZoomOut,
+                               onSliderChange,
+                               onResetZoom
+                           }: {
     scale: number;
     onZoomIn: () => void;
     onZoomOut: () => void;
@@ -154,19 +153,23 @@ const createStreamSignature = (
 };
 
 const ReaderViewComponent: React.FC<ReaderViewProps> = ({
-    bookId,
-    bookTitle,
-    stream,
-    watermark,
-    fallbackPreview,
-    onPageChange,
-    className,
-}) => {
+                                                            bookId,
+                                                            bookTitle,
+                                                            stream,
+                                                            watermark,
+                                                            fallbackPreview,
+                                                            onPageChange,
+                                                            className,
+                                                        }) => {
+    // FIX 1: Initialize state with a function to avoid recalculation on every render
     const [numPages, setNumPages] = useState<number>(0);
     const [pageNumber, setPageNumber] = useState<number>(1);
     const [pageInput, setPageInput] = useState<string>("1");
+    const [isEditingInput, setIsEditingInput] = useState<boolean>(false);
     const [scale, setScale] = useState<number>(1.1);
     const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(true);
+
+    // FIX 2: Initialize loadError with a lazy initializer function
     const [loadError, setLoadError] = useState<string | null>(() => {
         if (!stream) {
             return "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.";
@@ -176,6 +179,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         }
         return null;
     });
+
     const [progress, setProgress] = useState<number>(0);
     const [fallbackData, setFallbackData] = useState<Uint8Array | null>(null);
     const [isFallbackLoading, setIsFallbackLoading] = useState<boolean>(false);
@@ -185,64 +189,43 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const abortControllerRef = useRef<AbortController | null>(null);
     const hasTriedFallbackRef = useRef<boolean>(false);
 
+    // FIX 3: Memoize streamSignature properly
     const streamSignature = useMemo(() => createStreamSignature(stream), [stream]);
 
-    const streamStatus = useMemo(
-        () => {
-            if (!stream) {
-                return {
-                    signature: "no-stream",
-                    errorMessage:
-                        "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.",
-                    hasStream: false,
-                } as const;
-            }
+    // FIX 4: Calculate streamStatus only in useMemo
+    const streamStatus = useMemo(() => {
+        if (!stream) {
+            return {
+                signature: "no-stream",
+                errorMessage: "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.",
+                hasStream: false,
+            } as const;
+        }
 
-            if ("error" in stream) {
-                return {
-                    signature: streamSignature,
-                    errorMessage:
-                        stream.error || "Pristup knjizi je trenutno onemogućen.",
-                    hasStream: false,
-                } as const;
-            }
-
+        if ("error" in stream) {
             return {
                 signature: streamSignature,
-                errorMessage: null,
-                hasStream: true,
+                errorMessage: stream.error || "Pristup knjizi je trenutno onemogućen.",
+                hasStream: false,
             } as const;
-        },
-        [stream, streamSignature]
-    );
+        }
 
-    const {
-        errorMessage: streamErrorMessage,
-        hasStream: hasSecureStream,
-        signature: streamStatusSignature,
-    } = streamStatus;
+        return {
+            signature: streamSignature,
+            errorMessage: null,
+            hasStream: true,
+        } as const;
+    }, [stream, streamSignature]);
 
-    const previousStreamRef = useRef<SecureStreamDescriptor | null>(null);
-    const previousSignatureRef = useRef<string>("no-stream");
+    const { errorMessage: streamErrorMessage, hasStream: hasSecureStream } = streamStatus;
 
+    // FIX 5: Remove duplicate refs and simplify secureStream calculation
     const secureStream = useMemo<SecureStreamDescriptor | null>(() => {
         if (!stream || "error" in stream) {
-            previousStreamRef.current = null;
-            previousSignatureRef.current = "no-stream";
             return null;
         }
-
-        if (
-            previousStreamRef.current &&
-            previousSignatureRef.current === streamSignature
-        ) {
-            return previousStreamRef.current;
-        }
-
-        previousSignatureRef.current = streamSignature;
-        previousStreamRef.current = stream;
         return stream;
-    }, [stream, streamSignature]);
+    }, [stream]);
 
     const authorizedHeaders = useMemo(() => {
         if (!secureStream) {
@@ -265,13 +248,12 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         );
     }, [authorizedHeaders]);
 
+    // Configure PDF.js worker on mount
     useEffect(() => {
         setIsClient(true);
 
-        // Configure PDF.js worker on client side only
         const configurePdfWorker = async () => {
             const { pdfjs } = await import("react-pdf");
-            // Use CDN version that matches the react-pdf version
             pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.3.93/build/pdf.worker.min.mjs`;
         };
 
@@ -282,31 +264,25 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         if (!secureStream) {
             return null;
         }
-
         return secureStream.url;
     }, [secureStream]);
 
+    // FIX 6: Update loadError only when stream changes
     useEffect(() => {
-        setLoadError(prev => {
-            if (!hasSecureStream) {
-                return (
-                    streamErrorMessage ||
-                    "Trenutno nije moguće učitati bezbedan tok za ovu knjigu."
-                );
-            }
-            if (prev && !hasTriedFallbackRef.current) {
-                return prev;
-            }
-            return null;
-        });
+        if (!hasSecureStream) {
+            setLoadError(streamErrorMessage || "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.");
+        } else if (!hasTriedFallbackRef.current) {
+            setLoadError(null);
+        }
+
+        // Reset other states when stream changes
         setFallbackData(null);
         hasTriedFallbackRef.current = false;
         setPageNumber(1);
         setPageInput("1");
         setProgress(0);
         setIsDocumentLoading(true);
-    }, [bookId, hasSecureStream, streamErrorMessage, streamStatusSignature]);
-
+    }, [hasSecureStream, streamErrorMessage, streamSignature]);
 
     const onPageChangeRef = useRef(onPageChange);
     const userInitiatedChangeRef = useRef(false);
@@ -322,6 +298,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         }
     }, [pageNumber]);
 
+    useEffect(() => {
+        if (!isEditingInput) {
+            setPageInput(String(pageNumber));
+        }
+    }, [pageNumber, isEditingInput]);
+
+    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (pdfRef.current) {
@@ -390,14 +373,12 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             pdfRef.current.destroy().catch(() => undefined);
         }
         pdfRef.current = document;
-        setNumPages(document.numPages);
-        setPageNumber(current => {
-            if (current > document.numPages) {
-                setPageInput(String(document.numPages));
-                return document.numPages;
-            }
-            return current;
-        });
+
+        if (document.numPages > 0) {
+            setNumPages(document.numPages);
+            setPageNumber(current => Math.min(current, document.numPages));
+        }
+
         setIsDocumentLoading(false);
         setLoadError(null);
     }, []);
@@ -406,11 +387,12 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         (error: Error) => {
             console.error("PDF load error", error);
             setIsDocumentLoading(false);
+
             if (!hasSecureStream || !secureStream) {
                 setLoadError(
                     streamErrorMessage ||
-                        error.message ||
-                        "Došlo je do greške prilikom učitavanja dokumenta."
+                    error.message ||
+                    "Došlo je do greške prilikom učitavanja dokumenta."
                 );
                 return;
             }
@@ -475,8 +457,9 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 if (nextPage === prev) {
                     return prev;
                 }
-                const clamped = Math.max(1, Math.min(nextPage, numPages || nextPage));
-                setPageInput(String(clamped));
+                const clamped = numPages > 0
+                    ? Math.max(1, Math.min(nextPage, numPages))
+                    : Math.max(1, nextPage);
                 userInitiatedChangeRef.current = true;
                 return clamped;
             });
@@ -494,14 +477,17 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     const handlePageInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         setPageInput(event.target.value);
+        setIsEditingInput(true);
     }, []);
 
     const handlePageInputBlur = useCallback(() => {
+        setIsEditingInput(false);
         const parsed = Number(pageInput);
         if (!Number.isNaN(parsed)) {
             const clamped = Math.max(1, Math.min(parsed, numPages || parsed));
-            goToPage(clamped);
-            setPageInput(String(clamped));
+            if (clamped !== pageNumber) {
+                goToPage(clamped);
+            }
         } else {
             setPageInput(String(pageNumber));
         }
@@ -529,18 +515,15 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         setScale(1.1);
     }, []);
 
+    // FIX 7: Improved handleSliderChange to prevent loops
     const handleSliderChange = useCallback((value: number[]) => {
         if (value[0] !== undefined && value[0] !== null) {
             const newScale = Number(value[0].toFixed(2));
-            setScale(prevScale => {
-                // Use a more precise comparison to avoid infinite loops
-                if (Math.abs(prevScale - newScale) < 0.001) {
-                    return prevScale;
-                }
-                return newScale;
-            });
+            if (Math.abs(scale - newScale) > 0.001) {
+                setScale(newScale);
+            }
         }
-    }, []);
+    }, [scale]);
 
     const documentFile = useMemo(() => {
         if (fallbackData) {
@@ -649,11 +632,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     </div>
                 ) : shouldRenderDocument ? (
                     <Document
-                        key={
-                            fallbackData
-                                ? `${bookId}-fallback`
-                                : `${bookId}-${streamStatusSignature}`
-                        }
+                        key={`${bookId}-${streamSignature}`}
                         file={documentFile}
                         options={documentOptions}
                         loading={
