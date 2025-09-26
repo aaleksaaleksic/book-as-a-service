@@ -41,6 +41,17 @@ const MIN_SCALE = 0.75;
 const MAX_SCALE = 2.5;
 const SCALE_STEP = 0.25;
 
+// Debug logging helpers
+const isBrowser = typeof window !== "undefined";
+const DEBUG_READER = (isBrowser && window.localStorage?.getItem("DEBUG_READER") === "1")
+    || process.env.NEXT_PUBLIC_DEBUG_READER === "1";
+const readerLog = (...args: unknown[]) => {
+    if (DEBUG_READER) {
+        // eslint-disable-next-line no-console
+        console.log("[ReaderView]", ...args);
+    }
+};
+
 // Memoized zoom controls component to prevent re-renders
 const ZoomControls = memo(({
                                scale,
@@ -67,7 +78,7 @@ const ZoomControls = memo(({
         </Button>
         <div className="flex items-center gap-2 px-2">
             <Slider
-                value={[scale]}
+                value={useMemo(() => [scale], [scale])}
                 onValueChange={onSliderChange}
                 min={MIN_SCALE}
                 max={MAX_SCALE}
@@ -102,6 +113,7 @@ export interface ReaderViewProps {
     stream?: SecureStreamDescriptor | { error: string } | null;
     watermark?: ReaderWatermark | null;
     fallbackPreview?: string | null;
+    pageNumber?: number; // new - for controlled mode
     onPageChange?: (page: number) => void;
     className?: string;
 }
@@ -158,13 +170,25 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                                                             stream,
                                                             watermark,
                                                             fallbackPreview,
+                                                            pageNumber: controlledPageNumber,
                                                             onPageChange,
                                                             className,
                                                         }) => {
-    // FIX 1: Initialize state with a function to avoid recalculation on every render
+    // Hybrid controlled/uncontrolled pattern
     const [numPages, setNumPages] = useState<number>(0);
-    const [pageNumber, setPageNumber] = useState<number>(1);
+    const [internalPageNumber, setInternalPageNumber] = useState<number>(1);
     const [pageInput, setPageInput] = useState<string>("1");
+
+    // Use controlled value if provided, otherwise use internal state
+    const pageNumber = controlledPageNumber ?? internalPageNumber;
+    readerLog("render", { controlledPageNumber, internalPageNumber, pageNumber });
+
+    // Log prop changes for debugging parent interactions
+    const prevControlledPageRef = useRef(controlledPageNumber);
+    if (prevControlledPageRef.current !== controlledPageNumber) {
+        console.log("📥 Parent prop change:", prevControlledPageRef.current, "→", controlledPageNumber, "at", new Date().toISOString());
+        prevControlledPageRef.current = controlledPageNumber;
+    }
     const [isEditingInput, setIsEditingInput] = useState<boolean>(false);
     const [scale, setScale] = useState<number>(1.1);
     const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(true);
@@ -251,6 +275,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     // Configure PDF.js worker on mount
     useEffect(() => {
         setIsClient(true);
+        readerLog("mounted");
 
         const configurePdfWorker = async () => {
             const { pdfjs } = await import("react-pdf");
@@ -267,40 +292,109 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         return secureStream.url;
     }, [secureStream]);
 
-    // FIX 6: Update loadError only when stream changes
+    // Update loadError when stream changes
     useEffect(() => {
         if (!hasSecureStream) {
             setLoadError(streamErrorMessage || "Trenutno nije moguće učitati bezbedan tok za ovu knjigu.");
         } else if (!hasTriedFallbackRef.current) {
             setLoadError(null);
         }
+        readerLog("stream change", { hasSecureStream, streamSignature });
+    }, [hasSecureStream, streamErrorMessage, streamSignature]);
 
-        // Reset other states when stream changes
-        setFallbackData(null);
-        hasTriedFallbackRef.current = false;
-        setPageNumber(1);
+    // Reset states when book changes
+    useEffect(() => {
+        if (controlledPageNumber === undefined) {
+            setInternalPageNumber(1);
+        }
         setPageInput("1");
         setProgress(0);
         setIsDocumentLoading(true);
-    }, [hasSecureStream, streamErrorMessage, streamSignature]);
+        setFallbackData(null);
+        hasTriedFallbackRef.current = false;
+        readerLog("reset for book", { bookId, controlled: controlledPageNumber !== undefined });
+    }, [bookId, controlledPageNumber]);
 
     const onPageChangeRef = useRef(onPageChange);
-    const userInitiatedChangeRef = useRef(false);
+    const lastEmittedPageRef = useRef(internalPageNumber);
+    const lastSetScaleRef = useRef(scale);
+    const lastPageChangeTimeRef = useRef<number>(0);
+    const rapidChangeCountRef = useRef<number>(0);
 
     useEffect(() => {
         onPageChangeRef.current = onPageChange;
     }, [onPageChange]);
 
-    useEffect(() => {
-        if (userInitiatedChangeRef.current) {
-            onPageChangeRef.current?.(pageNumber);
-            userInitiatedChangeRef.current = false;
+    // Track if we should emit onPageChange - debounced to prevent loops
+    const emitPageChangeRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+    const debouncedEmitPageChange = useCallback((page: number) => {
+        if (emitPageChangeRef.current) {
+            clearTimeout(emitPageChangeRef.current);
         }
-    }, [pageNumber]);
+        emitPageChangeRef.current = setTimeout(() => {
+            if (page !== lastEmittedPageRef.current) {
+                lastEmittedPageRef.current = page;
+                readerLog("emit onPageChange (debounced)", page);
+                console.log("🔄 Would call parent onPageChange:", page, "at", new Date().toISOString());
+                console.log("⏸️ TEMPORARILY DISABLED onPageChange to test loop source");
+                // onPageChangeRef.current?.(page); // TEMPORARILY DISABLED
+                console.log("✅ Skipped onPageChange call for page:", page);
+            }
+        }, 50); // 50ms debounce
+    }, []);
+
+    // Unified page setter for both controlled and uncontrolled modes
+    const setPage = useCallback((next: number | ((prev: number) => number)) => {
+        // Add call stack logging for debugging
+        console.trace("🔍 setPage called from:", new Error().stack?.split('\n')[2]?.trim());
+
+        // Rapid change detection guard
+        const now = Date.now();
+        if (lastPageChangeTimeRef.current && now - lastPageChangeTimeRef.current < 10) {
+            rapidChangeCountRef.current += 1;
+            if (rapidChangeCountRef.current > 10) {
+                console.error("🚨 Maximum page change rate exceeded! Preventing infinite loop.");
+                console.error("Call stack:", new Error().stack);
+                readerLog("BLOCKED rapid page change", { count: rapidChangeCountRef.current });
+                return;
+            }
+            readerLog("rapid page change detected", { count: rapidChangeCountRef.current, timeSince: now - lastPageChangeTimeRef.current });
+        } else {
+            rapidChangeCountRef.current = 0;
+        }
+        lastPageChangeTimeRef.current = now;
+
+        if (controlledPageNumber !== undefined) {
+            // ✅ Controlled mode → samo pozovi callback
+            const nextPage = typeof next === "function" ? next(controlledPageNumber) : next;
+            if (nextPage !== controlledPageNumber) {
+                readerLog("setPage (controlled)", controlledPageNumber, "→", nextPage);
+                console.log("⏸️ TEMPORARILY DISABLED controlled onPageChange");
+                // onPageChangeRef.current?.(nextPage); // TEMPORARILY DISABLED
+            }
+        } else {
+            // ✅ Uncontrolled mode → ažuriraj state i pozovi debounced callback
+            setInternalPageNumber(prev => {
+                const nextPage = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
+                if (nextPage !== prev) {
+                    readerLog("setPage (uncontrolled)", prev, "→", nextPage);
+                    console.log("🔄 setInternalPageNumber:", prev, "→", nextPage);
+                    // Debounced callback to prevent rapid-fire loops
+                    debouncedEmitPageChange(nextPage);
+                }
+                return nextPage;
+            });
+        }
+    }, [controlledPageNumber, debouncedEmitPageChange]);
 
     useEffect(() => {
         if (!isEditingInput) {
-            setPageInput(String(pageNumber));
+            const newVal = String(pageNumber);
+            if (pageInput !== newVal) {
+                setPageInput(newVal);
+                readerLog("sync pageInput from pageNumber", { pageNumber: newVal });
+            }
         }
     }, [pageNumber, isEditingInput]);
 
@@ -316,6 +410,10 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
             }
+            if (emitPageChangeRef.current) {
+                clearTimeout(emitPageChangeRef.current);
+            }
+            readerLog("unmounted");
         };
     }, []);
 
@@ -376,12 +474,27 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
         if (document.numPages > 0) {
             setNumPages(document.numPages);
-            setPageNumber(current => Math.min(current, document.numPages));
+            readerLog("document loaded", { numPages: document.numPages, pageNumber, controlledPageNumber, internalPageNumber });
+            const clamped = Math.min(pageNumber, document.numPages);
+
+            if (controlledPageNumber !== undefined) {
+                // ✅ Controlled mode → samo pozovi callback ako treba da se klampuje
+                if (clamped !== controlledPageNumber) {
+                    readerLog("handleDocumentLoadSuccess (controlled) clamp", controlledPageNumber, "→", clamped);
+                    onPageChangeRef.current?.(clamped);
+                }
+            } else {
+                // ✅ Uncontrolled mode → koristi setPage za unified handling
+                if (clamped !== internalPageNumber) {
+                    readerLog("handleDocumentLoadSuccess (uncontrolled) clamp", internalPageNumber, "→", clamped);
+                    setPage(clamped);
+                }
+            }
         }
 
         setIsDocumentLoading(false);
         setLoadError(null);
-    }, []);
+    }, [pageNumber, controlledPageNumber, internalPageNumber, setPage]);
 
     const handleDocumentLoadError = useCallback(
         (error: Error) => {
@@ -451,33 +564,33 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         }
     }, []);
 
-    const goToPage = useCallback(
-        (nextPage: number) => {
-            setPageNumber(prev => {
-                if (nextPage === prev) {
-                    return prev;
-                }
-                const clamped = numPages > 0
-                    ? Math.max(1, Math.min(nextPage, numPages))
-                    : Math.max(1, nextPage);
-                userInitiatedChangeRef.current = true;
-                return clamped;
-            });
-        },
-        [numPages]
-    );
 
     const handlePrevious = useCallback(() => {
-        goToPage(pageNumber - 1);
-    }, [goToPage, pageNumber]);
+        readerLog("click previous");
+        setPage(prev => {
+            const nextPage = prev - 1;
+            const clamped = numPages > 0
+                ? Math.max(1, Math.min(nextPage, numPages))
+                : Math.max(1, nextPage);
+            return clamped;
+        });
+    }, [numPages, setPage]);
 
     const handleNext = useCallback(() => {
-        goToPage(pageNumber + 1);
-    }, [goToPage, pageNumber]);
+        readerLog("click next");
+        setPage(prev => {
+            const nextPage = prev + 1;
+            const clamped = numPages > 0
+                ? Math.max(1, Math.min(nextPage, numPages))
+                : Math.max(1, nextPage);
+            return clamped;
+        });
+    }, [numPages, setPage]);
 
     const handlePageInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         setPageInput(event.target.value);
         setIsEditingInput(true);
+        readerLog("input change", { value: event.target.value });
     }, []);
 
     const handlePageInputBlur = useCallback(() => {
@@ -485,45 +598,61 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         const parsed = Number(pageInput);
         if (!Number.isNaN(parsed)) {
             const clamped = Math.max(1, Math.min(parsed, numPages || parsed));
-            if (clamped !== pageNumber) {
-                goToPage(clamped);
-            }
+            setPage(clamped);
+            readerLog("input blur apply", { parsed, clamped });
         } else {
             setPageInput(String(pageNumber));
+            readerLog("input blur invalid, reset", { pageNumber });
         }
-    }, [goToPage, pageInput, pageNumber, numPages]);
+    }, [pageInput, numPages, setPage, pageNumber]);
 
     const handlePageInputKeyDown = useCallback(
         (event: React.KeyboardEvent<HTMLInputElement>) => {
             if (event.key === "Enter") {
                 event.preventDefault();
                 event.currentTarget.blur();
+                readerLog("input enter -> blur");
             }
         },
         []
     );
 
     const handleZoomOut = useCallback(() => {
-        setScale(prev => Math.max(MIN_SCALE, Number((prev - SCALE_STEP).toFixed(2))));
+        setScale(prev => {
+            const newScale = Math.max(MIN_SCALE, Number((prev - SCALE_STEP).toFixed(2)));
+            lastSetScaleRef.current = newScale;
+            return newScale;
+        });
+        readerLog("zoom out");
     }, []);
 
     const handleZoomIn = useCallback(() => {
-        setScale(prev => Math.min(MAX_SCALE, Number((prev + SCALE_STEP).toFixed(2))));
+        setScale(prev => {
+            const newScale = Math.min(MAX_SCALE, Number((prev + SCALE_STEP).toFixed(2)));
+            lastSetScaleRef.current = newScale;
+            return newScale;
+        });
+        readerLog("zoom in");
     }, []);
 
     const handleResetZoom = useCallback(() => {
-        setScale(1.1);
+        const resetScale = 1.1;
+        lastSetScaleRef.current = resetScale;
+        setScale(resetScale);
+        readerLog("zoom reset");
     }, []);
 
-    // FIX 7: Improved handleSliderChange to prevent loops
+    // Improved handleSliderChange with ref-based approach to prevent loops
     const handleSliderChange = useCallback((value: number[]) => {
         if (value[0] !== undefined && value[0] !== null) {
             const newScale = Number(value[0].toFixed(2));
-            if (Math.abs(scale - newScale) > 0.001) {
+            if (Math.abs(lastSetScaleRef.current - newScale) > 0.01) {
+                lastSetScaleRef.current = newScale;
                 setScale(newScale);
+                readerLog("slider change", { newScale });
             }
         }
-    }, [scale]);
+    }, []); // Bez dependencies
 
     const documentFile = useMemo(() => {
         if (fallbackData) {
