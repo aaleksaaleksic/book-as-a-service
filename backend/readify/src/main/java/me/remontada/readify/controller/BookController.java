@@ -300,6 +300,7 @@ public class BookController {
 
 
     @GetMapping("/{id}/read")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<Map<String, Object>> getBookContent(@PathVariable Long id,
                                                               Authentication authentication) {
         try {

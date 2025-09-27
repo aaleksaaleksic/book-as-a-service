@@ -99,6 +99,7 @@ public class FileController {
      * No-cache za bezbednost, inline display (ne download)
      */
     @GetMapping("/books/{bookId}/content")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
                                                Authentication authentication,
                                                HttpServletRequest request,

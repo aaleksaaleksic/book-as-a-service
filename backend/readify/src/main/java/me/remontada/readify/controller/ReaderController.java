@@ -102,7 +102,7 @@ public class ReaderController {
      * Accepts JWT token via authToken query parameter and creates streaming session internally
      */
     @GetMapping(value = "/{bookId}/content", produces = MediaType.APPLICATION_PDF_VALUE)
-    // @PreAuthorize("hasAuthority('CAN_READ_BOOKS')") // Temporarily removed for debugging - user has this authority but it's still failing
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
                                                Authentication authentication,
                                                HttpServletRequest request,

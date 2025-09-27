@@ -1,4 +1,5 @@
 package me.remontada.readify.controller;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import lombok.extern.slf4j.Slf4j;
 import me.remontada.readify.dto.response.UserResponseDTO;
@@ -93,6 +94,7 @@ public class AuthController {
 
 
     @GetMapping("/me")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<Map<String, Object>> getCurrentUser(
             org.springframework.security.core.Authentication authentication) {
         try {
@@ -133,6 +135,7 @@ public class AuthController {
 
 
     @PostMapping("/logout")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<Map<String, Object>> logout() {
 
 
@@ -178,6 +181,7 @@ public class AuthController {
 
 
     @PostMapping("/refresh")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<Map<String, Object>> refreshToken(@RequestBody Map<String, String> request) {
         try {
             String refreshToken = request.get("refreshToken");

@@ -101,6 +101,7 @@ public class UserController {
 
 
     @PostMapping("/verify-phone")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<Map<String, Object>> verifyPhone(@RequestBody Map<String, String> request) {
         try {
             String phoneNumber = Optional.ofNullable(request.get("phoneNumber"))
