@@ -184,7 +184,7 @@ public class AdminBookController {
 
 
     @GetMapping
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
+    @PreAuthorize("hasAuthority('CAN_CREATE_BOOKS') or hasAuthority('CAN_UPDATE_BOOKS') or hasAuthority('CAN_DELETE_BOOKS')")
     public ResponseEntity<List<BookResponseDTO>> getAllBooksForAdmin() {
         try {
             List<Book> books = bookService.getAllBooks();
