@@ -143,7 +143,7 @@ const UnauthorizedAccess: React.FC<UnauthorizedAccessProps> = ({
     };
 
     const handleGoHome = () => {
-        router.push('/dashboard');
+        router.push('/');
     };
 
     return (
@@ -160,30 +160,9 @@ const UnauthorizedAccess: React.FC<UnauthorizedAccessProps> = ({
                         {reason === 'missing-any-permissions' && 'You do not have any of the required permissions to access this page.'}
                     </p>
 
-                    {requiredRoles && (
-                        <div className="text-sm text-gray-500">
-                            <p>Required roles: {requiredRoles.join(', ')}</p>
-                        </div>
-                    )}
-
-                    {requiredPermissions && (
-                        <div className="text-sm text-gray-500">
-                            <p>Required permissions: {requiredPermissions.join(', ')}</p>
-                        </div>
-                    )}
-
-                    {requiredAnyPermissions && (
-                        <div className="text-sm text-gray-500">
-                            <p>Required any of: {requiredAnyPermissions.join(', ')}</p>
-                        </div>
-                    )}
-
-                    <div className="flex gap-2 justify-center">
-                        <Button variant="outline" onClick={handleGoBack}>
-                            Go Back
-                        </Button>
+                    <div className="flex justify-center">
                         <Button onClick={handleGoHome}>
-                            Go to Dashboard
+                            Home page
                         </Button>
                     </div>
                 </CardContent>
