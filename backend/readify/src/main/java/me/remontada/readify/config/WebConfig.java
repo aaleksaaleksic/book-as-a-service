@@ -4,8 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @Configuration
@@ -66,6 +72,18 @@ public class WebConfig {
                         .exposedHeaders(exposedHeadersArray)
                         .allowCredentials(allowCredentials)
                         .maxAge(3600);
+            }
+
+            @Override
+            public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+                log.info("Adding ResourceRegionHttpMessageConverter with PDF support to existing converters");
+                ResourceRegionHttpMessageConverter regionConverter = new ResourceRegionHttpMessageConverter();
+                regionConverter.setSupportedMediaTypes(Arrays.asList(
+                    MediaType.APPLICATION_PDF,
+                    MediaType.APPLICATION_OCTET_STREAM,
+                    MediaType.ALL
+                ));
+                converters.add(0, regionConverter); // Add as first priority
             }
         };
     }

@@ -1,11 +1,13 @@
 package me.remontada.readify.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import me.remontada.readify.dto.PdfMetadataDto;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
 import me.remontada.readify.security.MyUserDetails;
 import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
+import me.remontada.readify.service.PdfMetadataService;
 import me.remontada.readify.service.PdfStreamingService;
 import me.remontada.readify.service.StreamingSessionService;
 import me.remontada.readify.service.StreamingSessionService.StreamingSession;
@@ -31,6 +33,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -55,6 +58,7 @@ public class ReaderController {
     private final PdfStreamingService pdfStreamingService;
     private final StreamingSessionService streamingSessionService;
     private final JwtUtil jwtUtil;
+    private final PdfMetadataService pdfMetadataService;
 
     private static final String AUTH_COOKIE_NAME = "readbookhub_auth_token";
 
@@ -64,13 +68,15 @@ public class ReaderController {
                            UserService userService,
                            PdfStreamingService pdfStreamingService,
                            StreamingSessionService streamingSessionService,
-                           JwtUtil jwtUtil) {
+                           JwtUtil jwtUtil,
+                           PdfMetadataService pdfMetadataService) {
         this.fileStorageService = fileStorageService;
         this.bookService = bookService;
         this.userService = userService;
         this.pdfStreamingService = pdfStreamingService;
         this.streamingSessionService = streamingSessionService;
         this.jwtUtil = jwtUtil;
+        this.pdfMetadataService = pdfMetadataService;
     }
 
     /**
@@ -98,23 +104,93 @@ public class ReaderController {
     }
 
     /**
+     * Get PDF metadata and initial chunk for efficient loading
+     *
+     * This endpoint provides:
+     * 1. Streaming session credentials
+     * 2. Initial PDF structure (header + XRef table)
+     * 3. File size and recommended chunk size
+     *
+     * Frontend should call this BEFORE initializing PDF.js
+     */
+    @GetMapping("/{bookId}/metadata")
+    public ResponseEntity<?> getBookMetadata(@PathVariable Long bookId,
+                                             Authentication authentication,
+                                             HttpServletRequest request,
+                                             @RequestHeader HttpHeaders headers,
+                                             @RequestParam(value = "authToken", required = false) String authToken) {
+        log.info("=== Metadata request for book {} ===", bookId);
+
+        try {
+            // Resolve authentication (same logic as streamBookContent)
+            Authentication effectiveAuth = authentication;
+            Optional<User> resolvedUser = Optional.empty();
+
+            if (effectiveAuth == null || effectiveAuth.getName() == null) {
+                resolvedUser = resolveUserFromToken(request, headers, authToken);
+
+                if (resolvedUser.isEmpty()) {
+                    log.warn("No authentication found for book {} metadata request", bookId);
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("success", false, "message", "Authentication required"));
+                }
+
+                effectiveAuth = SecurityContextHolder.getContext().getAuthentication();
+            }
+
+            final Authentication finalAuth = effectiveAuth;
+            User currentUser = resolvedUser.orElseGet(() ->
+                    userService.findByEmail(finalAuth.getName())
+                            .orElseThrow(() -> new RuntimeException("User not found"))
+            );
+
+            log.info("User {} requesting metadata for book {}", currentUser.getEmail(), bookId);
+
+            // Get book and check access
+            Book book = bookService.findById(bookId)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+
+            if (!book.isAccessibleToUser(currentUser)) {
+                log.warn("Access denied for user {} to book {}", currentUser.getEmail(), bookId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("success", false, "message", "Subscription required to access this book"));
+            }
+
+            // Get PDF resource
+            Resource bookResource = fileStorageService.getBookPdf(bookId);
+
+            // Extract metadata using dedicated service
+            PdfMetadataDto metadata = pdfMetadataService.extractMetadata(bookResource, book, currentUser);
+
+            log.info("Successfully generated metadata for book {} (size: {} bytes, initial chunk: {} bytes)",
+                     bookId, metadata.getTotalSize(), metadata.getInitialChunkSize());
+
+            return ResponseEntity.ok(metadata);
+
+        } catch (Exception e) {
+            log.error("Error generating metadata for book {}", bookId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Error accessing book metadata: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Legacy endpoint for streaming book content
      * Accepts JWT token via authToken query parameter and creates streaming session internally
      */
-    @GetMapping(value = "/{bookId}/content", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<?> streamBookContent(@PathVariable Long bookId,
-                                               Authentication authentication,
-                                               HttpServletRequest request,
-                                               @RequestHeader HttpHeaders headers,
-                                               @RequestParam(value = "authToken", required = false) String authToken) {
+    @GetMapping("/{bookId}/content")
+    public void streamBookContent(@PathVariable Long bookId,
+                                  Authentication authentication,
+                                  HttpServletRequest request,
+                                  HttpServletResponse response,
+                                  @RequestHeader HttpHeaders headers,
+                                  @RequestParam(value = "authToken", required = false) String authToken) throws IOException {
         log.info("=== ReaderController.streamBookContent called ===");
         log.info("BookId: {}, Authentication: {}, AuthToken param: {}",
             bookId, authentication != null ? authentication.getName() : "null",
             authToken != null ? "present" : "null");
         try {
             Authentication effectiveAuth = authentication;
-
             Optional<User> resolvedUser = Optional.empty();
 
             if (effectiveAuth == null || effectiveAuth.getName() == null) {
@@ -123,10 +199,10 @@ public class ReaderController {
                 if (resolvedUser.isEmpty()) {
                     log.warn("No authentication found for book {} access. AuthToken param: {}",
                             bookId, authToken != null ? "present" : "null");
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                            "success", false,
-                            "message", "Authentication required"
-                    ));
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\": false, \"message\": \"Authentication required\"}");
+                    return;
                 }
 
                 effectiveAuth = SecurityContextHolder.getContext().getAuthentication();
@@ -148,10 +224,10 @@ public class ReaderController {
             // Check if user has access to the book
             if (!book.isAccessibleToUser(currentUser)) {
                 log.warn("Access denied for user {} to book {}", userEmail, bookId);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                    "success", false,
-                    "message", "Subscription required to access this book"
-                ));
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"Subscription required to access this book\"}");
+                return;
             }
 
             // Check for existing streaming session tokens in headers/params
@@ -218,10 +294,10 @@ public class ReaderController {
 
             if (sessionOpt.isEmpty()) {
                 log.warn("Failed to create or validate streaming session for book {} by user {}", bookId, userEmail);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                    "success", false,
-                    "message", "Invalid or expired streaming session"
-                ));
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"Invalid or expired streaming session\"}");
+                return;
             }
 
             StreamingSession session = sessionOpt.get();
@@ -237,34 +313,101 @@ public class ReaderController {
                 bookService.incrementReadCount(bookId);
             }
 
-            // Log access
-            log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes) via legacy /api/reader endpoint ({})",
-                    userEmail, book.getTitle(), bookId, clientIp, 0, contentLength - 1, contentLength, "FULL");
+            // Handle Range header for partial content requests
+            String rangeHeader = headers.getFirst(HttpHeaders.RANGE);
 
-            // Return full resource with appropriate headers
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .contentLength(contentLength)
-                    .cacheControl(CacheControl.noStore())
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + sanitizeFilename(book.getTitle()) + ".pdf\"")
-                    .header("X-Readify-Watermark", session.getWatermarkSignature())
-                    .header("X-Readify-Session", session.getToken())
-                    .header("X-Readify-Issued-At", session.getIssuedAt().toString())
-                    .body(bookResource);
+            long start, end;
+
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                // Normal range request - handle as requested
+                try {
+                    String range = rangeHeader.substring(6);
+                    String[] ranges = range.split("-");
+                    start = Long.parseLong(ranges[0]);
+                    if (ranges.length > 1 && !ranges[1].isEmpty()) {
+                        end = Long.parseLong(ranges[1]);
+                    } else {
+                        final long DEFAULT_CHUNK_SIZE = 5242880; // 5MB
+                        end = Math.min(start + DEFAULT_CHUNK_SIZE - 1, contentLength - 1);
+                    }
+
+                    // Validate range
+                    if (start >= contentLength || end >= contentLength || start > end) {
+                        throw new IllegalArgumentException("Invalid range");
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Invalid range header: " + rangeHeader);
+                }
+            } else {
+                // No range header - send LAST part of file first (metadata-first strategy)
+                // PDF.js needs xref table and metadata which are usually at the end
+                final long METADATA_CHUNK_SIZE = 1048576; // 1MB from end should contain xref
+                start = Math.max(0, contentLength - METADATA_CHUNK_SIZE);
+                end = contentLength - 1;
+
+                log.info("Metadata-first strategy: sending bytes {}-{} ({} bytes) for PDF.js compatibility",
+                         start, end, end - start + 1);
+            }
+
+            // Log access
+            log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes) via legacy /api/reader endpoint",
+                    userEmail, book.getTitle(), bookId, clientIp, start, end, end - start + 1);
+
+            // Set 206 Partial Content status and headers manually
+            response.setStatus(206); // HttpServletResponse.SC_PARTIAL_CONTENT
+            response.setContentType("application/pdf");
+            response.setHeader("Accept-Ranges", "bytes");
+            response.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + contentLength);
+            response.setHeader("Content-Length", String.valueOf(end - start + 1));
+            response.setHeader("Content-Disposition", "inline; filename=\"" + sanitizeFilename(book.getTitle()) + ".pdf\"");
+            response.setHeader("Cache-Control", "no-store");
+            response.setHeader("X-Readify-Watermark", session.getWatermarkSignature());
+            response.setHeader("X-Readify-Session", session.getToken());
+            response.setHeader("X-Readify-Issued-At", session.getIssuedAt().toString());
+
+            // Manually stream the partial content
+            try (InputStream inputStream = bookResource.getInputStream()) {
+                long skipped = inputStream.skip(start);
+                if (skipped != start) {
+                    log.warn("Could not skip to position {} in file for book {}, skipped {}", start, bookId, skipped);
+                }
+
+                long bytesToCopy = end - start + 1;
+                byte[] buffer = new byte[8192]; // 8KB buffer
+                long totalCopied = 0;
+
+                while (totalCopied < bytesToCopy) {
+                    int bytesToRead = (int) Math.min(buffer.length, bytesToCopy - totalCopied);
+                    int bytesRead = inputStream.read(buffer, 0, bytesToRead);
+
+                    if (bytesRead == -1) break; // End of stream
+
+                    response.getOutputStream().write(buffer, 0, bytesRead);
+                    totalCopied += bytesRead;
+                }
+
+                response.getOutputStream().flush();
+                log.debug("Successfully streamed {} bytes for book {} to user {}", totalCopied, bookId, userEmail);
+            }
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid range requested for book {}: {}", bookId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).body(Map.of(
-                "success", false,
-                "message", "Requested range not satisfiable"
-            ));
+            try {
+                response.setStatus(HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"Requested range not satisfiable\"}");
+            } catch (IOException ioException) {
+                log.error("Failed to write error response", ioException);
+            }
         } catch (Exception e) {
             log.error("Error streaming book content for ID: {} via legacy endpoint", bookId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error accessing book: " + e.getMessage()
-            ));
+            try {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"Error accessing book: " + e.getMessage() + "\"}");
+            } catch (IOException ioException) {
+                log.error("Failed to write error response", ioException);
+            }
         }
     }
 
