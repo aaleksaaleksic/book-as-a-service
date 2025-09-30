@@ -31,8 +31,10 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
-import { tokenManager } from "@/lib/api-client";
+import { api, tokenManager } from "@/lib/api-client";
+import type { PdfMetadata } from "@/api/types/pdf.types";
 import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
+import type { PDFDataRangeTransport } from "pdfjs-dist/types/src/display/api.js";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -41,13 +43,14 @@ const MIN_SCALE = 0.75;
 const MAX_SCALE = 2.5;
 const SCALE_STEP = 0.25;
 
+type PdfJsLib = typeof import("react-pdf")["pdfjs"];
+
 // Debug logging helpers
 const isBrowser = typeof window !== "undefined";
 const DEBUG_READER = (isBrowser && window.localStorage?.getItem("DEBUG_READER") === "1")
     || process.env.NEXT_PUBLIC_DEBUG_READER === "1";
 const readerLog = (...args: unknown[]) => {
     if (DEBUG_READER) {
-        // eslint-disable-next-line no-console
         console.log("[ReaderView]", ...args);
     }
 };
@@ -208,10 +211,15 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const [fallbackData, setFallbackData] = useState<Uint8Array | null>(null);
     const [isFallbackLoading, setIsFallbackLoading] = useState<boolean>(false);
     const [isClient, setIsClient] = useState<boolean>(false);
+    const [metadata, setMetadata] = useState<PdfMetadata | null>(null);
+    const [isMetadataLoading, setIsMetadataLoading] = useState<boolean>(false);
+    const [metadataError, setMetadataError] = useState<string | null>(null);
+    const [pdfjsLib, setPdfjsLib] = useState<PdfJsLib | null>(null);
 
     const pdfRef = useRef<Parameters<OnDocumentLoadSuccess>[0] | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const hasTriedFallbackRef = useRef<boolean>(false);
+    const metadataAbortControllerRef = useRef<AbortController | null>(null);
 
     // FIX 3: Memoize streamSignature properly
     const streamSignature = useMemo(() => createStreamSignature(stream), [stream]);
@@ -280,6 +288,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         const configurePdfWorker = async () => {
             const { pdfjs } = await import("react-pdf");
             pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.3.93/build/pdf.worker.min.mjs`;
+            setPdfjsLib(pdfjs);
         };
 
         configurePdfWorker().catch(console.error);
@@ -291,6 +300,168 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         }
         return secureStream.url;
     }, [secureStream]);
+
+    // Fetch PDF metadata prior to streaming
+    useEffect(() => {
+        if (!secureStream) {
+            metadataAbortControllerRef.current?.abort();
+            metadataAbortControllerRef.current = null;
+            setMetadata(null);
+            setMetadataError(null);
+            setIsMetadataLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        metadataAbortControllerRef.current?.abort();
+        metadataAbortControllerRef.current = controller;
+
+        let isSubscribed = true;
+
+        const fetchMetadata = async () => {
+            try {
+                setIsMetadataLoading(true);
+                setMetadata(null);
+                setMetadataError(null);
+                setProgress(0);
+                setIsDocumentLoading(true);
+                readerLog("fetch metadata", { bookId, streamSignature });
+
+                const response = await api.get<PdfMetadata>(`/api/reader/${bookId}/metadata`, {
+                    signal: controller.signal,
+                });
+
+                if (!isSubscribed) {
+                    return;
+                }
+
+                const nextMetadata = response.data;
+                setMetadata(nextMetadata);
+                readerLog("metadata received", {
+                    totalSize: nextMetadata.totalSize,
+                    initialChunkSize: nextMetadata.initialChunkSize,
+                    recommendedChunkSize: nextMetadata.recommendedChunkSize,
+                });
+
+                if (nextMetadata.initialChunkSize && nextMetadata.totalSize) {
+                    const loadedBytes = Number(nextMetadata.initialChunkSize);
+                    const totalBytes = Number(nextMetadata.totalSize);
+                    if (Number.isFinite(loadedBytes) && Number.isFinite(totalBytes) && totalBytes > 0) {
+                        const initialProgress = Math.min(100, Math.max(0, Math.round((loadedBytes / totalBytes) * 100)));
+                        setProgress(initialProgress);
+                    }
+                }
+            } catch (error) {
+                if (!isSubscribed || controller.signal.aborted) {
+                    return;
+                }
+                console.error("Failed to load PDF metadata", error);
+                readerLog("metadata error", error);
+                const message = error instanceof Error
+                    ? error.message
+                    : "Došlo je do greške prilikom preuzimanja metapodataka.";
+                setMetadataError(message);
+            } finally {
+                if (!isSubscribed) {
+                    return;
+                }
+                setIsMetadataLoading(false);
+            }
+        };
+
+        fetchMetadata().catch(console.error);
+
+        return () => {
+            isSubscribed = false;
+            controller.abort();
+        };
+    }, [secureStream, bookId, streamSignature]);
+
+    const decodeBase64ToUint8Array = useCallback((base64: string) => {
+        if (typeof window === "undefined") {
+            return new Uint8Array();
+        }
+        const binaryString = window.atob(base64);
+        const length = binaryString.length;
+        const bytes = new Uint8Array(length);
+        for (let index = 0; index < length; index += 1) {
+            bytes[index] = binaryString.charCodeAt(index);
+        }
+        return bytes;
+    }, []);
+
+    const pdfRangeTransport = useMemo<PDFDataRangeTransport | null>(() => {
+        if (!pdfjsLib || !metadata || !secureStream) {
+            return null;
+        }
+
+        const initialData = metadata.initialChunk ? decodeBase64ToUint8Array(metadata.initialChunk) : null;
+        const totalSize = Number(metadata.totalSize);
+
+        class MetadataRangeTransport extends pdfjsLib.PDFDataRangeTransport {
+            private abortController = new AbortController();
+
+            private loadedBytes = initialData?.length ?? 0;
+
+            override async requestDataRange(begin: number, end: number) {
+                const requestedEnd = Number.isFinite(end) ? Math.max(begin, end - 1) : begin;
+
+                const headers: Record<string, string> = {
+                    Range: `bytes=${begin}-${requestedEnd}`,
+                    "X-Readify-Session": metadata.sessionToken,
+                    "X-Readify-Watermark": metadata.watermarkSignature,
+                    "X-Readify-Issued-At": metadata.issuedAt,
+                };
+
+                if (authorizedHeadersRecord) {
+                    for (const [key, value] of Object.entries(authorizedHeadersRecord)) {
+                        if (!(key in headers)) {
+                            headers[key] = value;
+                        }
+                    }
+                }
+
+                try {
+                    const response = await api.get<ArrayBuffer>(`/api/reader/${bookId}/content`, {
+                        responseType: "arraybuffer",
+                        signal: this.abortController.signal,
+                        headers,
+                    });
+
+                    const chunk = new Uint8Array(response.data);
+                    this.loadedBytes += chunk.length;
+                    this.onDataRange(begin, chunk);
+                    this.onDataProgress(this.loadedBytes, totalSize);
+                } catch (error) {
+                    if (this.abortController.signal.aborted) {
+                        readerLog("range request aborted", { begin, end });
+                        return;
+                    }
+                    console.error("Range request failed", error);
+                    throw error;
+                }
+            }
+
+            override abort(): void {
+                if (!this.abortController.signal.aborted) {
+                    this.abortController.abort();
+                }
+            }
+        }
+
+        const transport = new MetadataRangeTransport(totalSize, initialData ?? null);
+        transport.transportReady();
+        readerLog("range transport ready", { totalSize, initialChunk: initialData?.length ?? 0 });
+        return transport;
+    }, [pdfjsLib, metadata, secureStream, authorizedHeadersRecord, decodeBase64ToUint8Array, bookId]);
+
+    useEffect(() => {
+        return () => {
+            if (pdfRangeTransport) {
+                pdfRangeTransport.abort();
+            }
+        };
+    }, [pdfRangeTransport]);
 
     // Update loadError when stream changes
     useEffect(() => {
@@ -410,6 +581,10 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
             }
+            if (metadataAbortControllerRef.current) {
+                metadataAbortControllerRef.current.abort();
+                metadataAbortControllerRef.current = null;
+            }
             if (emitPageChangeRef.current) {
                 clearTimeout(emitPageChangeRef.current);
             }
@@ -444,16 +619,22 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
         const options: DocumentProps["options"] = {};
 
-        if (authorizedHeadersRecord) {
+        if (!pdfRangeTransport && authorizedHeadersRecord) {
             options.httpHeaders = authorizedHeadersRecord;
         }
 
         options.withCredentials = false;
-        options.length = secureStream.contentLength;
-        options.rangeChunkSize = secureStream.chunkSize;
+        const totalSize = metadata?.totalSize ?? secureStream.contentLength;
+        if (totalSize) {
+            options.length = totalSize;
+        }
+        const chunkSize = metadata?.recommendedChunkSize ?? secureStream.chunkSize;
+        if (chunkSize) {
+            options.rangeChunkSize = chunkSize;
+        }
 
         return Object.keys(options).length ? options : undefined;
-    }, [secureStream, authorizedHeadersRecord]);
+    }, [secureStream, authorizedHeadersRecord, metadata, pdfRangeTransport]);
 
     const documentOptions = useMemo(() => {
         if (!baseDocumentOptions && !streamDocumentOptions) {
@@ -658,8 +839,24 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         if (fallbackData) {
             return { data: fallbackData } satisfies DocumentProps["file"];
         }
-        return pdfSource;
-    }, [fallbackData, pdfSource]);
+        if (!secureStream) {
+            return pdfSource;
+        }
+
+        if (pdfRangeTransport) {
+            return { range: pdfRangeTransport } satisfies DocumentProps["file"];
+        }
+
+        if (metadataError) {
+            return pdfSource;
+        }
+
+        if (!isMetadataLoading) {
+            return pdfSource;
+        }
+
+        return null;
+    }, [fallbackData, pdfSource, secureStream, pdfRangeTransport, metadataError, isMetadataLoading]);
 
     const shouldRenderDocument = documentFile && !loadError && isClient;
 
