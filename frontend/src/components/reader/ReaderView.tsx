@@ -35,6 +35,7 @@ import { api, tokenManager } from "@/lib/api-client";
 import type { PdfMetadata } from "@/api/types/pdf.types";
 import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
 import type { PdfRangeTransport } from "@/api/types/pdf.types";
+import { useDownloadPrevention } from "@/hooks/useDownloadPrevention";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -195,6 +196,9 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const [isEditingInput, setIsEditingInput] = useState<boolean>(false);
     const [scale, setScale] = useState<number>(1.1);
     const [isDocumentLoading, setIsDocumentLoading] = useState<boolean>(true);
+
+    // Enable download prevention security measures
+    useDownloadPrevention(true);
 
     // FIX 2: Initialize loadError with a lazy initializer function
     const [loadError, setLoadError] = useState<string | null>(() => {

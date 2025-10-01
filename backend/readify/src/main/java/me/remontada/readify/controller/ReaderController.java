@@ -9,6 +9,7 @@ import me.remontada.readify.service.BookService;
 import me.remontada.readify.service.FileStorageService;
 import me.remontada.readify.service.PdfMetadataService;
 import me.remontada.readify.service.PdfStreamingService;
+import me.remontada.readify.service.RateLimitingService;
 import me.remontada.readify.service.StreamingSessionService;
 import me.remontada.readify.service.StreamingSessionService.StreamingSession;
 import me.remontada.readify.service.UserService;
@@ -57,6 +58,7 @@ public class ReaderController {
     private final UserService userService;
     private final PdfStreamingService pdfStreamingService;
     private final StreamingSessionService streamingSessionService;
+    private final RateLimitingService rateLimitingService;
     private final JwtUtil jwtUtil;
     private final PdfMetadataService pdfMetadataService;
 
@@ -68,6 +70,7 @@ public class ReaderController {
                            UserService userService,
                            PdfStreamingService pdfStreamingService,
                            StreamingSessionService streamingSessionService,
+                           RateLimitingService rateLimitingService,
                            JwtUtil jwtUtil,
                            PdfMetadataService pdfMetadataService) {
         this.fileStorageService = fileStorageService;
@@ -75,6 +78,7 @@ public class ReaderController {
         this.userService = userService;
         this.pdfStreamingService = pdfStreamingService;
         this.streamingSessionService = streamingSessionService;
+        this.rateLimitingService = rateLimitingService;
         this.jwtUtil = jwtUtil;
         this.pdfMetadataService = pdfMetadataService;
     }
@@ -349,6 +353,25 @@ public class ReaderController {
                          start, end, end - start + 1);
             }
 
+            // Check rate limiting before streaming
+            RateLimitingService.RateLimitResult rateLimitResult = rateLimitingService.checkRateLimit(
+                    currentUser.getId(), session.getToken(), bookId, start, end);
+
+            if (!rateLimitResult.isAllowed()) {
+                log.warn("Rate limit exceeded for user {} on book {}: {}",
+                        currentUser.getEmail(), bookId, rateLimitResult.getReason());
+                response.setStatus(429); // Too Many Requests
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"" + rateLimitResult.getReason() + "\"}");
+                return;
+            }
+
+            if (rateLimitResult.hasWarning()) {
+                log.warn("Suspicious activity warning for user {} on book {}: {}",
+                        currentUser.getEmail(), bookId, rateLimitResult.getReason());
+                // Continue but log the warning
+            }
+
             // Log access
             log.info("User {} streaming book: {} ({}) from IP {} range {}-{} ({} bytes) via legacy /api/reader endpoint",
                     userEmail, book.getTitle(), bookId, clientIp, start, end, end - start + 1);
@@ -360,7 +383,20 @@ public class ReaderController {
             response.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + contentLength);
             response.setHeader("Content-Length", String.valueOf(end - start + 1));
             response.setHeader("Content-Disposition", "inline; filename=\"" + sanitizeFilename(book.getTitle()) + ".pdf\"");
-            response.setHeader("Cache-Control", "no-store");
+
+            // Enhanced cache prevention headers
+            response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+            response.setHeader("Pragma", "no-cache");
+            response.setHeader("Expires", "0");
+            response.setHeader("Vary", "Accept-Encoding, User-Agent");
+            response.setHeader("ETag", "\"session-" + session.getToken() + "-" + System.currentTimeMillis() + "\"");
+
+            // Security headers to prevent caching and downloading
+            response.setHeader("X-Content-Type-Options", "nosniff");
+            response.setHeader("X-Frame-Options", "SAMEORIGIN");
+            response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+            // Session and watermark headers
             response.setHeader("X-Readify-Watermark", session.getWatermarkSignature());
             response.setHeader("X-Readify-Session", session.getToken());
             response.setHeader("X-Readify-Issued-At", session.getIssuedAt().toString());

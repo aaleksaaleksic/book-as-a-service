@@ -1,0 +1,168 @@
+import { useEffect } from 'react';
+
+/**
+ * Hook to implement basic download prevention measures
+ */
+export const useDownloadPrevention = (isEnabled: boolean = true) => {
+  useEffect(() => {
+    if (!isEnabled) return;
+
+    let devToolsOpen = false;
+
+    // Disable right-click context menu
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable common keyboard shortcuts for downloading/saving
+    const disableKeyboardShortcuts = (e: KeyboardEvent) => {
+      // Ctrl+S (Save)
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        console.warn('[DownloadPrevention] Save action blocked');
+        return false;
+      }
+
+      // Ctrl+P (Print)
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        console.warn('[DownloadPrevention] Print action blocked');
+        return false;
+      }
+
+      // Ctrl+Shift+I (DevTools)
+      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+        console.warn('[DownloadPrevention] Developer tools access blocked');
+        return false;
+      }
+
+      // F12 (DevTools)
+      if (e.key === 'F12') {
+        e.preventDefault();
+        console.warn('[DownloadPrevention] Developer tools access blocked');
+        return false;
+      }
+
+      // Ctrl+U (View Source)
+      if (e.ctrlKey && e.key === 'u') {
+        e.preventDefault();
+        console.warn('[DownloadPrevention] View source blocked');
+        return false;
+      }
+
+      // Ctrl+Shift+J (Console)
+      if (e.ctrlKey && e.shiftKey && e.key === 'J') {
+        e.preventDefault();
+        console.warn('[DownloadPrevention] Console access blocked');
+        return false;
+      }
+    };
+
+    // Detect developer tools opening (basic detection)
+    const detectDevTools = () => {
+      const threshold = 160;
+
+      // Check if window is resized to accommodate dev tools
+      const checkResize = () => {
+        if (window.outerHeight - window.innerHeight > threshold ||
+            window.outerWidth - window.innerWidth > threshold) {
+          if (!devToolsOpen) {
+            devToolsOpen = true;
+            console.warn('[DownloadPrevention] Developer tools detected');
+            // Could trigger additional security measures here
+          }
+        } else {
+          devToolsOpen = false;
+        }
+      };
+
+      // Monitor console access attempts
+      let consoleLog = console.log;
+      console.log = function(...args) {
+        if (!devToolsOpen) {
+          devToolsOpen = true;
+          console.warn('[DownloadPrevention] Console access detected');
+        }
+        return consoleLog.apply(console, args);
+      };
+
+      window.addEventListener('resize', checkResize);
+
+      return () => {
+        window.removeEventListener('resize', checkResize);
+        console.log = consoleLog;
+      };
+    };
+
+    // Disable text selection on PDF viewer area
+    const disableSelection = () => {
+      const style = document.createElement('style');
+      style.textContent = `
+        .pdf-viewer, .react-pdf__Document {
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-touch-callout: none !important;
+          -webkit-tap-highlight-color: transparent !important;
+        }
+      `;
+      document.head.appendChild(style);
+
+      return () => {
+        document.head.removeChild(style);
+      };
+    };
+
+    // Block drag and drop operations
+    const blockDragDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.warn('[DownloadPrevention] Drag operation blocked');
+      return false;
+    };
+
+    // Monitor for suspicious blob URLs (potential download attempts)
+    const originalCreateObjectURL = URL.createObjectURL;
+    URL.createObjectURL = function(object: Blob | MediaSource) {
+      if (object instanceof Blob && object.type === 'application/pdf') {
+        console.warn('[DownloadPrevention] PDF blob creation detected - potential download attempt');
+        // Could block or modify the blob here
+      }
+      return originalCreateObjectURL.call(this, object);
+    };
+
+    // Setup all event listeners
+    document.addEventListener('contextmenu', disableContextMenu);
+    document.addEventListener('keydown', disableKeyboardShortcuts);
+    document.addEventListener('dragstart', blockDragDrop);
+    document.addEventListener('drop', blockDragDrop);
+
+    const cleanupDevTools = detectDevTools();
+    const cleanupSelection = disableSelection();
+
+    console.log('[DownloadPrevention] Protection measures activated');
+
+    // Cleanup function
+    return () => {
+      document.removeEventListener('contextmenu', disableContextMenu);
+      document.removeEventListener('keydown', disableKeyboardShortcuts);
+      document.removeEventListener('dragstart', blockDragDrop);
+      document.removeEventListener('drop', blockDragDrop);
+
+      cleanupDevTools();
+      cleanupSelection();
+
+      // Restore original URL.createObjectURL
+      URL.createObjectURL = originalCreateObjectURL;
+
+      console.log('[DownloadPrevention] Protection measures deactivated');
+    };
+  }, [isEnabled]);
+
+  return {
+    isProtectionActive: isEnabled
+  };
+};

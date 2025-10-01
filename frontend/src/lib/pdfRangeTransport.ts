@@ -27,6 +27,8 @@ export class SecurePdfRangeTransport implements PdfRangeTransport {
   private abortController: AbortController;
   private onProgressCallback?: (loaded: number, total: number) => void;
   private loadedBytes: number = 0;
+  private requestCount: number = 0;
+  private startTime: number = Date.now();
 
   /**
    * @param bookId - Book identifier
@@ -57,6 +59,9 @@ export class SecurePdfRangeTransport implements PdfRangeTransport {
     console.log(`  Total size: ${this.formatBytes(this.length)}`);
     console.log(`  Initial chunk: ${this.formatBytes(this.initialData.length)}`);
     console.log(`  PDF version: ${metadata.pdfVersion}`);
+
+    // Clear any existing PDF caches
+    this.clearPdfCaches();
   }
 
   /**
@@ -66,7 +71,15 @@ export class SecurePdfRangeTransport implements PdfRangeTransport {
    * This is called multiple times as the user navigates the document
    */
   async requestRange(begin: number, end: number): Promise<void> {
-    console.log(`[PdfRangeTransport] Range requested: ${begin}-${end} (${this.formatBytes(end - begin + 1)})`);
+    this.requestCount++;
+    const requestTime = Date.now() - this.startTime;
+
+    console.log(`[PdfRangeTransport] Range requested: ${begin}-${end} (${this.formatBytes(end - begin + 1)}) [${this.requestCount}/${(requestTime/1000).toFixed(1)}s]`);
+
+    // Basic rate limiting on frontend (additional layer)
+    if (this.requestCount > 100 || (requestTime > 0 && this.requestCount / (requestTime / 1000) > 10)) {
+      console.warn('[PdfRangeTransport] High request rate detected - potential scraping attempt');
+    }
 
     try {
       const response = await this.apiClient.get(
@@ -77,6 +90,8 @@ export class SecurePdfRangeTransport implements PdfRangeTransport {
             'X-Readify-Session': this.metadata.sessionToken,
             'X-Readify-Watermark': this.metadata.watermarkSignature,
             'X-Readify-Issued-At': this.metadata.issuedAt,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
           },
           responseType: 'arraybuffer',
           signal: this.abortController.signal,
@@ -119,6 +134,9 @@ export class SecurePdfRangeTransport implements PdfRangeTransport {
   abort(): void {
     console.log('[PdfRangeTransport] Aborting all requests');
     this.abortController.abort();
+
+    // Clear caches when aborting
+    this.clearPdfCaches();
   }
 
   /**
@@ -141,6 +159,65 @@ export class SecurePdfRangeTransport implements PdfRangeTransport {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  /**
+   * Clear various browser caches that could store PDF data
+   */
+  private clearPdfCaches(): void {
+    try {
+      // Clear browser cache entries for this book
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            if (name.includes('pdf') || name.includes('reader') || name.includes(this.bookId.toString())) {
+              caches.delete(name);
+            }
+          });
+        });
+      }
+
+      // Clear localStorage entries related to PDF
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('pdf') || key.includes('reader') || key.includes(this.bookId.toString())) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // Clear sessionStorage entries
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.includes('pdf') || key.includes('reader') || key.includes(this.bookId.toString())) {
+          sessionStorage.removeItem(key);
+        }
+      });
+
+      // Clear IndexedDB entries (PDF.js worker cache)
+      if ('indexedDB' in window) {
+        this.clearIndexedDBCache();
+      }
+
+      console.log('[PdfRangeTransport] Cleared browser caches');
+    } catch (error) {
+      console.warn('[PdfRangeTransport] Could not clear all caches:', error);
+    }
+  }
+
+  /**
+   * Clear IndexedDB cache (PDF.js worker storage)
+   */
+  private clearIndexedDBCache(): void {
+    try {
+      const deleteDB = (dbName: string) => {
+        const deleteReq = indexedDB.deleteDatabase(dbName);
+        deleteReq.onsuccess = () => console.log(`[PdfRangeTransport] Deleted IndexedDB: ${dbName}`);
+        deleteReq.onerror = () => console.warn(`[PdfRangeTransport] Failed to delete IndexedDB: ${dbName}`);
+      };
+
+      // Common PDF.js IndexedDB names
+      ['pdfjs', 'mozilla-pdf-js', 'pdf-worker', `pdf-${this.bookId}`].forEach(deleteDB);
+    } catch (error) {
+      console.warn('[PdfRangeTransport] Could not clear IndexedDB:', error);
+    }
   }
 }
 
