@@ -52,7 +52,6 @@ public class PdfMetadataServiceImpl implements PdfMetadataService {
         // Extract PDF version from header
         String pdfVersion = extractPdfVersion(resource);
 
-        // Create initial chunk: header + footer
         // This allows PDF.js to parse document structure immediately
         byte[] initialChunk = createInitialChunk(resource, totalSize);
         String initialChunkBase64 = Base64.getEncoder().encodeToString(initialChunk);
@@ -73,19 +72,7 @@ public class PdfMetadataServiceImpl implements PdfMetadataService {
                 .build();
     }
 
-    /**
-     * Creates initial chunk containing PDF header and footer
-     *
-     * Strategy:
-     * 1. Read first HEADER_SIZE bytes (PDF header, version, linearization)
-     * 2. Read last FOOTER_SIZE bytes (XRef table, Root, Trailer)
-     * 3. Concatenate them for PDF.js parsing
-     *
-     * Why this works:
-     * - PDF.js can parse XRef from the footer to understand document structure
-     * - It can then request specific byte ranges for pages/objects as needed
-     * - This avoids "Invalid Root reference" errors
-     */
+
     private byte[] createInitialChunk(Resource resource, long totalSize) throws IOException {
         long headerSize = Math.min(HEADER_SIZE, totalSize);
         long footerSize = Math.min(FOOTER_SIZE, totalSize - headerSize);
@@ -126,12 +113,7 @@ public class PdfMetadataServiceImpl implements PdfMetadataService {
         return combined;
     }
 
-    /**
-     * Extract PDF version from file header
-     *
-     * PDF files start with "%PDF-1.x" where x is the version number
-     * This is useful for client-side compatibility checks
-     */
+
     private String extractPdfVersion(Resource resource) throws IOException {
         byte[] headerBytes = new byte[16]; // "%PDF-1.7" is typically within first 16 bytes
 

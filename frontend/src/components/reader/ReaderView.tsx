@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import { api, tokenManager } from "@/lib/api-client";
 import type { PdfMetadata } from "@/api/types/pdf.types";
 import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
-import type { PDFDataRangeTransport } from "pdfjs-dist/types/src/display/api.js";
+import type { PdfRangeTransport } from "@/api/types/pdf.types";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -390,7 +390,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         return bytes;
     }, []);
 
-    const pdfRangeTransport = useMemo<PDFDataRangeTransport | null>(() => {
+    const pdfRangeTransport = useMemo(() => {
         if (!pdfjsLib || !metadata || !secureStream) {
             return null;
         }
@@ -400,17 +400,54 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
         class MetadataRangeTransport extends pdfjsLib.PDFDataRangeTransport {
             private abortController = new AbortController();
-
             private loadedBytes = initialData?.length ?? 0;
+
+            // LRU Cache for 20 pages (roughly 40MB max for 2MB pages)
+            private readonly maxCachedRanges = 20;
+            private cachedRanges = new Map<string, { data: Uint8Array; lastAccessed: number }>();
+
+            private getCacheKey(begin: number, end: number): string {
+                return `${begin}-${end}`;
+            }
+
+            private evictOldestCache(): void {
+                if (this.cachedRanges.size >= this.maxCachedRanges) {
+                    let oldestKey = '';
+                    let oldestTime = Date.now();
+
+                    for (const [key, value] of this.cachedRanges.entries()) {
+                        if (value.lastAccessed < oldestTime) {
+                            oldestTime = value.lastAccessed;
+                            oldestKey = key;
+                        }
+                    }
+
+                    if (oldestKey) {
+                        this.cachedRanges.delete(oldestKey);
+                        readerLog("cache evicted", { key: oldestKey, cacheSize: this.cachedRanges.size });
+                    }
+                }
+            }
 
             override async requestDataRange(begin: number, end: number) {
                 const requestedEnd = Number.isFinite(end) ? Math.max(begin, end - 1) : begin;
+                const cacheKey = this.getCacheKey(begin, requestedEnd);
+
+                // Check cache first
+                const cached = this.cachedRanges.get(cacheKey);
+                if (cached) {
+                    // Update last accessed time
+                    cached.lastAccessed = Date.now();
+                    this.onDataRange(begin, cached.data);
+                    readerLog("cache hit", { key: cacheKey, cacheSize: this.cachedRanges.size });
+                    return;
+                }
 
                 const headers: Record<string, string> = {
                     Range: `bytes=${begin}-${requestedEnd}`,
-                    "X-Readify-Session": metadata.sessionToken,
-                    "X-Readify-Watermark": metadata.watermarkSignature,
-                    "X-Readify-Issued-At": metadata.issuedAt,
+                    "X-Readify-Session": metadata!.sessionToken,
+                    "X-Readify-Watermark": metadata!.watermarkSignature,
+                    "X-Readify-Issued-At": metadata!.issuedAt,
                 };
 
                 if (authorizedHeadersRecord) {
@@ -422,6 +459,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 }
 
                 try {
+                    readerLog("cache miss - downloading", { key: cacheKey, cacheSize: this.cachedRanges.size });
+
                     const response = await api.get<ArrayBuffer>(`/api/reader/${bookId}/content`, {
                         responseType: "arraybuffer",
                         signal: this.abortController.signal,
@@ -430,8 +469,20 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
                     const chunk = new Uint8Array(response.data);
                     this.loadedBytes += chunk.length;
+
+                    // Evict oldest cache entry if needed
+                    this.evictOldestCache();
+
+                    // Store in cache
+                    this.cachedRanges.set(cacheKey, {
+                        data: chunk,
+                        lastAccessed: Date.now()
+                    });
+
                     this.onDataRange(begin, chunk);
                     this.onDataProgress(this.loadedBytes, totalSize);
+
+                    readerLog("cache stored", { key: cacheKey, size: chunk.length, cacheSize: this.cachedRanges.size });
                 } catch (error) {
                     if (this.abortController.signal.aborted) {
                         readerLog("range request aborted", { begin, end });
@@ -446,12 +497,21 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 if (!this.abortController.signal.aborted) {
                     this.abortController.abort();
                 }
+                // Clear cache on abort
+                this.cachedRanges.clear();
+                readerLog("cache cleared on abort", { cacheSize: this.cachedRanges.size });
             }
         }
 
         const transport = new MetadataRangeTransport(totalSize, initialData ?? null);
         transport.transportReady();
-        readerLog("range transport ready", { totalSize, initialChunk: initialData?.length ?? 0 });
+        readerLog("range transport ready", {
+            totalSize,
+            initialChunk: initialData?.length ?? 0,
+            maxCachedRanges: 20,
+            cacheEnabled: true
+        });
+        console.log("📚 PDF Cache: 20-page LRU cache enabled for book", bookId);
         return transport;
     }, [pdfjsLib, metadata, secureStream, authorizedHeadersRecord, decodeBase64ToUint8Array, bookId]);
 
@@ -498,6 +558,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     // Track if we should emit onPageChange - debounced to prevent loops
     const emitPageChangeRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const textLayerAbortControllerRef = useRef<AbortController | undefined>(undefined);
 
     const debouncedEmitPageChange = useCallback((page: number) => {
         if (emitPageChangeRef.current) {
@@ -588,6 +649,10 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             if (emitPageChangeRef.current) {
                 clearTimeout(emitPageChangeRef.current);
             }
+            if (textLayerAbortControllerRef.current) {
+                textLayerAbortControllerRef.current.abort();
+                textLayerAbortControllerRef.current = undefined;
+            }
             readerLog("unmounted");
         };
     }, []);
@@ -624,11 +689,11 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         }
 
         options.withCredentials = false;
-        const totalSize = metadata?.totalSize ?? secureStream.contentLength;
+        const totalSize = metadata?.totalSize ?? secureStream?.contentLength;
         if (totalSize) {
             options.length = totalSize;
         }
-        const chunkSize = metadata?.recommendedChunkSize ?? secureStream.chunkSize;
+        const chunkSize = metadata?.recommendedChunkSize ?? secureStream?.chunkSize;
         if (chunkSize) {
             options.rangeChunkSize = chunkSize;
         }
@@ -662,7 +727,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 // ✅ Controlled mode → samo pozovi callback ako treba da se klampuje
                 if (clamped !== controlledPageNumber) {
                     readerLog("handleDocumentLoadSuccess (controlled) clamp", controlledPageNumber, "→", clamped);
-                    onPageChangeRef.current?.(clamped);
+                    console.log("⏸️ TEMPORARILY DISABLED controlled clamp onPageChange");
+                    // onPageChangeRef.current?.(clamped); // TEMPORARILY DISABLED
                 }
             } else {
                 // ✅ Uncontrolled mode → koristi setPage za unified handling
@@ -980,6 +1046,14 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                             renderTextLayer
                             loading={<LoadingSpinner size="lg" text="Priprema strane" />}
                             className="rounded-lg bg-white shadow-lg"
+                            onRenderTextLayerError={(error) => {
+                                // Suppress AbortException errors as they're expected during rapid page changes
+                                if (error?.name === 'AbortException' || error?.message?.includes('TextLayer task cancelled')) {
+                                    console.debug('🔄 TextLayer task cancelled (expected during page changes)');
+                                    return;
+                                }
+                                console.warn('⚠️ TextLayer render error:', error);
+                            }}
                         />
                     </Document>
                 ) : (

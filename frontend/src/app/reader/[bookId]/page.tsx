@@ -85,7 +85,7 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
     }, [endSession, sessionId]);
 
     // Debounced progress update to avoid infinite loops
-    const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
+    const progressUpdateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     const handlePageChange = useCallback(
         (page: number) => {
