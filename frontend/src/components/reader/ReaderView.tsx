@@ -24,7 +24,7 @@ const Document = dynamic(() => import("react-pdf").then(mod => ({ default: mod.D
 const Page = dynamic(() => import("react-pdf").then(mod => ({ default: mod.Page })), {
     ssr: false,
 });
-import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,60 +56,6 @@ const readerLog = (...args: unknown[]) => {
     }
 };
 
-// Memoized zoom controls component to prevent re-renders
-const ZoomControls = memo(({
-                               scale,
-                               onZoomIn,
-                               onZoomOut,
-                               onSliderChange,
-                               onResetZoom
-                           }: {
-    scale: number;
-    onZoomIn: () => void;
-    onZoomOut: () => void;
-    onSliderChange: (value: number[]) => void;
-    onResetZoom: () => void;
-}) => (
-    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/20 p-1">
-        <Button
-            size="icon"
-            variant="ghost"
-            onClick={onZoomOut}
-            disabled={scale <= MIN_SCALE}
-            aria-label="Smanji zoom"
-        >
-            <Minus className="h-4 w-4" />
-        </Button>
-        <div className="flex items-center gap-2 px-2">
-            <Slider
-                value={useMemo(() => [scale], [scale])}
-                onValueChange={onSliderChange}
-                min={MIN_SCALE}
-                max={MAX_SCALE}
-                step={0.05}
-                className="w-36"
-                aria-label="Povećaj ili smanji prikaz"
-            />
-            <span className="w-12 text-right text-sm font-medium tabular-nums text-muted-foreground">
-                {Math.round(scale * 100)}%
-            </span>
-        </div>
-        <Button
-            size="icon"
-            variant="ghost"
-            onClick={onZoomIn}
-            disabled={scale >= MAX_SCALE}
-            aria-label="Povećaj zoom"
-        >
-            <Plus className="h-4 w-4" />
-        </Button>
-        <Button size="icon" variant="ghost" onClick={onResetZoom} aria-label="Resetuj zoom">
-            <RotateCcw className="h-4 w-4" />
-        </Button>
-    </div>
-));
-
-ZoomControls.displayName = "ZoomControls";
 
 export interface ReaderViewProps {
     bookId: number;
@@ -930,159 +876,313 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     const shouldRenderDocument = documentFile && !loadError && isClient;
 
+    // Add keyboard navigation effect
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.target && (event.target as HTMLElement).tagName === 'INPUT') {
+                return;
+            }
+
+            if (event.key === 'ArrowUp' && pageNumber > 1) {
+                event.preventDefault();
+                handlePrevious();
+            } else if (event.key === 'ArrowDown' && pageNumber < numPages) {
+                event.preventDefault();
+                handleNext();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [pageNumber, numPages, handlePrevious, handleNext]);
+
     return (
-        <section
-            className={cn(
-                "flex h-full min-h-[calc(100vh-5rem)] flex-col gap-4 bg-reading-background/40 p-4",
-                className
-            )}
-        >
-            <header className="flex flex-col gap-4 rounded-lg border border-border bg-background/80 p-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p className="text-xs uppercase text-muted-foreground">Bezbedan prikaz</p>
-                        <h1 className="text-xl font-semibold text-reading-text">
-                            {bookTitle ?? "Digitalni čitač"}
-                        </h1>
+        <div className="min-h-screen w-full bg-slate-950 text-slate-100">
+            {/* Top bar */}
+            <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-sm">
+                <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                        <div>
+                            <p className="text-lg font-bold">{bookTitle ?? "ReadBookHub"}</p>
+                        </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                        Strana {pageNumber}
-                        {numPages ? ` / ${numPages}` : ""}
-                    </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/20 p-1">
-                        <Button
-                            size="icon"
-                            variant="ghost"
+
+                    {/* Central controls */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            className="h-9 w-9 rounded-xl hover:bg-slate-900/60 disabled:opacity-50"
                             onClick={handlePrevious}
                             disabled={pageNumber <= 1 || !numPages}
-                            aria-label="Prethodna strana"
                         >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <form
-                            className="flex items-center gap-1"
-                            onSubmit={event => {
-                                event.preventDefault();
-                                handlePageInputBlur();
-                            }}
-                        >
-                            <Input
+                            <ChevronLeft className="mx-auto h-5 w-5" />
+                        </button>
+
+                        <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-2 py-1.5 text-sm">
+                            <input
+                                className="h-8 w-14 bg-transparent text-center outline-none"
                                 value={pageInput}
                                 onChange={handlePageInputChange}
                                 onBlur={handlePageInputBlur}
                                 onKeyDown={handlePageInputKeyDown}
                                 inputMode="numeric"
                                 pattern="[0-9]*"
-                                className="h-9 w-16 text-center"
-                                aria-label="Unesi broj strane"
                             />
-                            <span className="text-sm text-muted-foreground">
-                                od {numPages || "?"}
-                            </span>
-                        </form>
-                        <Button
-                            size="icon"
-                            variant="ghost"
+                            <span className="select-none text-slate-400">od</span>
+                            <span className="w-10 text-right text-slate-300">{numPages || "?"}</span>
+                        </div>
+
+                        <button
+                            className="h-9 w-9 rounded-xl hover:bg-slate-900/60 disabled:opacity-50"
                             onClick={handleNext}
                             disabled={numPages ? pageNumber >= numPages : true}
-                            aria-label="Sledeća strana"
                         >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
+                            <ChevronRight className="mx-auto h-5 w-5" />
+                        </button>
+
+                        <div className="mx-2 h-6 w-px bg-slate-800" />
+
+                        <button
+                            className="h-9 w-9 rounded-xl hover:bg-slate-900/60"
+                            onClick={handleZoomOut}
+                            disabled={scale <= MIN_SCALE}
+                        >
+                            <ZoomOut className="mx-auto h-5 w-5" />
+                        </button>
+
+                        <div className="hidden items-center gap-2 md:flex">
+                            <input
+                                type="range"
+                                min={MIN_SCALE}
+                                max={MAX_SCALE}
+                                step={0.05}
+                                value={scale}
+                                onChange={(e) => handleSliderChange([Number(e.target.value)])}
+                                className="w-40 accent-slate-300"
+                                aria-label="Zoom slider"
+                            />
+                            <select
+                                value={Math.round(scale * 100)}
+                                onChange={(e) => handleSliderChange([Number(e.target.value) / 100])}
+                                className="h-8 rounded-xl border border-slate-800 bg-slate-900/70 px-2 text-sm"
+                            >
+                                {[75, 90, 100, 110, 125, 150, 200].map((z) => (
+                                    <option key={z} value={z}>{z}%</option>
+                                ))}
+                            </select>
+                            <button
+                                className="h-9 w-9 rounded-xl hover:bg-slate-900/60"
+                                onClick={handleZoomIn}
+                                disabled={scale >= MAX_SCALE}
+                            >
+                                <ZoomIn className="mx-auto h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
 
-                    <ZoomControls
-                        scale={scale}
-                        onZoomIn={handleZoomIn}
-                        onZoomOut={handleZoomOut}
-                        onSliderChange={handleSliderChange}
-                        onResetZoom={handleResetZoom}
-                    />
-
-                    {isDocumentLoading && !loadError && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <LoadingSpinner size="sm" />
-                            <span>Učitavanje… {progress ? `${progress}%` : ""}</span>
-                        </div>
-                    )}
+                    {/* Right actions */}
+                    <div className="flex items-center gap-2">
+                        <button className="h-9 w-9 rounded-xl hover:bg-slate-900/60">
+                            <Maximize2 className="mx-auto h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            <div className="relative flex-1 overflow-auto rounded-lg border border-border bg-muted/10 p-4">
-                {watermark && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <div className="select-none text-center text-6xl font-black uppercase tracking-widest text-reading-text/10 opacity-40 [writing-mode:vertical-rl] sm:[writing-mode:horizontal-tb] sm:rotate-45">
-                            {watermark.text}
-                            <div className="mt-4 text-base font-medium normal-case tracking-normal">
-                                {watermark.signature}
+            {/* Body grid */}
+            <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-4 px-4 py-4">
+                {/* Main viewer */}
+                <main className="col-span-12 lg:col-span-10">
+                    <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-3 shadow-xl shadow-black/40">
+                        <div className="flex items-center justify-end px-1 pb-2 text-xs text-slate-400">
+                            <div className="flex items-center gap-2">
+                                {isDocumentLoading && !loadError && (
+                                    <div className="flex items-center gap-2 text-slate-300">
+                                        <LoadingSpinner size="sm" />
+                                        <span>Učitavanje… {progress ? `${progress}%` : ""}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* PDF canvas container */}
+                        <div className="relative flex min-h-[72vh] items-start justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                            {watermark && (
+                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                    <div className="select-none text-center text-6xl font-black uppercase tracking-widest text-slate-100/10 opacity-40 [writing-mode:vertical-rl] sm:[writing-mode:horizontal-tb] sm:rotate-45">
+                                        {watermark.text}
+                                        <div className="mt-4 text-base font-medium normal-case tracking-normal">
+                                            {watermark.signature}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!isClient ? (
+                                <div className="flex h-full min-h-[60vh] items-center justify-center">
+                                    <LoadingSpinner size="lg" text="Inicijalizujemo čitač" />
+                                </div>
+                            ) : shouldRenderDocument ? (
+                                <Document
+                                    key={`${bookId}-${streamSignature}`}
+                                    file={documentFile}
+                                    options={documentOptions}
+                                    loading={
+                                        <div className="flex h-full min-h-[60vh] items-center justify-center">
+                                            <LoadingSpinner size="lg" text="Učitavanje dokumenta" />
+                                        </div>
+                                    }
+                                    onLoadSuccess={handleDocumentLoadSuccess}
+                                    onLoadError={handleDocumentLoadError}
+                                    onSourceError={handleDocumentLoadError}
+                                    onLoadProgress={handleProgress}
+                                    renderMode="canvas"
+                                    className="mx-auto flex flex-col items-center gap-4"
+                                >
+                                    <Page
+                                        pageNumber={pageNumber}
+                                        scale={scale}
+                                        renderAnnotationLayer
+                                        renderTextLayer
+                                        loading={<LoadingSpinner size="lg" text="Priprema strane" />}
+                                        className="my-8 rounded-lg bg-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.55)]"
+                                        onRenderTextLayerError={(error) => {
+                                            if (error?.name === 'AbortException' || error?.message?.includes('TextLayer task cancelled')) {
+                                                console.debug('🔄 TextLayer task cancelled (expected during page changes)');
+                                                return;
+                                            }
+                                            console.warn('⚠️ TextLayer render error:', error);
+                                        }}
+                                    />
+                                </Document>
+                            ) : (
+                                <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+                                    {isFallbackLoading ? (
+                                        <LoadingSpinner size="lg" text="Pripremamo alternativni prikaz…" />
+                                    ) : (
+                                        <>
+                                            <p className="max-w-xl text-balance text-base text-slate-400">
+                                                {loadError ?? "Došlo je do neočekivane greške prilikom učitavanja dokumenta."}
+                                            </p>
+                                            {fallbackPreview && (
+                                                <div className="max-w-2xl rounded-lg border border-dashed border-slate-800 bg-slate-900/70 p-6 text-left text-sm text-slate-400">
+                                                    <h2 className="mb-2 text-lg font-semibold text-slate-100">
+                                                        Kratak pregled sadržaja
+                                                    </h2>
+                                                    <p className="whitespace-pre-wrap leading-relaxed">{fallbackPreview}</p>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Bottom bar inside the card */}
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                            <div className="text-sm text-slate-400">
+                                Strana <span className="font-medium text-slate-200">{pageNumber}</span> / {numPages || "?"}
+                            </div>
+                            <div className="flex-1">
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                                    <div
+                                        className="h-full bg-slate-300"
+                                        style={{ width: `${numPages ? (pageNumber / numPages) * 100 : 0}%` }}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                )}
+                </main>
 
-                {!isClient ? (
-                    <div className="flex h-full min-h-[60vh] items-center justify-center">
-                        <LoadingSpinner size="lg" text="Inicijalizujemo čitač" />
-                    </div>
-                ) : shouldRenderDocument ? (
-                    <Document
-                        key={`${bookId}-${streamSignature}`}
-                        file={documentFile}
-                        options={documentOptions}
-                        loading={
-                            <div className="flex h-full min-h-[60vh] items-center justify-center">
-                                <LoadingSpinner size="lg" text="Učitavanje dokumenta" />
-                            </div>
-                        }
-                        onLoadSuccess={handleDocumentLoadSuccess}
-                        onLoadError={handleDocumentLoadError}
-                        onSourceError={handleDocumentLoadError}
-                        onLoadProgress={handleProgress}
-                        renderMode="canvas"
-                        className="mx-auto flex flex-col items-center gap-4"
-                    >
-                        <Page
-                            pageNumber={pageNumber}
-                            scale={scale}
-                            renderAnnotationLayer
-                            renderTextLayer
-                            loading={<LoadingSpinner size="lg" text="Priprema strane" />}
-                            className="rounded-lg bg-white shadow-lg"
-                            onRenderTextLayerError={(error) => {
-                                // Suppress AbortException errors as they're expected during rapid page changes
-                                if (error?.name === 'AbortException' || error?.message?.includes('TextLayer task cancelled')) {
-                                    console.debug('🔄 TextLayer task cancelled (expected during page changes)');
-                                    return;
-                                }
-                                console.warn('⚠️ TextLayer render error:', error);
-                            }}
-                        />
-                    </Document>
-                ) : (
-                    <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-                        {isFallbackLoading ? (
-                            <LoadingSpinner size="lg" text="Pripremamo alternativni prikaz…" />
-                        ) : (
-                            <>
-                                <p className="max-w-xl text-balance text-base text-muted-foreground">
-                                    {loadError ?? "Došlo je do neočekivane greške prilikom učitavanja dokumenta."}
-                                </p>
-                                {fallbackPreview && (
-                                    <div className="max-w-2xl rounded-lg border border-dashed border-border bg-background/70 p-6 text-left text-sm text-muted-foreground">
-                                        <h2 className="mb-2 text-lg font-semibold text-foreground">
-                                            Kratak pregled sadržaja
-                                        </h2>
-                                        <p className="whitespace-pre-wrap leading-relaxed">{fallbackPreview}</p>
+                {/* Right sidebar: navigation and controls */}
+                <aside className="col-span-12 lg:col-span-2">
+                    <div className="rounded-xl border border-slate-800/60 bg-slate-900/40">
+                        <div className="px-4 py-3 text-sm font-medium border-b border-slate-800/60">Navigacija</div>
+                        <div className="p-3 space-y-4">
+                            {/* Page navigation */}
+                            <div className="space-y-2">
+                                <button
+                                    className="w-full rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left transition hover:border-slate-700 disabled:opacity-50"
+                                    onClick={handlePrevious}
+                                    disabled={pageNumber <= 1 || !numPages}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <ChevronLeft className="h-4 w-4" />
+                                        <span className="text-sm">Prethodna</span>
                                     </div>
-                                )}
-                            </>
-                        )}
+                                    {pageNumber > 1 && (
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            Strana {pageNumber - 1}
+                                        </div>
+                                    )}
+                                </button>
+
+                                <button
+                                    className="w-full rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left transition hover:border-slate-700 disabled:opacity-50"
+                                    onClick={handleNext}
+                                    disabled={numPages ? pageNumber >= numPages : true}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <ChevronRight className="h-4 w-4" />
+                                        <span className="text-sm">Sledeća</span>
+                                    </div>
+                                    {pageNumber < numPages && (
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            Strana {pageNumber + 1}
+                                        </div>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Zoom controls */}
+                            <div className="space-y-2">
+                                <div className="text-xs text-slate-400 font-medium">Uvećanje</div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="flex-1 rounded-lg bg-slate-800/60 px-2 py-1 text-xs hover:bg-slate-800"
+                                        onClick={handleZoomOut}
+                                        disabled={scale <= MIN_SCALE}
+                                    >
+                                        <Minus className="mx-auto h-3 w-3" />
+                                    </button>
+                                    <span className="text-xs tabular-nums text-slate-300 min-w-[3rem] text-center">
+                                        {Math.round(scale * 100)}%
+                                    </span>
+                                    <button
+                                        className="flex-1 rounded-lg bg-slate-800/60 px-2 py-1 text-xs hover:bg-slate-800"
+                                        onClick={handleZoomIn}
+                                        disabled={scale >= MAX_SCALE}
+                                    >
+                                        <Plus className="mx-auto h-3 w-3" />
+                                    </button>
+                                </div>
+                                <button
+                                    className="w-full rounded-lg bg-slate-800/60 px-2 py-1 text-xs hover:bg-slate-800"
+                                    onClick={handleResetZoom}
+                                >
+                                    Reset (110%)
+                                </button>
+                            </div>
+
+                            {/* Keyboard shortcuts info */}
+                            <div className="space-y-2">
+                                <div className="text-xs text-slate-400 font-medium">Prečice</div>
+                                <div className="space-y-1 text-xs text-slate-500">
+                                    <div className="flex justify-between">
+                                        <span>↑</span>
+                                        <span>Prethodna strana</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>↓</span>
+                                        <span>Sledeća strana</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
+                </aside>
             </div>
-        </section>
+        </div>
     );
 };
 

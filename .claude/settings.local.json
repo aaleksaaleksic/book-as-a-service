@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:react-pdf.org)"
+      "WebFetch(domain:react-pdf.org)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -27,6 +27,15 @@ storage/
 .vscode/
 *.iml
 
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.development
+*.env
+backend/**/.env*
+frontend/**/.env*
+
 # OS junk
 .DS_Store
 Thumbs.db

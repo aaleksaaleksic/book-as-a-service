@@ -2,6 +2,9 @@ package me.remontada.readify.controller;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import lombok.extern.slf4j.Slf4j;
+import me.remontada.readify.dto.request.ForgotPasswordRequestDTO;
+import me.remontada.readify.dto.request.LoginRequestDTO;
+import me.remontada.readify.dto.request.RefreshTokenRequestDTO;
 import me.remontada.readify.dto.response.UserResponseDTO;
 import me.remontada.readify.mapper.UserMapper;
 import me.remontada.readify.model.User;
@@ -12,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.Optional;
 
@@ -34,10 +38,10 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequestDTO request) {
         try {
-            String email = request.get("email");
-            String password = request.get("password");
+            String email = request.getEmail();
+            String password = request.getPassword();
 
             log.info("Login attempt for email: {}", email);
 
@@ -147,9 +151,9 @@ public class AuthController {
 
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request) {
         try {
-            String email = request.get("email");
+            String email = request.getEmail();
             log.info("Password reset requested for email: {}", email);
 
             Optional<User> userOpt = userService.findByEmail(email);
@@ -161,8 +165,7 @@ public class AuthController {
             }
 
             User user = userOpt.get();
-            // TODO: Implement actual password reset token generation and email sending
-            // For now, just log the request
+            // Password reset functionality - implement email service when ready
             log.info("Password reset would be sent to user: {}", user.getEmail());
 
             return ResponseEntity.ok(Map.of(
@@ -182,9 +185,9 @@ public class AuthController {
 
     @PostMapping("/refresh")
     @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<Map<String, Object>> refreshToken(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO request) {
         try {
-            String refreshToken = request.get("refreshToken");
+            String refreshToken = request.getRefreshToken();
 
             if (refreshToken == null || !jwtUtil.validateRefreshToken(refreshToken)) {
                 return ResponseEntity.status(401).body(Map.of(
