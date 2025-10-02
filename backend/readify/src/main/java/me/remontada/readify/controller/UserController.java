@@ -23,10 +23,12 @@ import java.util.Optional;
 public class UserController {
 
     private final UserService userService;
+    private final me.remontada.readify.service.VerificationRateLimitService rateLimitService;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, me.remontada.readify.service.VerificationRateLimitService rateLimitService) {
         this.userService = userService;
+        this.rateLimitService = rateLimitService;
     }
 
 
@@ -73,18 +75,70 @@ public class UserController {
             String email = request.get("email");
             String code = request.get("code");
 
-            if ("123456".equals(code)) {
-                Optional<User> userOpt = userService.findByEmail(email);
-                if (userOpt.isPresent()) {
-                    User user = userOpt.get();
-                    user.setEmailVerified(true);
-                    userService.save(user);
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Email is required"
+                ));
+            }
 
-                    return ResponseEntity.ok(Map.of(
-                            "success", true,
-                            "message", "Email successfully verified"
-                    ));
-                }
+            if (code == null || code.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Verification code is required"
+                ));
+            }
+
+            // Check rate limiting
+            try {
+                rateLimitService.checkVerificationAttempt(email);
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
+                        "success", false,
+                        "message", e.getMessage()
+                ));
+            }
+
+            Optional<User> userOpt = userService.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "User not found"
+                ));
+            }
+
+            User user = userOpt.get();
+
+            // Check if already verified
+            if (Boolean.TRUE.equals(user.getEmailVerified())) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Email already verified"
+                ));
+            }
+
+            // Check if token is expired
+            if (user.getVerificationTokenExpiry() != null &&
+                user.getVerificationTokenExpiry().isBefore(java.time.LocalDateTime.now())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Verification code has expired. Please request a new one."
+                ));
+            }
+
+            // Validate verification code
+            if (code.equals(user.getEmailVerificationToken())) {
+                user.setEmailVerified(true);
+                user.setEmailVerificationToken(null); // Invalidate token after use
+                userService.save(user);
+
+                // Reset rate limit attempts after successful verification
+                rateLimitService.resetAttempts(email);
+
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Email successfully verified"
+                ));
             }
 
             return ResponseEntity.badRequest().body(Map.of(
@@ -92,9 +146,66 @@ public class UserController {
                     "message", "Invalid verification code"
             ));
         } catch (Exception e) {
+            log.error("Email verification error", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
+                    "message", "Verification failed: " + e.getMessage()
+            ));
+        }
+    }
+
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, Object>> resendVerification(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Email is required"
+                ));
+            }
+
+            // Check resend cooldown
+            try {
+                rateLimitService.checkResendCooldown(email);
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
+                        "success", false,
+                        "message", e.getMessage()
+                ));
+            }
+
+            Optional<User> userOpt = userService.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "User not found"
+                ));
+            }
+
+            User user = userOpt.get();
+
+            if (Boolean.TRUE.equals(user.getEmailVerified())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Email already verified"
+                ));
+            }
+
+            // Resend verification email
+            userService.sendEmailVerification(email);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Verification code sent successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Resend verification error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "Failed to resend verification code"
             ));
         }
     }

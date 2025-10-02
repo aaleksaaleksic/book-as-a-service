@@ -23,6 +23,9 @@ target/
 .env.*
 !*.example
 
+nul
+frontend/nul
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/

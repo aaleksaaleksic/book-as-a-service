@@ -18,11 +18,13 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     @Override
@@ -73,10 +75,22 @@ public class UserServiceImpl implements UserService {
                 Permission.CAN_VIEW_SUBSCRIPTION
         ));
 
-        user.setEmailVerificationToken(UUID.randomUUID().toString());
+        // Generate 6-digit verification code for email
+        String verificationCode = generateSixDigitCode();
+        user.setEmailVerificationToken(verificationCode);
         user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
 
-        return save(user);
+        User savedUser = save(user);
+
+        // Send verification email
+        try {
+            emailService.sendVerificationEmail(email, verificationCode, user.getFullName());
+        } catch (Exception e) {
+            // Log error but don't fail user creation
+            System.err.println("Failed to send verification email: " + e.getMessage());
+        }
+
+        return savedUser;
     }
 
     @Override
@@ -102,8 +116,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void sendEmailVerification(String email) {
-        // TODO: Implement email sending logic
-        System.out.println("Sending email verification to: " + email);
+        Optional<User> userOpt = findByEmail(email);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found with email: " + email);
+        }
+
+        User user = userOpt.get();
+
+        // Generate new verification code
+        String verificationCode = generateSixDigitCode();
+        user.setEmailVerificationToken(verificationCode);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        save(user);
+
+        // Send verification email
+        emailService.sendVerificationEmail(email, verificationCode, user.getFullName());
     }
 
     @Override
@@ -123,9 +150,12 @@ public class UserServiceImpl implements UserService {
         user.setPhoneNumber(phoneNumber);
         user.setPassword(passwordEncoder.encode(password));
 
-        // Generate verification tokens
-        user.setEmailVerificationToken(UUID.randomUUID().toString());
-        user.setPhoneVerificationCode(generateSixDigitCode());
+        // Generate verification codes
+        String emailVerificationCode = generateSixDigitCode();
+        String phoneVerificationCode = generateSixDigitCode();
+
+        user.setEmailVerificationToken(emailVerificationCode);
+        user.setPhoneVerificationCode(phoneVerificationCode);
         user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
 
         user.setPermissions(Set.of(
@@ -134,7 +164,17 @@ public class UserServiceImpl implements UserService {
                 Permission.CAN_VIEW_SUBSCRIPTION
         ));
 
-        return save(user);
+        User savedUser = save(user);
+
+        // Send verification email
+        try {
+            emailService.sendVerificationEmail(email, emailVerificationCode, user.getFullName());
+        } catch (Exception e) {
+            // Log error but don't fail user creation
+            System.err.println("Failed to send verification email: " + e.getMessage());
+        }
+
+        return savedUser;
     }
 
     @Override
@@ -194,6 +234,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private String generateSixDigitCode() {
-        return String.valueOf((int) (Math.random() * 900000) + 100000);
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        int code = 100000 + random.nextInt(900000);
+        return String.valueOf(code);
     }
 }

@@ -66,7 +66,7 @@ export const userApi = {
 
     // Resend verification email
     resendEmailVerification: (client: AxiosInstance, email: string) =>
-        client.post<MessageResponse>("/api/v1/users/resend-email-verification", { email }),
+        client.post<MessageResponse>("/api/v1/users/resend-verification", { email }),
 
     // Resend phone verification
     resendPhoneVerification: (client: AxiosInstance, phoneNumber: string) =>
