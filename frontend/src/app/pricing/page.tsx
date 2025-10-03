@@ -18,7 +18,7 @@ const plans = [
         name: 'Osnovni plan',
         badge: 'Mesečno članstvo',
         description:
-            'Idealno ako želiš punu fleksibilnost i pristup celom katalogu dok istražuješ ReadBookHub.',
+            'Idealno ako želiš punu fleksibilnost i pristup celom katalogu dok istražuješ Bookotecha.',
         price: {
             amount: '999',
             currency: 'RSD',
@@ -65,7 +65,7 @@ const experienceHighlights = [
     {
         icon: Users,
         title: 'Zajednica koja inspiriše',
-        description: 'Mogućnost biranja sledećeg naslova za ReadBookHub platformu.',
+        description: 'Mogućnost biranja sledećeg naslova za Bookotecha platformu.',
     },
 ];
 

@@ -82,6 +82,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/popular").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/top-rated").permitAll()
 
+                        // Public promo chapter access (no authentication needed)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/promo-chapters").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/*/promo-chapter").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/v1/books/*/promo-chapter").permitAll()
+
                         // File endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/covers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/books/**").authenticated()

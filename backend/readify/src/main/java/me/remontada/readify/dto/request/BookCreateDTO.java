@@ -25,8 +25,8 @@ public class BookCreateDTO {
 
     @NotBlank(message = "ISBN is required")
     @Pattern(
-            regexp = "^(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13}$|97[89][0-9]{10}$|(?=(?:[0-9]+[- ]){4})[- 0-9]{17}$)(?:97[89][- ]?)?[0-9]{1,5}[- ]?[0-9]+[- ]?[0-9]+[- ]?[0-9X]$",
-            message = "Invalid ISBN format. Must be valid ISBN-10 or ISBN-13"
+            regexp = "^[0-9X-]{10,17}$",
+            message = "Invalid ISBN format. Must be 10-17 characters (digits, X, or hyphens)"
     )
     private String isbn;
 
@@ -51,7 +51,7 @@ public class BookCreateDTO {
     // Publisher removed - doesn't exist in Book entity
 
     @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Price must be 0 or greater")
     @DecimalMax(value = "999999.99", message = "Price cannot exceed 999,999.99 RSD")
     @Digits(integer = 6, fraction = 2, message = "Price must have max 6 integer digits and 2 decimal places")
     private BigDecimal price;

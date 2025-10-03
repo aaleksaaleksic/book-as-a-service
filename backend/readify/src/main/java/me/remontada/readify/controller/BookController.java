@@ -180,6 +180,111 @@ public class BookController {
         }
     }
 
+    @GetMapping("/promo-chapters")
+    public ResponseEntity<List<BookResponseDTO>> getBooksWithPromoChapters() {
+        try {
+            List<Book> books = bookService.getBooksWithPromoChapters();
+            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching books with promo chapters", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    @GetMapping("/{id}/promo-chapter")
+    public void streamPromoChapter(@PathVariable Long id,
+                                   @RequestHeader(value = "Range", required = false) String rangeHeader,
+                                   jakarta.servlet.http.HttpServletResponse response) {
+        try {
+            Book book = bookService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+
+            if (!book.hasPromoChapter()) {
+                response.setStatus(404);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"Promo chapter not available\"}");
+                return;
+            }
+
+            org.springframework.core.io.Resource promoResource = fileStorageService.getPromoChapter(id);
+            long contentLength = promoResource.contentLength();
+
+            long start = 0;
+            long end = contentLength - 1;
+
+            // Handle range requests
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                try {
+                    String range = rangeHeader.substring(6);
+                    String[] ranges = range.split("-");
+                    start = Long.parseLong(ranges[0]);
+                    if (ranges.length > 1 && !ranges[1].isEmpty()) {
+                        end = Long.parseLong(ranges[1]);
+                    }
+
+                    if (start >= contentLength || end >= contentLength || start > end) {
+                        response.setStatus(416); // Range Not Satisfiable
+                        return;
+                    }
+                } catch (Exception e) {
+                    log.warn("Invalid range header: {}", rangeHeader);
+                }
+            }
+
+            // Set response headers
+            response.setStatus(rangeHeader != null ? 206 : 200);
+            response.setContentType("application/pdf");
+            response.setHeader("Accept-Ranges", "bytes");
+            if (rangeHeader != null) {
+                response.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + contentLength);
+            }
+            response.setHeader("Content-Length", String.valueOf(end - start + 1));
+            response.setHeader("Content-Disposition", "inline; filename=\"" + sanitizeFilename(book.getTitle()) + "-promo.pdf\"");
+
+            // Cache headers for public content
+            response.setHeader("Cache-Control", "public, max-age=3600");
+
+            // Stream the content
+            try (java.io.InputStream inputStream = promoResource.getInputStream()) {
+                inputStream.skip(start);
+                long bytesToCopy = end - start + 1;
+                byte[] buffer = new byte[8192];
+                long totalCopied = 0;
+
+                while (totalCopied < bytesToCopy) {
+                    int bytesToRead = (int) Math.min(buffer.length, bytesToCopy - totalCopied);
+                    int bytesRead = inputStream.read(buffer, 0, bytesToRead);
+                    if (bytesRead == -1) break;
+                    response.getOutputStream().write(buffer, 0, bytesRead);
+                    totalCopied += bytesRead;
+                }
+
+                response.getOutputStream().flush();
+                log.info("Streamed promo chapter for book {} ({} bytes)", id, totalCopied);
+            }
+
+        } catch (Exception e) {
+            log.error("Error streaming promo chapter for book {}", id, e);
+            try {
+                response.setStatus(500);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"message\": \"Error streaming promo chapter\"}");
+            } catch (java.io.IOException ioEx) {
+                log.error("Failed to write error response", ioEx);
+            }
+        }
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (filename == null) return "document";
+        String sanitized = filename.replaceAll("[^a-zA-Z0-9.-]", "_")
+                .replaceAll("_{2,}", "_")
+                .replaceAll("^_+", "");
+        if (sanitized.isBlank()) sanitized = "document";
+        return sanitized.substring(0, Math.min(sanitized.length(), 50));
+    }
+
 
     @PostMapping
     @PreAuthorize("hasAuthority('CAN_CREATE_BOOKS')")

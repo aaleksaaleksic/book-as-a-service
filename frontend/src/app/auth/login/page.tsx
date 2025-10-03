@@ -50,7 +50,7 @@ export default function LoginPage() {
 
                         <div className="space-y-4">
                             <h1 className="text-6xl lg:text-7xl font-bold text-reading-text leading-tight">
-                                ReadBookHub
+                                Bookotecha
                             </h1>
                             <p className={`${dt.typography.body} text-reading-text/70 text-xl max-w-lg`}>
                                 Vaša digitalna biblioteka. Čitajte bilo gde, bilo kada.

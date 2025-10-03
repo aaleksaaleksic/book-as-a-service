@@ -65,6 +65,9 @@ public class Book {
     @Column(name = "content_file_path", length = 500)
     private String contentFilePath; // Encrypted path to book content
 
+    @Column(name = "promo_chapter_path", length = 500)
+    private String promoChapterPath; // Path to promo chapter PDF for non-subscribed users
+
     @Column(name = "content_preview", length = 5000)
     private String contentPreview; // First few pages for preview
 
@@ -115,6 +118,10 @@ public class Book {
         }
 
         return user != null && user.hasActiveSubscription();
+    }
+
+    public boolean hasPromoChapter() {
+        return promoChapterPath != null && !promoChapterPath.isBlank();
     }
 
 

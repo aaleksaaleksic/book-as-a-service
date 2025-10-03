@@ -16,7 +16,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-    title: "ReadBookHub - Your Digital Library",
+    title: "Bookotecha - Your Digital Library",
     description: "Premium online book reading platform with subscription model",
 };
 

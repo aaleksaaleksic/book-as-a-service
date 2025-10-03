@@ -240,6 +240,7 @@ public class FileController {
             @RequestParam("bookId") Long bookId,
             @RequestParam(value = "pdf", required = false) MultipartFile pdfFile,
             @RequestParam(value = "cover", required = false) MultipartFile coverFile,
+            @RequestParam(value = "promoChapter", required = false) MultipartFile promoChapterFile,
             Authentication authentication) {
 
         Map<String, Object> response = new HashMap<>();
@@ -251,9 +252,10 @@ public class FileController {
 
             boolean pdfProvided = pdfFile != null && !pdfFile.isEmpty();
             boolean coverProvided = coverFile != null && !coverFile.isEmpty();
+            boolean promoProvided = promoChapterFile != null && !promoChapterFile.isEmpty();
 
-            if (!pdfProvided && !coverProvided) {
-                throw new IllegalArgumentException("At least one file (pdf or cover) is required");
+            if (!pdfProvided && !coverProvided && !promoProvided) {
+                throw new IllegalArgumentException("At least one file (pdf, cover, or promo chapter) is required");
             }
 
             if (pdfProvided) {
@@ -266,6 +268,12 @@ public class FileController {
                 String coverPath = fileStorageService.saveBookCover(coverFile, bookId);
                 book.setCoverImageUrl(coverPath);
                 response.put("coverPath", coverPath);
+            }
+
+            if (promoProvided) {
+                String promoPath = fileStorageService.savePromoChapter(promoChapterFile, bookId);
+                book.setPromoChapterPath(promoPath);
+                response.put("promoChapterPath", promoPath);
             }
 
             Book updatedBook = bookService.save(book);

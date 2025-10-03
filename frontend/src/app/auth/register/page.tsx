@@ -50,7 +50,7 @@ export default function RegisterPage() {
 
                         <div className="space-y-4">
                             <h1 className="text-5xl lg:text-6xl font-bold text-reading-text leading-tight">
-                                Pridružite se ReadBookHub-u
+                                Pridružite se Bookotecha platformi
                             </h1>
                         </div>
 

@@ -79,7 +79,7 @@ export default function LandingPage() {
                                 Pridruži se zajednici čitalaca koja svakog dana otkriva nove svetove
                             </h2>
                             <p className="mt-4 text-sm text-reading-contrast/75">
-                                Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku, ReadBookHub ti pruža sve alate za nezaboravno iskustvo.
+                                Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku, Bookotecha ti pruža sve alate za nezaboravno iskustvo.
                             </p>
 
                             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -110,14 +110,14 @@ export default function LandingPage() {
                 <div className={cn(dt.layouts.pageContainer, 'py-16')}>
                     <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr_1fr]">
                         <div className="space-y-4">
-                            <h3 className="font-display text-2xl font-semibold text-reading-contrast">ReadBookHub</h3>
+                            <h3 className="font-display text-2xl font-semibold text-reading-contrast">Bookotecha</h3>
                             <p className="max-w-sm text-sm text-reading-contrast/75">
-                                Platforma koja spaja vrhunske knjige, pametne preporuke i zajednicu istinskih ljubitelja čitanja.
+                                Platforma koja spaja vrhunske knjige, pametne preporuke i zajednicu istinskih ljubitelja kompjuterske literature.
                                 Kreirana za sve koji žele da čitaju više i bolje.
                             </p>
                             <div className="flex items-center gap-3 rounded-2xl border border-library-highlight/25 bg-library-azure/20 px-4 py-3 text-sm text-reading-contrast/80">
                                 <Mail className="h-5 w-5 text-library-gold" />
-                                support@readbookhub.rs
+                                bookotecha@gmail.com
                             </div>
                         </div>
 
@@ -198,7 +198,7 @@ export default function LandingPage() {
                     </div>
 
                     <div className="mt-12 border-t border-library-gold/20 pt-6 text-sm text-reading-contrast/60">
-                        © {currentYear} ReadBookHub. Sva prava zadržana.
+                        © {currentYear} Bookotecha. Sva prava zadržana.
                     </div>
                 </div>
             </footer>

@@ -16,7 +16,7 @@ interface TopBooksSectionProps {
 
 export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
     const router = useRouter();
-    const displayedBooks = books.slice(0, 5);
+    const displayedBooks = books.slice(0, 6);
     const totalReads = displayedBooks.reduce((acc, book) => acc + (book.readCount ?? 0), 0);
 
     const handleViewBook = (bookId: number) => {
@@ -34,10 +34,10 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
             <div className={cn(dt.layouts.pageContainer, 'relative')}>
                 <div className="text-center">
                     <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-copper">
-                        Top 5 knjiga poslednjih 30 dana
+                        Top 6 knjiga poslednjih 30 dana
                     </div>
                     <h2 className="mt-6 font-display text-3xl font-semibold text-reading-text sm:text-4xl">
-                        Najčitanije priče koje ne smete propustiti
+                        Najčitanije knjige koje ne smete propustiti
                     </h2>
                     {/*<p className="mx-auto mt-4 max-w-2xl text-sm text-reading-text/70">*/}
                     {/*    Naša zajednica je u poslednjih 30 dana provela preko{' '}*/}
@@ -48,7 +48,7 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
 
                 <div className="mt-12 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
                     {isLoading
-                        ? Array.from({ length: 5 }).map((_, index) => (
+                        ? Array.from({ length: 6 }).map((_, index) => (
                               <div
                                   key={`skeleton-${index}`}
                                   className="flex animate-pulse flex-col gap-4 rounded-3xl border border-library-gold/10 bg-library-linen/60 p-6"
@@ -73,9 +73,9 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                                       className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border border-library-gold/15 bg-white/90 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.12)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_30px_80px_rgba(31,41,51,0.2)]"
                                       onClick={() => handleViewBook(book.id)}
                                   >
-                                      <div className="absolute right-6 top-4 text-5xl font-display font-semibold text-library-slate">
-                                          {String(index + 1).padStart(2, '0')}
-                                      </div>
+                                      {/*<div className="absolute right-6 top-4 text-5xl font-display font-semibold text-library-slate">*/}
+                                      {/*    {String(index + 1).padStart(2, '0')}*/}
+                                      {/*</div>*/}
 
                                       <div className="relative flex flex-1 flex-col gap-6">
                                           <div className="flex flex-col gap-6 sm:flex-row">
@@ -108,16 +108,6 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                                                       )}
                                                   </div>
 
-                                                  {/*<div className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.32em] text-reading-text/60">*/}
-                                                  {/*    <span className="flex items-center gap-2 text-library-copper">*/}
-                                                  {/*        <Flame className="h-4 w-4" />*/}
-                                                  {/*        {book.readCount?.toLocaleString('sr-RS') ?? 0} čitanja*/}
-                                                  {/*    </span>*/}
-                                                  {/*    <span className="flex items-center gap-2">*/}
-                                                  {/*        <BarChart3 className="h-4 w-4 text-library-highlight" />*/}
-                                                  {/*        Ocena {book.averageRating?.toFixed(1) ?? '—'}/5*/}
-                                                  {/*    </span>*/}
-                                                  {/*</div>*/}
                                               </div>
                                           </div>
 

@@ -11,15 +11,19 @@ interface ValuePropositionSectionProps {
 const steps = [
     {
         title: 'Kreiraš nalog',
-        description: 'Registracija traje manje od jednog minuta. Unesi osnovne informacije i odmah dobijaš pristup personalizovanoj kontroli čitanja.'
+        description: 'Registracija traje manje od jednog minuta. Unesi osnovne informacije i potvrdi email i broj telefona.'
     },
     {
         title: 'Izabereš svoj ritam',
-        description: 'Probaj 3 dana potpuno besplatno. Nakon toga biraš plan koji ti odgovara – mesečni ili godišnji za ekskluzivne naslove.'
+        description: 'Probaj režim čitanja prelistavajući promo poglavlja knjiga u našem čitaču.'
     },
     {
-        title: 'Čitaš gde god poželiš',
-        description: 'Na telefonu, tabletu ili laptopu. Sve beleške i napredak se automatski sinhronizuju, tako da nikada ne gubiš progres.'
+        title: 'Odaberi plan koji ti odgovara',
+        description: 'Od naša tri dostupna plana pretplate izaberite onaj koji vam najviše odgovara.'
+    },
+    {
+        title: 'Uživajte u čitanju',
+        description: 'Uživajte u čitanju knjiga koje vas zanimaju i predlažite naslove koje bi hteli da vidite na platformi'
     },
 ];
 
@@ -30,15 +34,15 @@ const benefits = [
     },
     {
         icon: Headphones,
-        title: 'Mode čitanja za svaku situaciju',
+        title: 'Slušamo vaše predloge za nove naslove',
     },
     {
         icon: Users,
-        title: 'Zajednica strastvenih čitalaca',
+        title: 'Zajednica čitalaca',
     },
     {
         icon: Compass,
-        title: 'Putovanje kroz interesovanja u svetu programiranja',
+        title: 'Čitanje knjiga u pretplati',
     },
 ];
 
@@ -52,15 +56,15 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                 <div className="grid gap-16 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-8">
                         <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-copper">
-                            Kako funkcioniše ReadBookHub
+                            Kako funkcioniše Bookotecha?
                         </div>
                         <h2 className="font-display text-3xl font-semibold text-reading-text sm:text-4xl">
-                            Sve što ti treba da čitanje postane navika koju obožavaš
+                            Sve što ti treba da započneš korišćenje ove platforme
                         </h2>
-                        <p className="max-w-xl text-sm text-reading-text/70">
-                            ReadBookHub je više od digitalne biblioteke – to je lični asistent za čitanje koji ti pomaže da pronađeš prave knjige, držiš fokus i deliš inspiraciju sa drugima.
-                            Svaki korak je osmišljen da ti uštedi vreme i otkrije nove priče.
-                        </p>
+                        {/*<p className="max-w-xl text-sm text-reading-text/70">*/}
+                        {/*    Bookotecha je više od digitalne biblioteke – to je lični asistent za čitanje koji ti pomaže da pronađeš prave knjige, držiš fokus i deliš inspiraciju sa drugima.*/}
+                        {/*    Svaki korak je osmišljen da ti uštedi vreme i otkrije nove priče.*/}
+                        {/*</p>*/}
 
                         <div className="space-y-6">
                             {steps.map((step, index) => (
@@ -80,7 +84,7 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                         {!isAuthenticated && (
                             <div className="rounded-3xl border border-library-highlight/30 bg-library-highlight/10 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.15)]">
                                 <p className="text-sm font-semibold text-reading-text">
-                                    Tip: Aktiviraj probu sada i dobijaš personalizovani plan čitanja za prva tri dana – potpuno besplatno i bez obaveze.
+                                    Tip: Prelistajte probna poglavlja knjiga koje vas interesuju i isprobajte režim čitanja.
                                 </p>
                             </div>
                         )}
@@ -90,7 +94,7 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                         <div className="rounded-3xl border border-library-gold/20 bg-library-linen/80 p-8 shadow-[0_20px_60px_rgba(31,41,51,0.18)]">
                             <h3 className="font-display text-xl font-semibold text-reading-text">Zašto nas korisnici biraju</h3>
                             <p className="mt-3 text-sm text-reading-text/70">
-                                Spojili smo tehnologiju i ljubav prema knjigama kako bismo kreirali iskustvo koje je istovremeno moderno, intuitivno i inspirativno.
+                                Spojili smo tehnologiju i ljubav prema knjigama kako bismo olakšali čitanje literature koja nas unapređuje.
                             </p>
                             <div className="mt-6 grid gap-5">
                                 {benefits.map((benefit) => (
@@ -108,9 +112,9 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
 
                         <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">
                             <p className="text-sm text-reading-text/70">
-                                “ReadBookHub nam omugućava da imamo sve knjige koje volimo na jednom mestu. ”
+                                "Bookotecha nam omugućava da imamo sve knjige koje volimo na jednom mestu. "
                             </p>
-                            <p className="mt-4 text-sm font-semibold text-reading-text">Aleksa, jedan od osnivača ReadBookHub platforme </p>
+                            <p className="mt-4 text-sm font-semibold text-reading-text">Aleksa, jedan od osnivača Bookotecha platforme </p>
                         </div>
                     </div>
                 </div>

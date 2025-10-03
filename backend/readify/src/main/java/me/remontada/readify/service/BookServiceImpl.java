@@ -381,4 +381,10 @@ public class BookServiceImpl implements BookService {
         }
         return isbn.replaceAll("[^0-9X]", "");
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Book> getBooksWithPromoChapters() {
+        return bookRepository.findByIsAvailableTrueAndPromoChapterPathIsNotNullOrderByCreatedAtDesc();
+    }
 }

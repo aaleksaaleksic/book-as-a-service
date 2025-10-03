@@ -92,4 +92,43 @@ public interface FileStorageService {
      * @throws IOException ukoliko fajl ne postoji ili nije čitljiv
      */
     long getBookPdfSize(Long bookId) throws IOException;
+
+    /**
+     * Čuva promo chapter PDF fajl za knjigu
+     * @param file - MultipartFile PDF dokument
+     * @param bookId - ID knjige
+     * @return String - relativna putanja do sačuvanog fajla
+     * @throws IOException - ako se desi greška pri čuvanju
+     */
+    String savePromoChapter(MultipartFile file, Long bookId) throws IOException;
+
+    /**
+     * Dohvata promo chapter PDF kao Resource za streaming
+     * @param bookId - ID knjige
+     * @return Resource - Spring Resource za HTTP streaming
+     * @throws IOException - ako fajl ne postoji
+     */
+    Resource getPromoChapter(Long bookId) throws IOException;
+
+    /**
+     * Proverava da li postoji promo chapter za datu knjigu
+     * @param bookId - ID knjige
+     * @return boolean - true ako postoji
+     */
+    boolean promoChapterExists(Long bookId);
+
+    /**
+     * Vraća putanju do promo chapter PDF fajla (za bazu podataka)
+     * @param bookId - ID knjige
+     * @return String - relativna putanja
+     */
+    String getPromoChapterPath(Long bookId);
+
+    /**
+     * Izračunava veličinu promo chapter PDF fajla u bajtovima
+     * @param bookId ID knjige
+     * @return veličina promo chapter PDF fajla u bajtovima
+     * @throws IOException ukoliko fajl ne postoji ili nije čitljiv
+     */
+    long getPromoChapterSize(Long bookId) throws IOException;
 }

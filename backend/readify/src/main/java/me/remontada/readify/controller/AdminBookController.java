@@ -50,6 +50,7 @@ public class AdminBookController {
             @RequestPart("book") @Valid BookCreateDTO bookDTO,
             @RequestPart("pdf") MultipartFile pdfFile,
             @RequestPart("cover") MultipartFile coverFile,
+            @RequestPart(value = "promoChapter", required = false) MultipartFile promoChapterFile,
             Authentication authentication) {
 
         Map<String, Object> response = new HashMap<>();
@@ -65,6 +66,12 @@ public class AdminBookController {
 
             if (!coverFile.getContentType().startsWith("image/")) {
                 throw new IllegalArgumentException("Cover must be an image");
+            }
+
+            if (promoChapterFile != null && !promoChapterFile.isEmpty()) {
+                if (!promoChapterFile.getContentType().equals("application/pdf")) {
+                    throw new IllegalArgumentException("Promo chapter must be a PDF file");
+                }
             }
 
             User currentUser = userService.findByEmail(authentication.getName())
@@ -92,6 +99,14 @@ public class AdminBookController {
 
             savedBook.setContentFilePath(pdfPath);
             savedBook.setCoverImageUrl(coverPath);
+
+            // Save promo chapter if provided
+            if (promoChapterFile != null && !promoChapterFile.isEmpty()) {
+                String promoPath = fileStorageService.savePromoChapter(promoChapterFile, savedBook.getId());
+                savedBook.setPromoChapterPath(promoPath);
+                log.info("Promo chapter saved for book ID: {}", savedBook.getId());
+            }
+
             Book finalBook = bookService.save(savedBook);
 
             log.info("Admin {} created book with files: {} (ID: {})",
@@ -192,6 +207,53 @@ public class AdminBookController {
         } catch (Exception e) {
             log.error("Error fetching books for admin", e);
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    @PostMapping("/{id}/promo-chapter")
+    @PreAuthorize("hasAuthority('CAN_UPDATE_BOOKS')")
+    public ResponseEntity<Map<String, Object>> uploadPromoChapter(
+            @PathVariable Long id,
+            @RequestPart("promoChapter") MultipartFile promoChapterFile,
+            Authentication authentication) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            if (promoChapterFile.isEmpty()) {
+                throw new IllegalArgumentException("Promo chapter file is required");
+            }
+
+            if (!promoChapterFile.getContentType().equals("application/pdf")) {
+                throw new IllegalArgumentException("Promo chapter must be a PDF file");
+            }
+
+            Book book = bookService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+
+            String promoPath = fileStorageService.savePromoChapter(promoChapterFile, book.getId());
+            book.setPromoChapterPath(promoPath);
+            Book updatedBook = bookService.save(book);
+
+            log.info("Admin {} uploaded promo chapter for book ID: {}",
+                    authentication.getName(), id);
+
+            response.put("success", true);
+            response.put("message", "Promo chapter uploaded successfully");
+            response.put("book", BookMapper.toResponseDTO(updatedBook));
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            log.error("Error uploading promo chapter", e);
+            response.put("success", false);
+            response.put("message", "Promo chapter upload failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        } catch (Exception e) {
+            log.error("Error uploading promo chapter for book: {}", id, e);
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(400).body(response);
         }
     }
 }

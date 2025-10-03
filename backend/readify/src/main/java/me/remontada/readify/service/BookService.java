@@ -34,4 +34,6 @@ public interface BookService {
 
     Book getBookContent(Long bookId, User user);
     void incrementReadCount(Long bookId);
+
+    List<Book> getBooksWithPromoChapters();
 }

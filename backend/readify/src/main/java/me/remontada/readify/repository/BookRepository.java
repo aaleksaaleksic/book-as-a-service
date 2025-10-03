@@ -97,4 +97,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT b FROM Book b WHERE b.isAvailable = true AND b.isPremium = true AND b.totalReads > 50 ORDER BY b.averageRating DESC")
     List<Book> findTopPremiumBooks();
+
+    List<Book> findByIsAvailableTrueAndPromoChapterPathIsNotNullOrderByCreatedAtDesc();
 }

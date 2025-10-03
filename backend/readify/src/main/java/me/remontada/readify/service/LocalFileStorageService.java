@@ -36,6 +36,9 @@ public class LocalFileStorageService implements FileStorageService {
     @Value("${app.storage.local.covers-dir:covers}")
     private String coversDir;
 
+    @Value("${app.storage.local.promo-dir:promo-chapters}")
+    private String promoDir;
+
     // Maksimalna veličina fajla (70MB default)
     @Value("${app.storage.max-file-size:73400320}")
     private long maxFileSize;
@@ -48,6 +51,7 @@ public class LocalFileStorageService implements FileStorageService {
 
     private Path booksPath;
     private Path coversPath;
+    private Path promoPath;
 
     /**
      * @PostConstruct - izvršava se nakon dependency injection
@@ -60,14 +64,17 @@ public class LocalFileStorageService implements FileStorageService {
             Path baseStoragePath = Paths.get(basePath).toAbsolutePath().normalize();
             this.booksPath = baseStoragePath.resolve(booksDir);
             this.coversPath = baseStoragePath.resolve(coversDir);
+            this.promoPath = baseStoragePath.resolve(promoDir);
 
             // Kreiranje direktorijuma ako ne postoje
             Files.createDirectories(this.booksPath);
             Files.createDirectories(this.coversPath);
+            Files.createDirectories(this.promoPath);
 
             log.info("Local storage initialized at: {}", baseStoragePath);
             log.info("Books directory: {}", this.booksPath);
             log.info("Covers directory: {}", this.coversPath);
+            log.info("Promo chapters directory: {}", this.promoPath);
 
         } catch (IOException e) {
             log.error("Failed to create storage directories", e);
@@ -261,5 +268,60 @@ public class LocalFileStorageService implements FileStorageService {
             return "jpg"; // default
         }
         return fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+    }
+
+    @Override
+    public String savePromoChapter(MultipartFile file, Long bookId) throws IOException {
+        // Validacija
+        validateFile(file, "application/pdf");
+
+        // Generisanje imena fajla: book-{id}-promo.pdf
+        String fileName = "book-" + bookId + "-promo.pdf";
+        Path targetLocation = this.promoPath.resolve(fileName);
+
+        // Kopiranje fajla
+        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+        log.info("Saved promo chapter: {} (size: {} bytes)", fileName, file.getSize());
+
+        // Vraćamo relativnu putanju za čuvanje u bazi
+        return promoDir + "/" + fileName;
+    }
+
+    @Override
+    public Resource getPromoChapter(Long bookId) throws IOException {
+        String fileName = "book-" + bookId + "-promo.pdf";
+        Path filePath = this.promoPath.resolve(fileName).normalize();
+
+        Resource resource = new FileSystemResource(filePath);
+
+        if (!resource.exists() || !resource.isReadable()) {
+            log.error("Promo chapter not found: {}", fileName);
+            throw new IOException("Promo chapter not found: " + bookId);
+        }
+
+        return resource;
+    }
+
+    @Override
+    public boolean promoChapterExists(Long bookId) {
+        try {
+            String fileName = "book-" + bookId + "-promo.pdf";
+            Path filePath = this.promoPath.resolve(fileName).normalize();
+            return Files.exists(filePath) && Files.isReadable(filePath);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public String getPromoChapterPath(Long bookId) {
+        return promoDir + "/book-" + bookId + "-promo.pdf";
+    }
+
+    @Override
+    public long getPromoChapterSize(Long bookId) throws IOException {
+        Resource resource = getPromoChapter(bookId);
+        return resource.contentLength();
     }
 }

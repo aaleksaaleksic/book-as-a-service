@@ -1,11 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { BookOpen, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
+} from '@/components/ui/carousel';
 import { useAuth } from '@/hooks/useAuth';
 import { dt } from '@/lib/design-tokens';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
@@ -14,7 +20,7 @@ interface Book {
     id: number;
     title: string;
     author: string;
-    coverImageUrl: string;
+    coverImageUrl?: string;
     category: string;
     rating: number;
     popular?: boolean;
@@ -59,7 +65,7 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
                     <Button
                         variant="ghost"
                         onClick={handleViewAll}
-                        className="text-reading-accent hover:bg-book-green-100"
+                        className="text-reading-accent hover:bg-reading-accent/10"
                     >
                         Prikaži sve
                         <ChevronRight className="w-4 h-4 ml-1" />
@@ -69,74 +75,77 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
 
             <Carousel
                 opts={{
-                    align: "start",
+                    align: 'start',
                     loop: false,
                 }}
                 className="w-full"
             >
                 <CarouselContent className="-ml-2 md:-ml-4">
                     {books.map((book) => (
-                        <CarouselItem key={book.id} className="pl-2 md:pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+                        <CarouselItem
+                            key={book.id}
+                            className="pl-2 md:pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5"
+                        >
                             <Card
-                                className={`${dt.components.bookCard} cursor-pointer group h-full`}
+                                className={`${dt.components.bookCard} cursor-pointer group h-full rounded-xl overflow-hidden border border-white/10 shadow-md transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg`}
                                 onClick={() => handleBookClick(book.id)}
                             >
                                 <CardContent className="p-0 h-full flex flex-col">
                                     <div className="relative">
-                                        <img
-                                            src={resolveApiFileUrl(book.coverImageUrl) ?? book.coverImageUrl}
-                                            alt={book.title}
-                                            className="w-full h-48 sm:h-56 object-cover rounded-t-lg"
-                                        />
+                                        {book.coverImageUrl ? (
+                                            <img
+                                                src={resolveApiFileUrl(book.coverImageUrl) ?? book.coverImageUrl}
+                                                alt={book.title}
+                                                className="w-full aspect-[2/3] object-cover rounded-t-xl"
+                                            />
+                                        ) : (
+                                            <div className="w-full aspect-[2/3] flex items-center justify-center bg-library-azure/15 rounded-t-xl">
+                                                <BookOpen className="h-16 w-16 text-library-copper/30" />
+                                            </div>
+                                        )}
+
                                         {book.popular && (
-                                            <Badge className="absolute top-2 left-2 bg-orange-500 text-white text-xs">
-                                                Popularno
+                                            <Badge className="absolute top-2 left-2 bg-orange-500/90 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
+                                                🔥 Popularno
                                             </Badge>
                                         )}
                                         {book.featured && (
-                                            <Badge className="absolute top-2 left-2 bg-reading-accent text-white text-xs">
-                                                Izdvojeno
+                                            <Badge className="absolute top-2 left-2 bg-reading-accent/90 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
+                                                ⭐ Izdvojeno
                                             </Badge>
                                         )}
 
                                         {/* Hover overlay */}
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-t-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                                             <Button
                                                 size="sm"
-                                                className="bg-white/90 text-reading-accent hover:bg-white"
+                                                className="bg-white/90 text-reading-accent font-semibold shadow-md hover:bg-white"
                                             >
                                                 Čitaj odmah
                                             </Button>
                                         </div>
                                     </div>
 
-                                    <div className="p-4 space-y-3 flex-1 flex flex-col">
-                                        <div className="flex-1">
-                                            <Badge variant="outline" className="text-xs mb-2">
-                                                {book.category}
-                                            </Badge>
-                                            <h3 className={`${dt.typography.body} font-semibold text-reading-text line-clamp-2 leading-tight`}>
-                                                {book.title}
-                                            </h3>
-                                            <p className={`${dt.typography.small} text-reading-text/70 mt-1`}>
-                                                {book.author}
-                                            </p>
-                                        </div>
-
-                                        {/*<div className="flex items-center gap-1 mt-auto">*/}
-                                        {/*    /!*<Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />*!/*/}
-                                        {/*    /!*<span className={`${dt.typography.small} text-reading-text/60`}>*!/*/}
-                                        {/*    /!*    {book.rating}*!/*/}
-                                        {/*    /!*</span>*!/*/}
-                                        {/*</div>*/}
+                                    <div className="p-4 flex flex-col flex-1">
+                                        <Badge variant="outline" className="text-xs mb-2">
+                                            {book.category}
+                                        </Badge>
+                                        <h3 className="font-semibold text-reading-text text-sm line-clamp-2 leading-tight">
+                                            {book.title}
+                                        </h3>
+                                        <p className="text-xs italic text-reading-text/70 mt-1">
+                                            {book.author}
+                                        </p>
                                     </div>
                                 </CardContent>
                             </Card>
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                <CarouselPrevious className="hidden md:flex -left-12 bg-reading-surface border-reading-accent/20 hover:bg-book-green-100" />
-                <CarouselNext className="hidden md:flex -right-12 bg-reading-surface border-reading-accent/20 hover:bg-book-green-100" />
+
+                {/* Restyled navigation buttons */}
+                <CarouselPrevious className="hidden md:flex -left-6 bg-white/80 text-reading-accent rounded-full shadow hover:bg-white transition-colors" />
+                <CarouselNext className="hidden md:flex -right-6 bg-white/80 text-reading-accent rounded-full shadow hover:bg-white transition-colors" />
             </Carousel>
         </section>
     );
