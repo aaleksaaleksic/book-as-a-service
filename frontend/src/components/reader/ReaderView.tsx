@@ -66,6 +66,7 @@ export interface ReaderViewProps {
     pageNumber?: number; // new - for controlled mode
     onPageChange?: (page: number) => void;
     className?: string;
+    skipMetadata?: boolean; // Skip metadata fetch for public content (promo chapters)
 }
 
 type PdfSource = DocumentProps["file"] | null;
@@ -123,6 +124,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                                                             pageNumber: controlledPageNumber,
                                                             onPageChange,
                                                             className,
+                                                            skipMetadata = false,
                                                         }) => {
     // Hybrid controlled/uncontrolled pattern
     const [numPages, setNumPages] = useState<number>(0);
@@ -251,8 +253,18 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         return secureStream.url;
     }, [secureStream]);
 
-    // Fetch PDF metadata prior to streaming
+    // Fetch PDF metadata prior to streaming (skip for public content like promo chapters)
     useEffect(() => {
+        // Skip metadata fetch for public content (promo chapters)
+        if (skipMetadata) {
+            metadataAbortControllerRef.current?.abort();
+            metadataAbortControllerRef.current = null;
+            setMetadata(null);
+            setMetadataError(null);
+            setIsMetadataLoading(false);
+            return;
+        }
+
         if (!secureStream) {
             metadataAbortControllerRef.current?.abort();
             metadataAbortControllerRef.current = null;
@@ -325,7 +337,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             isSubscribed = false;
             controller.abort();
         };
-    }, [secureStream, bookId, streamSignature]);
+    }, [secureStream, bookId, streamSignature, skipMetadata]);
 
     const decodeBase64ToUint8Array = useCallback((base64: string) => {
         if (typeof window === "undefined") {

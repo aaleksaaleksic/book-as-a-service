@@ -127,6 +127,15 @@ export default function LandingPage() {
                                 <li>
                                     <button
                                         type="button"
+                                        onClick={() => router.push('/promo-chapters')}
+                                        className="transition hover:text-library-gold"
+                                    >
+                                        Promo poglavlja
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
                                         onClick={handleBrowse}
                                         className="transition hover:text-library-gold"
                                     >

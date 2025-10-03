@@ -59,6 +59,9 @@ const createBookSchema = z.object({
     coverFile: z.instanceof(File)
         .refine(file => ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type),
             'Cover mora biti JPG ili PNG slika'),
+    promoChapterFile: z.instanceof(File)
+        .refine(file => file.type === 'application/pdf', 'Promo poglavlje mora biti PDF')
+        .optional(),
 });
 
 type CreateBookFormData = z.infer<typeof createBookSchema>;
@@ -112,9 +115,18 @@ export function CreateBookForm() {
         }
     };
 
+    // Handle promo chapter file selection
+    const handlePromoChapterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setValue('promoChapterFile', file, { shouldDirty: true });
+        }
+    };
+
     useEffect(() => {
         register('pdfFile');
         register('coverFile');
+        register('promoChapterFile');
     }, [register]);
 
     // Submit form
@@ -136,6 +148,7 @@ export function CreateBookForm() {
                 isAvailable: data.isAvailable,
                 pdfFile: data.pdfFile,
                 coverFile: data.coverFile,
+                promoChapterFile: data.promoChapterFile,
             });
             router.push('/admin/books');
         } catch (error) {
@@ -437,6 +450,49 @@ export function CreateBookForm() {
                             </div>
                             {errors.coverFile && (
                                 <p className="text-sm text-red-500">{errors.coverFile.message}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <Separator className="my-6" />
+
+                    {/* Promo Chapter Upload - Optional */}
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-1">Promo poglavlje (opciono)</h3>
+                            <p className={cn(dt.typography.muted)}>
+                                Dodajte besplatno promo poglavlje koje korisnici bez pretplate mogu čitati
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="promoChapterFile">Promo poglavlje PDF</Label>
+                            <div className="border-2 border-dashed border-book-green-500/20 rounded-lg p-6 text-center hover:border-book-green-500/40 transition-colors">
+                                <FileText className="w-12 h-12 mx-auto mb-4 text-book-green-500/40" />
+                                <Label
+                                    htmlFor="promoChapterFile"
+                                    className="cursor-pointer text-book-green-600 hover:underline"
+                                >
+                                    Izaberite promo poglavlje PDF
+                                </Label>
+                                <Input
+                                    id="promoChapterFile"
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handlePromoChapterChange}
+                                    className="hidden"
+                                />
+                                <p className={cn(dt.typography.muted, "mt-2")}>
+                                    PDF fajl, maksimalno 70MB
+                                </p>
+                                {watch('promoChapterFile') && (
+                                    <Badge variant="secondary" className="mt-3 bg-book-green-100 text-book-green-700">
+                                        <Check className="w-3 h-3 mr-1" />
+                                        {watch('promoChapterFile').name}
+                                    </Badge>
+                                )}
+                            </div>
+                            {errors.promoChapterFile && (
+                                <p className="text-sm text-red-500">{errors.promoChapterFile.message}</p>
                             )}
                         </div>
                     </div>

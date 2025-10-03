@@ -102,6 +102,7 @@ type CreateBookMutationPayload = Omit<CreateBookRequest, 'price'> & {
     price?: number;
     pdfFile?: File | null;
     coverFile?: File | null;
+    promoChapterFile?: File | null;
 };
 
 export function useCreateBook() {
@@ -111,6 +112,7 @@ export function useCreateBook() {
     return useMutation({
         mutationFn: async (data: CreateBookMutationPayload) => {
             try {
+                // Step 1: Create book metadata using admin endpoint
                 const bookData: CreateBookRequest = {
                     title: data.title.trim(),
                     author: data.author.trim(),
@@ -128,46 +130,33 @@ export function useCreateBook() {
                     bookData.publicationYear = data.publicationYear;
                 }
 
-                const bookResponse = await booksApi.createBook(client, bookData);
-                const apiResponse = bookResponse.data;
+                // Create the book with all files at once via admin endpoint
+                const formData = new FormData();
+                formData.append('book', new Blob([JSON.stringify(bookData)], { type: 'application/json' }));
 
-                if (!apiResponse.success || !apiResponse.data) {
+                if (data.pdfFile) {
+                    formData.append('pdf', data.pdfFile);
+                }
+                if (data.coverFile) {
+                    formData.append('cover', data.coverFile);
+                }
+                if (data.promoChapterFile) {
+                    formData.append('promoChapter', data.promoChapterFile);
+                }
+
+                const response = await client.post('/api/v1/admin/books', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+
+                const apiResponse = response.data;
+
+                if (!apiResponse.success || !apiResponse.book) {
                     throw new Error(apiResponse.message || 'Failed to create book');
                 }
 
-                const createdBookId = apiResponse.data.id;
-
-                if (!createdBookId) {
-                    throw new Error('Book created but no ID returned');
-                }
-
-                const hasPdf = !!data.pdfFile;
-                const hasCover = !!data.coverFile;
-
-                if (hasPdf || hasCover) {
-                    const formData = new FormData();
-                    formData.append('bookId', createdBookId.toString());
-                    if (hasPdf && data.pdfFile) {
-                        formData.append('pdf', data.pdfFile);
-                    }
-                    if (hasCover && data.coverFile) {
-                        formData.append('cover', data.coverFile);
-                    }
-
-                    const uploadResponse = await client.post('/api/v1/files/upload', formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                        },
-                    });
-
-                    if (!uploadResponse.data.success) {
-                        // Ako upload ne uspe, obriši kreiranu knjigu
-                        await client.delete(`/api/v1/books/${createdBookId}`);
-                        throw new Error('Files upload failed, book creation rolled back');
-                    }
-                }
-
-                return apiResponse.data;
+                return apiResponse.book;
             } catch (error) {
                 console.error('Create book error:', error);
                 throw error;
@@ -269,7 +258,7 @@ export function useDeleteBook() {
     });
 }
 
-// Mutation za upload fajlova (PDF i cover)
+// Mutation za upload fajlova (PDF, cover, i promo chapter)
 export function useUploadBookFiles() {
     const client = useHttpClient();
     const queryClient = useQueryClient();
@@ -278,13 +267,15 @@ export function useUploadBookFiles() {
         mutationFn: async ({
                                bookId,
                                pdfFile,
-                               coverFile
+                               coverFile,
+                               promoChapterFile
                            }: {
             bookId: number;
             pdfFile?: File;
             coverFile?: File;
+            promoChapterFile?: File;
         }) => {
-            if (!pdfFile && !coverFile) {
+            if (!pdfFile && !coverFile && !promoChapterFile) {
                 throw new Error('At least one file must be provided');
             }
 
@@ -295,6 +286,9 @@ export function useUploadBookFiles() {
             }
             if (coverFile) {
                 formData.append('cover', coverFile);
+            }
+            if (promoChapterFile) {
+                formData.append('promoChapter', promoChapterFile);
             }
 
             const response = await client.post('/api/v1/files/upload', formData, {
@@ -395,6 +389,20 @@ export function useBooksStatistics() {
             return response.data;
         },
         staleTime: 5 * 60 * 1000, // 5 minuta
+    });
+}
+
+// Query za knjige sa promo poglavljima (javni endpoint)
+export function usePromoChapters() {
+    const client = useHttpClient();
+
+    return useQuery({
+        queryKey: ["books", "promo-chapters"],
+        queryFn: async () => {
+            const response = await client.get("/api/v1/books/promo-chapters");
+            return response.data;
+        },
+        staleTime: 10 * 60 * 1000, // 10 minuta
     });
 }
 

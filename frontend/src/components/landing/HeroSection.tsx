@@ -77,21 +77,32 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                             <div className="flex flex-col gap-4 sm:flex-row">
                                 <Button
                                     size="lg"
-                                    onClick={handlePrimaryCta}
+                                    onClick={() => isAuthenticated ? router.push('/dashboard') : router.push('/promo-chapters')}
                                     className="group flex items-center gap-2 rounded-full bg-library-gold px-10 py-6 text-lg font-semibold text-library-midnight shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1 hover:bg-library-gold/90"
                                 >
-                                    {isAuthenticated ? 'Nastavi čitanje' : 'Probaj 3 dana besplatno'}
+                                    {isAuthenticated ? 'Nastavi čitanje' : (
+                                        <>
+                                            <Sparkles className="h-5 w-5" />
+                                            Čitaj promo poglavlja
+                                        </>
+                                    )}
                                     <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
                                 </Button>
 
                                 <Button
                                     variant="outline"
                                     size="lg"
-                                    onClick={handleBrowse}
+                                    onClick={() => isAuthenticated ? handleBrowse() : router.push('/auth/register')}
                                     className="rounded-full border-library-gold/30 bg-transparent px-10 py-6 text-lg font-semibold text-reading-contrast transition hover:bg-library-azure/40"
                                 >
-                                    <BookOpen className="mr-2 h-5 w-5" />
-                                    Pogledaj katalog
+                                    {isAuthenticated ? (
+                                        <>
+                                            <BookOpen className="mr-2 h-5 w-5" />
+                                            Pogledaj katalog
+                                        </>
+                                    ) : (
+                                        'Registruj se besplatno'
+                                    )}
                                 </Button>
                             </div>
 

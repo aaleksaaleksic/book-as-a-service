@@ -68,6 +68,9 @@ const editBookSchema = z.object({
         .refine(file => ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type),
             'Cover mora biti JPG ili PNG slika')
         .optional(),
+    newPromoChapterFile: z.instanceof(File)
+        .refine(file => file.type === 'application/pdf', 'Promo poglavlje mora biti PDF')
+        .optional(),
 });
 
 type EditBookFormData = z.infer<typeof editBookSchema>;
@@ -136,6 +139,15 @@ export function EditBookForm({ book }: EditBookFormProps) {
         }
     };
 
+    // Handle promo chapter file selection
+    const handlePromoChapterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setValue('newPromoChapterFile', file);
+            setHasChanges(true);
+        }
+    };
+
     // Submit form
     const onSubmit = async (data: EditBookFormData) => {
         try {
@@ -162,11 +174,12 @@ export function EditBookForm({ book }: EditBookFormProps) {
             }
 
             // Upload novih fajlova ako postoje
-            if (data.newPdfFile || data.newCoverFile) {
+            if (data.newPdfFile || data.newCoverFile || data.newPromoChapterFile) {
                 await uploadFilesMutation.mutateAsync({
                     bookId: book.id,
                     ...(data.newPdfFile ? { pdfFile: data.newPdfFile } : {}),
                     ...(data.newCoverFile ? { coverFile: data.newCoverFile } : {}),
+                    ...(data.newPromoChapterFile ? { promoChapterFile: data.newPromoChapterFile } : {}),
                 });
             }
 
@@ -459,6 +472,45 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                 {watch('newPdfFile') && (
                                     <Badge variant="secondary" className="mt-3">
                                         Novi PDF: {watch('newPdfFile')?.name}
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <Separator className="my-6" />
+
+                    {/* Promo Chapter */}
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-1">Promo poglavlje (opciono)</h3>
+                            <p className={cn(dt.typography.muted)}>
+                                Dodajte ili zamenite besplatno promo poglavlje
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Promo poglavlje PDF</Label>
+                            <div className="border-2 border-dashed border-book-green-500/20 rounded-lg p-4 text-center">
+                                <FileText className="w-12 h-12 mx-auto mb-4 text-book-green-500/40" />
+                                <p className={cn(dt.typography.muted, "mb-2")}>
+                                    {book.promoChapterPath ? 'Promo poglavlje postoji' : 'Promo poglavlje nije dodato'}
+                                </p>
+                                <Label
+                                    htmlFor="newPromoChapterFile"
+                                    className="cursor-pointer text-book-green-600 hover:underline"
+                                >
+                                    {book.promoChapterPath ? 'Zameni promo poglavlje' : 'Dodaj promo poglavlje'}
+                                </Label>
+                                <Input
+                                    id="newPromoChapterFile"
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handlePromoChapterChange}
+                                    className="hidden"
+                                />
+                                {watch('newPromoChapterFile') && (
+                                    <Badge variant="secondary" className="mt-3 bg-book-green-100 text-book-green-700">
+                                        Novi promo: {watch('newPromoChapterFile')?.name}
                                     </Badge>
                                 )}
                             </div>
