@@ -298,6 +298,7 @@ public class BookController {
             String description = extractString(request.get("description"));
             String isbn = extractString(request.get("isbn"));
             String category = extractString(request.get("category"));
+            String publisher = extractString(request.get("publisher"));
             Integer pages = extractInteger(request.get("pages"));
             String language = extractString(request.get("language"));
             Integer publicationYear = extractInteger(request.get("publicationYear"));
@@ -307,7 +308,7 @@ public class BookController {
             BigDecimal price = parsePrice(request.get("price"));
 
             Book createdBook = bookService.createBook(
-                    title, author, description, isbn, category,
+                    title, author, description, isbn, category, publisher,
                     pages, language, publicationYear, price, isPremium, isAvailable, currentUser
             );
 
@@ -345,6 +346,7 @@ public class BookController {
             if (request.get("author") != null) bookData.setAuthor(extractString(request.get("author")));
             if (request.get("description") != null) bookData.setDescription(extractString(request.get("description")));
             if (request.get("category") != null) bookData.setCategory(extractString(request.get("category")));
+            if (request.get("publisher") != null) bookData.setPublisher(extractString(request.get("publisher")));
             if (request.get("pages") != null) bookData.setPages(extractInteger(request.get("pages")));
             if (request.get("language") != null) bookData.setLanguage(extractString(request.get("language")));
             if (request.get("isbn") != null) bookData.setIsbn(extractString(request.get("isbn")));

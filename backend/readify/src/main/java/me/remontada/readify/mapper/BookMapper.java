@@ -31,6 +31,7 @@ public class BookMapper {
                     .description(book.getDescription())
                     .isbn(book.getIsbn())
                     .category(book.getCategory())
+                    .publisher(book.getPublisher())
                     .pages(book.getPages())
                     .language(book.getLanguage())
                     .publicationYear(book.getPublicationYear())

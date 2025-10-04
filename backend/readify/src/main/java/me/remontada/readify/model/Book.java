@@ -39,6 +39,9 @@ public class Book {
     @Column(nullable = false, length = 100)
     private String category;
 
+    @Column(length = 255)
+    private String publisher;
+
     @Column(nullable = false)
     private Integer pages;
 

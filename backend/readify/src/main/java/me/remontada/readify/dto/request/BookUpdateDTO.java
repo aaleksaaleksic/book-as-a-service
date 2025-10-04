@@ -35,6 +35,9 @@ public class BookUpdateDTO {
     @Size(min = 2, max = 100, message = "Category must be between 2 and 100 characters")
     private String category;
 
+    @Size(max = 255, message = "Publisher cannot exceed 255 characters")
+    private String publisher;
+
     @Min(value = 1, message = "Book must have at least 1 page")
     @Max(value = 10000, message = "Number of pages cannot exceed 10,000")
     private Integer pages;
@@ -71,6 +74,10 @@ public class BookUpdateDTO {
         }
         if (this.category != null && !this.category.trim().isEmpty()) {
             book.setCategory(this.category.trim());
+        }
+        if (this.publisher != null) {
+            String trimmedPublisher = this.publisher.trim();
+            book.setPublisher(trimmedPublisher.isEmpty() ? null : trimmedPublisher);
         }
         if (this.pages != null) {
             book.setPages(this.pages);

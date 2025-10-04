@@ -113,7 +113,7 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public Book createBook(String title, String author, String description, String isbn,
-                           String category, Integer pages, String language, Integer publicationYear,
+                           String category, String publisher, Integer pages, String language, Integer publicationYear,
                            BigDecimal price, Boolean isPremium, Boolean isAvailable, User addedBy) {
 
         validateBookCreationData(title, author, isbn, pages, price, addedBy);
@@ -124,6 +124,7 @@ public class BookServiceImpl implements BookService {
                 .description(sanitizeString(description))
                 .isbn(sanitizeIsbn(isbn))
                 .category(category != null ? category.trim() : "General")
+                .publisher(sanitizeString(publisher))
                 .pages(pages)
                 .language(language != null ? language.trim() : "Serbian")
                 .publicationYear(publicationYear)
@@ -183,6 +184,16 @@ public class BookServiceImpl implements BookService {
 
         if (bookData.getCategory() != null) {
             existingBook.setCategory(bookData.getCategory().trim());
+        }
+
+        if (bookData.getPublisher() != null) {
+            String sanitizedPublisher = sanitizeString(bookData.getPublisher());
+            if ((sanitizedPublisher != null && !sanitizedPublisher.equals(existingBook.getPublisher()))
+                    || (sanitizedPublisher == null && existingBook.getPublisher() != null)) {
+                changes.append("publisher: '").append(existingBook.getPublisher()).append("' -> '")
+                        .append(sanitizedPublisher).append("', ");
+                existingBook.setPublisher(sanitizedPublisher);
+            }
         }
 
         if (bookData.getPages() != null && bookData.getPages() > 0) {
