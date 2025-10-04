@@ -34,9 +34,6 @@ public class BookCreateDTO {
     @Size(min = 2, max = 100, message = "Category must be between 2 and 100 characters")
     private String category;
 
-    @Size(max = 255, message = "Publisher cannot exceed 255 characters")
-    private String publisher;
-
     @NotNull(message = "Number of pages is required")
     @Min(value = 1, message = "Book must have at least 1 page")
     @Max(value = 10000, message = "Number of pages cannot exceed 10,000")
@@ -50,6 +47,10 @@ public class BookCreateDTO {
     @Min(value = 1000, message = "Publication year cannot be before 1000")
     @Max(value = 2100, message = "Publication year cannot be after 2100")
     private Integer publicationYear;
+
+    @NotBlank(message = "Publisher is required")
+    @Size(min = 1, max = 255, message = "Publisher must be between 1 and 255 characters")
+    private String publisher;
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = true, message = "Price must be 0 or greater")
@@ -73,10 +74,6 @@ public class BookCreateDTO {
         this.isbn = isbn != null ? isbn.replaceAll("[\\s-]", "") : null;
         this.category = category != null ? category.trim() : null;
         this.language = language != null ? language.trim() : null;
-        if (publisher != null) {
-            String trimmedPublisher = publisher.trim();
-            this.publisher = trimmedPublisher.isEmpty() ? null : trimmedPublisher;
-        }
-        // Only trim existing fields
+        this.publisher = publisher != null ? publisher.trim() : null;
     }
 }

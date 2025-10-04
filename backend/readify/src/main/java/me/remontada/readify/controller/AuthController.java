@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.remontada.readify.dto.request.ForgotPasswordRequestDTO;
 import me.remontada.readify.dto.request.LoginRequestDTO;
 import me.remontada.readify.dto.request.RefreshTokenRequestDTO;
+import me.remontada.readify.dto.request.ResetPasswordRequestDTO;
 import me.remontada.readify.dto.response.UserResponseDTO;
 import me.remontada.readify.mapper.UserMapper;
 import me.remontada.readify.model.User;
@@ -75,8 +76,13 @@ public class AuthController {
             String token = jwtUtil.generateToken(email);
             String refreshToken = jwtUtil.generateRefreshToken(email);
 
+            // Extract session ID from token and store it to invalidate other sessions
+            String sessionId = jwtUtil.extractSessionId(token);
+            user.setCurrentSessionToken(sessionId);
             user.updateLastLogin();
             userService.save(user);
+
+            log.info("User {} logged in. New session created: {}", email, sessionId);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -140,13 +146,31 @@ public class AuthController {
 
     @PostMapping("/logout")
     @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<Map<String, Object>> logout() {
+    public ResponseEntity<Map<String, Object>> logout(Authentication authentication) {
+        try {
+            if (authentication != null && authentication.getName() != null) {
+                String email = authentication.getName();
+                Optional<User> userOpt = userService.findByEmail(email);
 
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    user.setCurrentSessionToken(null);
+                    userService.save(user);
+                    log.info("User {} logged out. Session cleared.", email);
+                }
+            }
 
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Logout successful"
-        ));
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Logout successful"
+            ));
+        } catch (Exception e) {
+            log.error("Error during logout", e);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Logout successful"
+            ));
+        }
     }
 
 
@@ -158,15 +182,17 @@ public class AuthController {
 
             Optional<User> userOpt = userService.findByEmail(email);
             if (userOpt.isEmpty()) {
+                // Return success even if user doesn't exist (security best practice)
+                log.warn("Password reset requested for non-existent email: {}", email);
                 return ResponseEntity.ok(Map.of(
                         "success", true,
                         "message", "If the email exists, password reset instructions have been sent"
                 ));
             }
 
-            User user = userOpt.get();
-            // Password reset functionality - implement email service when ready
-            log.info("Password reset would be sent to user: {}", user.getEmail());
+            // Generate password reset token and send email
+            userService.generatePasswordResetToken(email);
+            log.info("Password reset token generated and email sent to: {}", email);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -178,6 +204,40 @@ public class AuthController {
             return ResponseEntity.status(500).body(Map.of(
                     "success", false,
                     "message", "Error processing password reset request"
+            ));
+        }
+    }
+
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
+        try {
+            String token = request.getToken();
+            String newPassword = request.getNewPassword();
+
+            log.info("Password reset attempt with token: {}", token.substring(0, Math.min(8, token.length())) + "...");
+
+            // Reset the password
+            userService.resetPassword(token, newPassword);
+
+            log.info("Password successfully reset for token");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Password has been reset successfully"
+            ));
+
+        } catch (RuntimeException e) {
+            log.warn("Password reset failed: {}", e.getMessage());
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Error resetting password", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Error resetting password"
             ));
         }
     }

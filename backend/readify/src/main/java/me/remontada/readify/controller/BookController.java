@@ -79,6 +79,7 @@ public class BookController {
 
             if (bookOpt.isPresent()) {
                 BookResponseDTO response = BookMapper.toResponseDTO(bookOpt.get());
+                log.info("Returning book: id={}, title={}, publisher={}", response.getId(), response.getTitle(), response.getPublisher());
                 return ResponseEntity.ok(response);
             } else {
                 log.warn("Book not found with ID: {}", id);

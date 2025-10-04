@@ -35,9 +35,6 @@ public class BookUpdateDTO {
     @Size(min = 2, max = 100, message = "Category must be between 2 and 100 characters")
     private String category;
 
-    @Size(max = 255, message = "Publisher cannot exceed 255 characters")
-    private String publisher;
-
     @Min(value = 1, message = "Book must have at least 1 page")
     @Max(value = 10000, message = "Number of pages cannot exceed 10,000")
     private Integer pages;
@@ -50,6 +47,9 @@ public class BookUpdateDTO {
     @Max(value = 2100, message = "Publication year cannot be after 2100")
     private Integer publicationYear;
 
+    @NotBlank(message = "Publisher is required")
+    @Size(min = 1, max = 255, message = "Publisher must be between 1 and 255 characters")
+    private String publisher;
 
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     @DecimalMax(value = "999999.99", message = "Price cannot exceed 999,999.99 RSD")
@@ -75,9 +75,8 @@ public class BookUpdateDTO {
         if (this.category != null && !this.category.trim().isEmpty()) {
             book.setCategory(this.category.trim());
         }
-        if (this.publisher != null) {
-            String trimmedPublisher = this.publisher.trim();
-            book.setPublisher(trimmedPublisher.isEmpty() ? null : trimmedPublisher);
+        if (this.publisher != null && !this.publisher.trim().isEmpty()) {
+            book.setPublisher(this.publisher.trim());
         }
         if (this.pages != null) {
             book.setPages(this.pages);
@@ -87,6 +86,12 @@ public class BookUpdateDTO {
         }
         if (this.publicationYear != null) {
             book.setPublicationYear(this.publicationYear);
+        }
+        if (this.publisher != null) {
+            System.out.println("Setting publisher to: " + this.publisher.trim());
+            book.setPublisher(this.publisher.trim());
+        } else {
+            System.out.println("Publisher is null, not updating");
         }
         if (this.price != null) {
             book.setPrice(this.price);

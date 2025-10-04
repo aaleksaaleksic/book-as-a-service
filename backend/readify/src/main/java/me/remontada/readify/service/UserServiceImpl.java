@@ -233,6 +233,66 @@ public class UserServiceImpl implements UserService {
         System.out.println("Sending SMS verification to: " + phoneNumber);
     }
 
+    @Override
+    public String generatePasswordResetToken(String email) {
+        Optional<User> userOpt = findByEmail(email);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found with email: " + email);
+        }
+
+        User user = userOpt.get();
+
+        // Generate secure random token
+        String resetToken = UUID.randomUUID().toString();
+
+        // Set token and expiry (1 hour from now)
+        user.setPasswordResetToken(resetToken);
+        user.setPasswordResetTokenExpiry(LocalDateTime.now().plusHours(1));
+
+        save(user);
+
+        // Send password reset email
+        try {
+            emailService.sendPasswordResetEmail(email, resetToken, user.getFullName());
+        } catch (Exception e) {
+            // Log error but don't fail token generation
+            System.err.println("Failed to send password reset email: " + e.getMessage());
+        }
+
+        return resetToken;
+    }
+
+    @Override
+    public Optional<User> findByPasswordResetToken(String token) {
+        return userRepository.findByPasswordResetToken(token);
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        Optional<User> userOpt = findByPasswordResetToken(token);
+
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("Invalid password reset token");
+        }
+
+        User user = userOpt.get();
+
+        // Check if token has expired
+        if (user.getPasswordResetTokenExpiry() == null ||
+            user.getPasswordResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Password reset token has expired");
+        }
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // Clear reset token
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+
+        save(user);
+    }
+
     private String generateSixDigitCode() {
         java.security.SecureRandom random = new java.security.SecureRandom();
         int code = 100000 + random.nextInt(900000);

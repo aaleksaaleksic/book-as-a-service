@@ -22,5 +22,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE REPLACE(u.phoneNumber, ' ', '') = :sanitizedPhone")
     Optional<User> findByPhoneNumberSanitized(@Param("sanitizedPhone") String sanitizedPhone);
 
+    Optional<User> findByPasswordResetToken(String token);
 
 }

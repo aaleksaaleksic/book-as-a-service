@@ -118,13 +118,15 @@ public class BookServiceImpl implements BookService {
 
         validateBookCreationData(title, author, isbn, pages, price, addedBy);
 
+        log.info("BookService.createBook called with publisher: {}", publisher);
+
         Book book = Book.builder()
                 .title(sanitizeString(title))
                 .author(sanitizeString(author))
                 .description(sanitizeString(description))
                 .isbn(sanitizeIsbn(isbn))
                 .category(category != null ? category.trim() : "General")
-                .publisher(sanitizeString(publisher))
+                .publisher(publisher != null ? publisher.trim() : null)
                 .pages(pages)
                 .language(language != null ? language.trim() : "Serbian")
                 .publicationYear(publicationYear)
@@ -139,9 +141,9 @@ public class BookServiceImpl implements BookService {
 
         Book savedBook = bookRepository.save(book);
 
-        log.info("Created new book: '{}' by '{}' (ID: {}) - Premium: {}, Price: {} RSD",
+        log.info("Created new book: '{}' by '{}' (ID: {}) - Publisher: '{}' - Premium: {}, Price: {} RSD",
                 savedBook.getTitle(), savedBook.getAuthor(), savedBook.getId(),
-                savedBook.getIsPremium(), savedBook.getPrice());
+                savedBook.getPublisher(), savedBook.getIsPremium(), savedBook.getPrice());
 
         return savedBook;
     }
@@ -187,13 +189,7 @@ public class BookServiceImpl implements BookService {
         }
 
         if (bookData.getPublisher() != null) {
-            String sanitizedPublisher = sanitizeString(bookData.getPublisher());
-            if ((sanitizedPublisher != null && !sanitizedPublisher.equals(existingBook.getPublisher()))
-                    || (sanitizedPublisher == null && existingBook.getPublisher() != null)) {
-                changes.append("publisher: '").append(existingBook.getPublisher()).append("' -> '")
-                        .append(sanitizedPublisher).append("', ");
-                existingBook.setPublisher(sanitizedPublisher);
-            }
+            existingBook.setPublisher(bookData.getPublisher().trim());
         }
 
         if (bookData.getPages() != null && bookData.getPages() > 0) {

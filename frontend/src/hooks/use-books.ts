@@ -119,6 +119,7 @@ export function useCreateBook() {
                     description: data.description.trim(),
                     isbn: data.isbn?.replace(/[\s-]/g, ""),
                     category: data.category,
+                    publisher: data.publisher?.trim(),
                     pages: data.pages,
                     language: data.language,
                     price: Number(data.price ?? 0),
@@ -195,6 +196,7 @@ export function useUpdateBook() {
             if (data.author !== undefined) updateData.author = data.author;
             if (data.description !== undefined) updateData.description = data.description;
             if (data.category !== undefined) updateData.category = data.category;
+            if (data.publisher !== undefined) updateData.publisher = data.publisher;
             if (data.pages !== undefined) updateData.pages = data.pages;
             if (data.language !== undefined) updateData.language = data.language;
             if (data.publicationYear !== undefined) updateData.publicationYear = data.publicationYear;

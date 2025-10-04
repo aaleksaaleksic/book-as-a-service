@@ -32,4 +32,10 @@ public interface UserService {
     void sendPhoneVerification(String phoneNumber);
 
     boolean existsByPhoneNumber(String phoneNumber);
+
+    String generatePasswordResetToken(String email);
+
+    Optional<User> findByPasswordResetToken(String token);
+
+    void resetPassword(String token, String newPassword);
 }

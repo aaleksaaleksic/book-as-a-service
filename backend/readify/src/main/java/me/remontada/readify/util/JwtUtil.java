@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Component
@@ -36,12 +37,19 @@ public class JwtUtil {
     }
 
     public String generateToken(String email) {
+        String sessionId = UUID.randomUUID().toString();
         return Jwts.builder()
                 .setSubject(email)
+                .claim("sessionId", sessionId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String extractSessionId(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims.get("sessionId", String.class);
     }
 
     public String extractEmail(String token) {

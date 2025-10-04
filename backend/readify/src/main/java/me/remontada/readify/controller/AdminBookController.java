@@ -79,6 +79,8 @@ public class AdminBookController {
 
             bookDTO.trimStrings();
 
+            log.info("Creating book with publisher: {}", bookDTO.getPublisher());
+
             Book savedBook = bookService.createBook(
                     bookDTO.getTitle(),
                     bookDTO.getAuthor(),
@@ -143,14 +145,18 @@ public class AdminBookController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            log.info("Received update request for book {}: publisher={}", id, updateDTO.getPublisher());
+
             Book book = bookService.findById(id)
                     .orElseThrow(() -> new RuntimeException("Book not found"));
 
+            log.info("Book before update: publisher={}", book.getPublisher());
             updateDTO.applyToBook(book);
+            log.info("Book after applyToBook: publisher={}", book.getPublisher());
 
             Book updatedBook = bookService.save(book);
 
-            log.info("Admin {} updated book ID: {}", authentication.getName(), id);
+            log.info("Admin {} updated book ID: {} - publisher after save: {}", authentication.getName(), id, updatedBook.getPublisher());
 
             response.put("success", true);
             response.put("message", "Book updated successfully");

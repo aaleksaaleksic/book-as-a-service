@@ -56,11 +56,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Optional<User> optionalUser = userService.findByEmail(email);
 
                 if (optionalUser.isPresent()) {
+                    User user = optionalUser.get();
                     boolean isValid = jwtUtil.validateToken(token, email);
                     logger.debug("Token validation result for {}: {}", email, isValid);
 
                     if (isValid) {
-                        User user = optionalUser.get();
+                        // Validate session - check if this token's session ID matches the user's current session
+                        String tokenSessionId = jwtUtil.extractSessionId(token);
+                        String currentSessionId = user.getCurrentSessionToken();
+
+                        if (tokenSessionId == null || !tokenSessionId.equals(currentSessionId)) {
+                            logger.warn("Session invalidated for user: {}. Token session: {}, Current session: {}",
+                                email, tokenSessionId, currentSessionId);
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Session expired. You have been logged in from another device.\"}");
+                            return;
+                        }
 
                         MyUserDetails userDetails = new MyUserDetails(user);
 

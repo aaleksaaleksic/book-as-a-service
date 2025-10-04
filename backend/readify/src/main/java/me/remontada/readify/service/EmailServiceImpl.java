@@ -270,7 +270,7 @@ public class EmailServiceImpl implements EmailService {
                                     <!-- Header -->
                                     <tr>
                                         <td style="background: linear-gradient(135deg, #4F46E5 0%%, #6366F1 100%%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
-                                            <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 600;">🔒 Resetovanje lozinke</h1>
+                                            <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 600;"> Resetovanje lozinke</h1>
                                         </td>
                                     </tr>
 

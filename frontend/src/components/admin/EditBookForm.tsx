@@ -164,7 +164,14 @@ export function EditBookForm({ book }: EditBookFormProps) {
             if (data.author !== book.author) changedData.author = data.author;
             if (data.description !== book.description) changedData.description = data.description;
             if (data.category !== book.category) changedData.category = data.category;
-            if (data.publisher !== book.publisher) changedData.publisher = data.publisher;
+
+            // Handle publisher with proper null/empty string comparison
+            const currentPublisher = book.publisher || '';
+            const newPublisher = (data.publisher || '').trim();
+            if (newPublisher !== currentPublisher && newPublisher !== '') {
+                changedData.publisher = newPublisher;
+            }
+
             if (data.pages !== book.pages) changedData.pages = data.pages;
             if (data.language !== book.language) changedData.language = data.language;
             if (data.publicationYear !== book.publicationYear) changedData.publicationYear = data.publicationYear;

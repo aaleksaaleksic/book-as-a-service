@@ -50,6 +50,12 @@ public class User {
     @Column
     private LocalDateTime verificationTokenExpiry;
 
+    @Column
+    private String passwordResetToken;
+
+    @Column
+    private LocalDateTime passwordResetTokenExpiry;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
@@ -64,6 +70,9 @@ public class User {
 
     @Column(nullable = false)
     private Boolean active = true;
+
+    @Column(name = "current_session_token")
+    private String currentSessionToken;
 
     public boolean hasPermission(Permission permission) {
         return permissions != null && permissions.contains(permission);
