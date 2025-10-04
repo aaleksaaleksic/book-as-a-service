@@ -48,6 +48,10 @@ const editBookSchema = z.object({
         .max(2000, 'Opis ne može biti duži od 2000 karaktera')
         .optional(),
     category: z.string().optional(),
+    publisher: z.string()
+        .min(1, 'Izdavač je obavezan')
+        .max(255, 'Izdavač ne može biti duži od 255 karaktera')
+        .optional(),
     pages: z.number()
         .min(1, 'Broj strana mora biti pozitivan')
         .max(10000, 'Broj strana ne može biti veći od 10000')
@@ -100,6 +104,7 @@ export function EditBookForm({ book }: EditBookFormProps) {
             author: book.author,
             description: book.description,
             category: book.category,
+            publisher: book.publisher || '',
             pages: book.pages,
             language: book.language || 'Serbian',
             publicationYear: book.publicationYear,
@@ -159,6 +164,7 @@ export function EditBookForm({ book }: EditBookFormProps) {
             if (data.author !== book.author) changedData.author = data.author;
             if (data.description !== book.description) changedData.description = data.description;
             if (data.category !== book.category) changedData.category = data.category;
+            if (data.publisher !== book.publisher) changedData.publisher = data.publisher;
             if (data.pages !== book.pages) changedData.pages = data.pages;
             if (data.language !== book.language) changedData.language = data.language;
             if (data.publicationYear !== book.publicationYear) changedData.publicationYear = data.publicationYear;
@@ -286,6 +292,20 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                     </div>
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        {/* Izdavač */}
+                        <div className="space-y-2">
+                            <Label htmlFor="publisher">Izdavač *</Label>
+                            <Input
+                                id="publisher"
+                                {...register('publisher')}
+                                placeholder="npr. Laguna"
+                                className={errors.publisher ? 'border-red-500' : ''}
+                            />
+                            {errors.publisher && (
+                                <p className="text-sm text-red-500">{errors.publisher.message}</p>
+                            )}
                         </div>
 
                         {/* Broj strana */}

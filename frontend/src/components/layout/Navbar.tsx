@@ -70,7 +70,7 @@ export const Navbar = () => {
     const navigation: NavigationItem[] = PUBLIC_ITEMS;
 
     return (
-        <header className="w-full border-b border-white/10 bg-gradient-to-r from-reading-accent/90 to-reading-surface/80 backdrop-blur-lg">
+        <header className="w-full border-b border-white/10 bg-amber-300 backdrop-blur-lg">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export const Navbar = () => {
                                         className={`relative w-9 h-9 rounded-full overflow-hidden flex items-center justify-center ${
                                             user?.avatarUrl
                                                 ? 'border border-reading-accent/20 bg-reading-surface'
-                                                : 'bg-reading-accent text-white'
+                                                : 'bg-sky-950 text-white'
                                         } text-sm`}
                                         style={
                                             user?.avatarUrl
@@ -150,7 +150,7 @@ export const Navbar = () => {
                                         )}
                                     </div>
 
-                                    <span className="hidden text-sm font-medium text-white sm:inline">
+                                    <span className="hidden text-sm font-medium text-sky-950 sm:inline">
                                         {`${user.firstName} ${user.lastName}`}
                                     </span>
                                 </Button>

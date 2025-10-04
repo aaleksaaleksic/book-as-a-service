@@ -5,6 +5,7 @@ export interface BookResponseDTO {
     description: string;
     isbn?: string;
     category: string;
+    publisher?: string;
     pages: number;
     language: string;
     publicationYear?: number;
@@ -26,6 +27,7 @@ export interface CreateBookRequest {
     description: string;
     isbn?: string;
     category: string;
+    publisher?: string;
     pages: number;
     language: string;
     publicationYear?: number;

@@ -44,6 +44,9 @@ const createBookSchema = z.object({
         .max(20, 'ISBN ne može biti duži od 20 karaktera')
         .regex(/^[0-9X-]+$/, 'ISBN može sadržati samo brojeve, X i crtice'),
     category: z.string().min(1, 'Kategorija je obavezna'),
+    publisher: z.string()
+        .min(1, 'Izdavač je obavezan')
+        .max(255, 'Izdavač ne može biti duži od 255 karaktera'),
     pages: z.number()
         .min(1, 'Broj strana mora biti pozitivan')
         .max(10000, 'Broj strana ne može biti veći od 10000'),
@@ -140,6 +143,7 @@ export function CreateBookForm() {
                 description: data.description,
                 isbn: data.isbn,
                 category: data.category,
+                publisher: data.publisher,
                 pages: data.pages,
                 language: data.language,
                 publicationYear: publicationYearValue,
@@ -251,6 +255,20 @@ export function CreateBookForm() {
                             </Select>
                             {errors.category && (
                                 <p className="text-sm text-red-500">{errors.category.message}</p>
+                            )}
+                        </div>
+
+                        {/* Izdavač */}
+                        <div className="space-y-2">
+                            <Label htmlFor="publisher">Izdavač *</Label>
+                            <Input
+                                id="publisher"
+                                {...register('publisher')}
+                                placeholder="npr. Laguna"
+                                className={errors.publisher ? 'border-red-500' : ''}
+                            />
+                            {errors.publisher && (
+                                <p className="text-sm text-red-500">{errors.publisher.message}</p>
                             )}
                         </div>
 

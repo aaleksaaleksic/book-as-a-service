@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, AlertCircle, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
+import { CheckCircle } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { useLogin } from '@/hooks/use-auth-api';
 import { dt } from '@/lib/design-tokens';
@@ -26,9 +27,7 @@ export default function LoginPage() {
                 email: data.email,
                 password: data.password,
             };
-
             await loginMutation.mutateAsync(loginRequest);
-            // Redirect se vrši automatski u useLogin hook-u
         } catch (error: any) {
             if (error.response?.status === 401) {
                 setError('Neispravni email ili lozinka');
@@ -39,62 +38,78 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-book-green-50 via-book-green-100 to-book-green-200">
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-
-                    <div className="text-center lg:text-left space-y-8">
-                        <div className="flex items-center justify-center lg:justify-start gap-3">
-                            <BookOpen className="w-12 h-12 text-reading-accent" />
-                        </div>
-
-                        <div className="space-y-4">
-                            <h1 className="text-6xl lg:text-7xl font-bold text-reading-text leading-tight">
-                                Bookotecha
-                            </h1>
-                            <p className={`${dt.typography.body} text-reading-text/70 text-xl max-w-lg`}>
-                                Vaša digitalna biblioteka. Čitajte bilo gde, bilo kada.
-                            </p>
-                        </div>
-
-                        {/* Success messages */}
-                        {registered && (
-                            <Alert className="bg-green-50 border-green-200">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <AlertDescription className="text-green-800">
-                                    Registracija uspešna! Poslali smo vam email sa kodom za verifikaciju.
-                                    <br />
-                                    <span className="text-sm">Za test koristite kod: 123456</span>
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        {verified && (
-                            <Alert className="bg-green-50 border-green-200">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <AlertDescription className="text-green-800">
-                                    Email uspešno verifikovan! Možete se prijaviti.
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        <div className="space-y-4">
-                            <p className="text-reading-text/60">
-                                Novi korisnik?{' '}
-                                <Link href="/auth/register" className="text-reading-accent hover:underline">
-                                    Kreirajte nalog
-                                </Link>
-                            </p>
-                            <p className="text-reading-text/60">
-                                Imate kod za verifikaciju?{' '}
-                                <Link href="/auth/verify-email" className="text-reading-accent hover:underline">
-                                    Verifikujte email
-                                </Link>
-                            </p>
-                        </div>
+        <div className="min-h-screen bg-gradient-to-br from-[#FDF7E3] via-[#FAF3D6] to-[#F7EAC0] flex flex-col items-center justify-center px-4">
+            <div className="w-full max-w-6xl grid lg:grid-cols-2 items-center gap-12">
+                {/* Left Section */}
+                <div className="text-center lg:text-left space-y-10">
+                    {/* Logo */}
+                    <div className="flex items-center justify-center lg:justify-start">
+                        <Image
+                            src="/logo.svg"
+                            alt="Bookotecha Logo"
+                            width={180}
+                            height={80}
+                            className="h-48 w-64 object-contain"
+                            priority
+                        />
                     </div>
 
-                    <div className="w-full max-w-md mx-auto lg:mx-0">
+                    <div className="space-y-4">
+                        <h1 className="text-5xl lg:text-6xl font-bold text-[#1A1A1A] leading-tight">
+                            Dobrodošli nazad!
+                        </h1>
+                        <p className="text-lg text-[#4B4B4B] max-w-md">
+                            Prijavite se u svoj nalog i nastavite da čitate svoje omiljene knjige na Bookotecha platformi.
+                        </p>
+                    </div>
+
+                    {/* Success messages */}
+                    {registered && (
+                        <Alert className="bg-green-50 border-green-200 max-w-md">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-green-800">
+                                Registracija uspešna! Poslali smo vam email sa kodom za verifikaciju.
+                                <br />
+                                <span className="text-sm">Za test koristite kod: 123456</span>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {verified && (
+                        <Alert className="bg-green-50 border-green-200 max-w-md">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-green-800">
+                                Email uspešno verifikovan! Možete se prijaviti.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    {/* Links */}
+                    <div className="space-y-3">
+                        <p className="text-[#4B4B4B]">
+                            Novi korisnik?{' '}
+                            <Link
+                                href="/auth/register"
+                                className="text-[#C4972E] font-medium hover:underline"
+                            >
+                                Kreirajte nalog
+                            </Link>
+                        </p>
+                        <p className="text-[#4B4B4B]">
+                            Imate kod za verifikaciju?{' '}
+                            <Link
+                                href="/auth/verify-email"
+                                className="text-[#C4972E] font-medium hover:underline"
+                            >
+                                Verifikujte email
+                            </Link>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Right Section (form) */}
+                <div className="w-full max-w-md mx-auto lg:mx-0">
+                    <div className="rounded-2xl bg-white/80 shadow-lg border border-[#E6D7A3] backdrop-blur-sm p-6">
                         <LoginForm
                             onSubmit={handleLogin}
                             isLoading={loginMutation.isPending}

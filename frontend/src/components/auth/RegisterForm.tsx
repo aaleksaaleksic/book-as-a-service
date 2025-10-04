@@ -83,190 +83,210 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
     };
 
     return (
-        <Card className="w-full max-w-md mx-auto">
-            <CardHeader className="text-center space-y-2">
-                <CardTitle className={`${dt.typography.cardTitle} text-reading-text`}>
-                    Kreirajte nalog
-                </CardTitle>
-                <CardDescription className={dt.typography.body}>
-                    Pridružite se Bookotecha platformi
-                </CardDescription>
-            </CardHeader>
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+            {/* Error Alert */}
+            {error && (
+                <Alert
+                    variant="destructive"
+                    className="border-red-300 bg-red-50 text-red-700"
+                >
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
 
-            <CardContent>
-                <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-                    {error && (
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    )}
+            {/* First Name */}
+            <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-sm font-medium text-gray-800">
+                    Ime
+                </Label>
+                <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="Vaše ime"
+                        className={`pl-10 text-gray-900 ${
+                            errors.firstName ? 'border-red-400' : 'border-amber-200'
+                        } focus:border-amber-400 focus:ring-amber-300`}
+                        disabled={loading}
+                        {...register('firstName')}
+                    />
+                </div>
+                {errors.firstName && (
+                    <p className="text-sm text-red-500">
+                        {errors.firstName.message}
+                    </p>
+                )}
+            </div>
 
-                    {/* First Name */}
-                    <div className="space-y-2">
-                        <Label htmlFor="firstName">Ime</Label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                id="firstName"
-                                type="text"
-                                placeholder="Vaše ime"
-                                className={`pl-10 ${errors.firstName ? 'border-red-500' : ''}`}
-                                disabled={loading}
-                                {...register('firstName')}
-                            />
-                        </div>
-                        {errors.firstName && (
-                            <p className={`${dt.typography.small} text-red-500`}>
-                                {errors.firstName.message}
-                            </p>
-                        )}
-                    </div>
+            {/* Last Name */}
+            <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-sm font-medium text-gray-800">
+                    Prezime
+                </Label>
+                <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Vaše prezime"
+                        className={`pl-10 text-gray-900 ${
+                            errors.lastName ? 'border-red-400' : 'border-amber-200'
+                        } focus:border-amber-400 focus:ring-amber-300`}
+                        disabled={loading}
+                        {...register('lastName')}
+                    />
+                </div>
+                {errors.lastName && (
+                    <p className="text-sm text-red-500">
+                        {errors.lastName.message}
+                    </p>
+                )}
+            </div>
 
-                    {/* Last Name */}
-                    <div className="space-y-2">
-                        <Label htmlFor="lastName">Prezime</Label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                id="lastName"
-                                type="text"
-                                placeholder="Vaše prezime"
-                                className={`pl-10 ${errors.lastName ? 'border-red-500' : ''}`}
-                                disabled={loading}
-                                {...register('lastName')}
-                            />
-                        </div>
-                        {errors.lastName && (
-                            <p className={`${dt.typography.small} text-red-500`}>
-                                {errors.lastName.message}
-                            </p>
-                        )}
-                    </div>
+            {/* Email */}
+            <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-800">
+                    Email
+                </Label>
+                <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="vaš@email.com"
+                        className={`pl-10 text-gray-900 ${
+                            errors.email ? 'border-red-400' : 'border-amber-200'
+                        } focus:border-amber-400 focus:ring-amber-300`}
+                        disabled={loading}
+                        {...register('email')}
+                    />
+                </div>
+                {errors.email && (
+                    <p className="text-sm text-red-500">
+                        {errors.email.message}
+                    </p>
+                )}
+            </div>
 
-                    {/* Email */}
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="vas@email.com"
-                                className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
-                                disabled={loading}
-                                {...register('email')}
-                            />
-                        </div>
-                        {errors.email && (
-                            <p className={`${dt.typography.small} text-red-500`}>
-                                {errors.email.message}
-                            </p>
-                        )}
-                    </div>
+            {/* Phone Number */}
+            <div className="space-y-2">
+                <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-800">
+                    Broj telefona
+                </Label>
+                <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                        id="phoneNumber"
+                        type="tel"
+                        placeholder="+381611234567"
+                        className={`pl-10 text-gray-900 ${
+                            errors.phoneNumber ? 'border-red-400' : 'border-amber-200'
+                        } focus:border-amber-400 focus:ring-amber-300`}
+                        disabled={loading}
+                        {...register('phoneNumber')}
+                    />
+                </div>
+                {errors.phoneNumber && (
+                    <p className="text-sm text-red-500">
+                        {errors.phoneNumber.message}
+                    </p>
+                )}
+            </div>
 
-                    {/* Phone Number */}
-                    <div className="space-y-2">
-                        <Label htmlFor="phoneNumber">Broj telefona</Label>
-                        <div className="relative">
-                            <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                id="phoneNumber"
-                                type="tel"
-                                placeholder="+381611234567"
-                                className={`pl-10 ${errors.phoneNumber ? 'border-red-500' : ''}`}
-                                disabled={loading}
-                                {...register('phoneNumber')}
-                            />
-                        </div>
-                        {errors.phoneNumber && (
-                            <p className={`${dt.typography.small} text-red-500`}>
-                                {errors.phoneNumber.message}
-                            </p>
-                        )}
-                    </div>
+            {/* Password */}
+            <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-800">
+                    Lozinka
+                </Label>
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className={`pl-10 pr-10 text-gray-900 ${
+                            errors.password ? 'border-red-400' : 'border-amber-200'
+                        } focus:border-amber-400 focus:ring-amber-300`}
+                        disabled={loading}
+                        {...register('password')}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        disabled={loading}
+                    >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                </div>
+                {errors.password && (
+                    <p className="text-sm text-red-500">
+                        {errors.password.message}
+                    </p>
+                )}
+            </div>
 
-                    {/* Password */}
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Lozinka</Label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                id="password"
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="••••••••"
-                                className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
-                                disabled={loading}
-                                {...register('password')}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                                disabled={loading}
-                            >
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                        </div>
-                        {errors.password && (
-                            <p className={`${dt.typography.small} text-red-500`}>
-                                {errors.password.message}
-                            </p>
-                        )}
-                    </div>
+            {/* Confirm Password */}
+            <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-800">
+                    Potvrdi lozinku
+                </Label>
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className={`pl-10 pr-10 text-gray-900 ${
+                            errors.confirmPassword ? 'border-red-400' : 'border-amber-200'
+                        } focus:border-amber-400 focus:ring-amber-300`}
+                        disabled={loading}
+                        {...register('confirmPassword')}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        disabled={loading}
+                    >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                </div>
+                {errors.confirmPassword && (
+                    <p className="text-sm text-red-500">
+                        {errors.confirmPassword.message}
+                    </p>
+                )}
+            </div>
 
-                    {/* Confirm Password */}
-                    <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Potvrdi lozinku</Label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                id="confirmPassword"
-                                type={showConfirmPassword ? 'text' : 'password'}
-                                placeholder="••••••••"
-                                className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                                disabled={loading}
-                                {...register('confirmPassword')}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                                disabled={loading}
-                            >
-                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                        </div>
-                        {errors.confirmPassword && (
-                            <p className={`${dt.typography.small} text-red-500`}>
-                                {errors.confirmPassword.message}
-                            </p>
-                        )}
-                    </div>
+            {/* Terms */}
+            <div className="flex items-start space-x-2">
+                <Checkbox
+                    id="acceptTerms"
+                    checked={acceptTerms}
+                    onCheckedChange={(checked) => setValue('acceptTerms', checked as boolean)}
+                    disabled={loading}
+                />
+                <Label htmlFor="acceptTerms" className="text-sm text-gray-800 cursor-pointer">
+                    Prihvatam uslove korišćenja i politiku privatnosti
+                </Label>
+            </div>
+            {errors.acceptTerms && (
+                <p className="text-sm text-red-500">
+                    {errors.acceptTerms.message}
+                </p>
+            )}
 
-                    {/* Terms */}
-                    <div className="flex items-start space-x-2">
-                        <Checkbox
-                            id="acceptTerms"
-                            checked={acceptTerms}
-                            onCheckedChange={(checked) => setValue('acceptTerms', checked as boolean)}
-                            disabled={loading}
-                        />
-                        <Label htmlFor="acceptTerms" className="text-sm cursor-pointer">
-                            Prihvatam uslove korišćenja i politiku privatnosti
-                        </Label>
-                    </div>
-                    {errors.acceptTerms && (
-                        <p className={`${dt.typography.small} text-red-500`}>
-                            {errors.acceptTerms.message}
-                        </p>
-                    )}
-
-                    <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? 'Kreiram nalog...' : 'Kreiraj nalog'}
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
+            {/* Submit Button */}
+            <Button
+                type="submit"
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 rounded-md shadow-sm transition-colors"
+                disabled={loading}
+            >
+                {loading ? 'Kreiram nalog...' : 'Kreiraj nalog'}
+            </Button>
+        </form>
     );
 };

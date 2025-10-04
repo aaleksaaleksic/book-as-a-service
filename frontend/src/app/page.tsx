@@ -76,11 +76,11 @@ export default function LandingPage() {
                                 Spremni za sledeću knjigu?
                             </div>
                             <h2 className="mt-6 font-display text-3xl font-semibold text-reading-contrast sm:text-4xl">
-                                Pridruži se zajednici čitalaca koja svakog dana otkriva nove svetove
+                                Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku.
                             </h2>
-                            <p className="mt-4 text-sm text-reading-contrast/75">
-                                Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku, Bookotecha ti pruža sve alate za nezaboravno iskustvo.
-                            </p>
+                            {/*<p className="mt-4 text-sm text-reading-contrast/75">*/}
+                            {/*    Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku, Bookotecha ti pruža sve alate za nezaboravno iskustvo.*/}
+                            {/*</p>*/}
 
                             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                                 <Button
