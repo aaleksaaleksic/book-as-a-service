@@ -24,7 +24,7 @@ public interface BookService {
     List<Book> getTopRatedBooks();
 
     Book createBook(String title, String author, String description, String isbn,
-                    String category, Integer pages, String language, Integer publicationYear,
+                    String category, String publisher, Integer pages, String language, Integer publicationYear,
                     BigDecimal price, Boolean isPremium, Boolean isAvailable, User addedBy);
 
     Book updateBook(Long id, Book bookData, User updatedBy);

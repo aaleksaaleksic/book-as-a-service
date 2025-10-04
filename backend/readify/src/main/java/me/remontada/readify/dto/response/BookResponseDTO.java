@@ -21,6 +21,7 @@ public class BookResponseDTO {
     private String description;
     private String isbn;
     private String category;
+    private String publisher;
     private Integer pages;
     private String language;
     private Integer publicationYear;

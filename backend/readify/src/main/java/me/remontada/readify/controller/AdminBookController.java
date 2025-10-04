@@ -85,6 +85,7 @@ public class AdminBookController {
                     bookDTO.getDescription(),
                     bookDTO.getIsbn(),
                     bookDTO.getCategory(),
+                    bookDTO.getPublisher(),
                     bookDTO.getPages(),
                     bookDTO.getLanguage(),
                     bookDTO.getPublicationYear(),
