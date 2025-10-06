@@ -45,7 +45,7 @@ const PUBLIC_ITEMS: NavigationItem[] = [
 
 const AUTH_ITEMS: NavigationItem[] = [
     { label: 'Moja Biblioteka', href: '/dashboard', auth: true },
-    { label: 'Moj Profil', href: '/profile', auth: true },
+    { label: 'Moj Profil', href: '/my-profile', auth: true },
     { label: 'Pretplata', href: '/subscription', auth: true },
 ];
 
@@ -146,7 +146,7 @@ export const Navbar = () => {
                                         )}
                                     </div>
 
-                                    <span className="hidden text-lg font-medium text-white sm:inline">
+                                    <span className="hidden text-lg font-medium text-white sm:inline ">
                                         {`${user.firstName} ${user.lastName}`}
                                     </span>
                                 </Button>
@@ -198,7 +198,7 @@ export const Navbar = () => {
                                 </DropdownMenuItem>
 
                                 <DropdownMenuItem
-                                    onClick={() => router.push('/profile')}
+                                    onClick={() => router.push('/my-profile')}
                                     className="cursor-pointer"
                                 >
                                     <User className="mr-2 h-4 w-4" />
@@ -289,7 +289,7 @@ export const Navbar = () => {
                                     <button
                                         onClick={() => {
                                             setIsMenuOpen(false);
-                                            router.push('/profile');
+                                            router.push('/my-profile');
                                         }}
                                         className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-reading-text transition-colors hover:bg-reading-accent/10"
                                     >

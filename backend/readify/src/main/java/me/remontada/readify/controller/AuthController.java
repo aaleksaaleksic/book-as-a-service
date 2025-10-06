@@ -244,7 +244,6 @@ public class AuthController {
 
 
     @PostMapping("/refresh")
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
     public ResponseEntity<Map<String, Object>> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO request) {
         try {
             String refreshToken = request.getRefreshToken();

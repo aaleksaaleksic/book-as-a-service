@@ -28,9 +28,9 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
     // Color mappings
     const colorClasses = {
-        primary: 'text-reading-accent',
-        secondary: 'text-reading-text/70',
-        muted: 'text-reading-text/50',
+        primary: 'text-sky-950',
+        secondary: 'text-sky-950/70',
+        muted: 'text-sky-950/50',
     };
 
     // Text size mappings
@@ -166,13 +166,13 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 };
 
 export const PageLoader: React.FC<{ text?: string }> = ({ text = "Loading..." }) => (
-    <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" variant="book" text={text} />
+    <div className="flex items-center justify-center min-h-screen bg-library-parchment/95">
+        <LoadingSpinner size="lg" variant="spinner" text={text} />
     </div>
 );
 
 export const ComponentLoader: React.FC<{ text?: string }> = ({ text }) => (
-    <div className="flex items-center justify-center py-8">
+    <div className="flex items-center justify-center py-8 bg-library-parchment/95">
         <LoadingSpinner size="md" variant="spinner" text={text} />
     </div>
 );

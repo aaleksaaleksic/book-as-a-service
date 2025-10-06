@@ -18,7 +18,7 @@ const steps = [
         description: 'Prelistajte promo poglavlja knjiga u našem čitaču.'
     },
     {
-        title: 'Odaberite plan koji ti odgovara',
+        title: 'Odaberite plan koji vam odgovara',
         description: 'Od naša tri dostupna plana pretplate izaberite onaj koji vam najviše odgovara.'
     },
     {

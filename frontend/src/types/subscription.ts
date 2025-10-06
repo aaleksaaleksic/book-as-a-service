@@ -5,17 +5,27 @@ export type SubscriptionType = 'MONTHLY' | 'SIX_MONTH' | 'YEARLY' | 'TRIAL';
 export interface Subscription {
     id: number;
     userId: number;
-    planType: SubscriptionPlan;
+    type: SubscriptionType; // Backend sends 'type' not 'planType'
+    planType?: SubscriptionPlan; // Keep for backward compatibility
     status: SubscriptionStatus;
     startDate: string;
     endDate: string;
     autoRenew: boolean;
-    priceRSD: number;
+    priceInRsd: number; // Backend sends 'priceInRsd'
+    priceRSD?: number; // Keep for backward compatibility
     trialEndDate?: string;
     cancelledAt?: string;
+    canceledAt?: string; // Backend sends 'canceledAt'
     cancelReason?: string;
     createdAt: string;
     updatedAt: string;
+    // Additional backend fields
+    isActive?: boolean;
+    isExpired?: boolean;
+    isTrial?: boolean;
+    isCanceled?: boolean;
+    daysRemaining?: number;
+    statusDescription?: string;
 }
 
 export type SubscriptionPlan = 'MONTHLY' | 'SIX_MONTH' | 'YEARLY';
