@@ -36,7 +36,7 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                     <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-sky-950">
                         Top 6 knjiga poslednjih 30 dana
                     </div>
-                    <h2 className="mt-6 font-display text-3xl font-semibold text-reading-text sm:text-4xl">
+                    <h2 className={cn(dt.typography.pageTitle, 'mt-6')}>
                         Najčitanije knjige koje ne smete propustiti
                     </h2>
                     {/*<p className="mx-auto mt-4 max-w-2xl text-sm text-reading-text/70">*/}
@@ -69,7 +69,7 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                               return (
                                   <article
                                       key={book.id}
-                                      className="relative cursor-pointer rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6 text-reading-text shadow-[0_30px_80px_rgba(4,12,28,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_40px_100px_rgba(4,12,28,0.55)]"
+                                      className={cn(dt.components.bookCard, 'relative cursor-pointer')}
                                       onClick={() => handleViewBook(book.id)}
                                   >
                                       <div className="absolute -top-3 right-6 rounded-full border border-library-gold/20 bg-library-parchment px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-sky-950 shadow-lg">
@@ -96,16 +96,16 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                                           <div className="space-y-4">
                                               <div className="flex items-start justify-between gap-4">
                                                   <div>
-                                                      <h3 className="font-display text-2xl font-semibold text-reading-text">{book.title}</h3>
-                                                      <p className="mt-1 text-sm text-reading-text/70">{book.author}</p>
+                                                      <h3 className={dt.typography.cardTitle}>{book.title}</h3>
+                                                      <p className={cn(dt.typography.muted, 'mt-1')}>{book.author}</p>
                                                   </div>
-                                                  <Badge className="rounded-full bg-library-gold/15 text-sky-950">
+                                                  <Badge className={dt.components.badge}>
                                                       {book.category?.name || 'N/A'}
                                                   </Badge>
                                               </div>
 
                                               {book.description && (
-                                                  <p className="text-sm text-reading-text/70 line-clamp-4">
+                                                  <p className={cn(dt.typography.muted, 'line-clamp-4')}>
                                                       {book.description}
                                                   </p>
                                               )}

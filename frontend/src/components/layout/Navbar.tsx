@@ -70,18 +70,20 @@ export const Navbar = () => {
     const navigation: NavigationItem[] = PUBLIC_ITEMS;
 
     return (
-        <header className="w-full border-b border-white/10 bg-gradient-to-r from-library-gold via-amber-300 to-library-gold">
+        <header className="w-full border-b border-white/10 bg-sky-950">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2">
-                    <Image
-                        src="/logo.svg"
-                        alt="Bookotecha Logo"
-                        width={180}
-                        height={40}
-                        className="h-auto w-48 object-contain"
-                        priority
-                    />
+                    <div className="brightness-0 invert opacity-95">
+                        <Image
+                            src="/logo.svg"
+                            alt="Bookotecha Logo"
+                            width={216}
+                            height={48}
+                            className="h-auto w-[14.4rem] object-contain"
+                            priority
+                        />
+                    </div>
                 </Link>
 
                 {/* Desktop nav */}
@@ -90,7 +92,7 @@ export const Navbar = () => {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className="text-sm font-medium text-blue-950 transition-colors hover:text-white"
+                            className="text-lg font-medium text-white transition-colors hover:text-library-gold"
                         >
                             {item.label}
                         </Link>
@@ -109,7 +111,7 @@ export const Navbar = () => {
                 </nav>
 
                 {/* Desktop actions */}
-                <div className="hidden items-center gap-4 lg:flex">
+                <div className="hidden items-center  gap-4 lg:flex">
 
 
                     {isAuthenticated && user ? (
@@ -124,7 +126,7 @@ export const Navbar = () => {
                                         className={`relative w-9 h-9 rounded-full overflow-hidden flex items-center justify-center ${
                                             user?.avatarUrl
                                                 ? 'border border-reading-accent/20 bg-reading-surface'
-                                                : 'bg-sky-950 text-white'
+                                                : 'bg-library-gold text-sky-950'
                                         } text-sm`}
                                         style={
                                             user?.avatarUrl
@@ -144,7 +146,7 @@ export const Navbar = () => {
                                         )}
                                     </div>
 
-                                    <span className="hidden text-sm font-medium text-sky-950 sm:inline">
+                                    <span className="hidden text-lg font-medium text-white sm:inline">
                                         {`${user.firstName} ${user.lastName}`}
                                     </span>
                                 </Button>
@@ -231,7 +233,7 @@ export const Navbar = () => {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : !isLoading ? (
-                        <div className="flex items-center gap-3 text-blue-950">
+                        <div className="flex items-center gap-3 text-white">
                             <Button variant="ghost" onClick={() => router.push('/auth/login')}>
                                 Prijavi se
                             </Button>

@@ -9,10 +9,14 @@ export const dt = {
     },
 
     typography: {
-        pageTitle: "text-3xl font-semibold font-display text-reading-text",
-        sectionTitle: "text-2xl font-semibold font-display text-reading-text",
-        subsectionTitle: "text-xl font-medium font-display text-reading-text",
-        cardTitle: "text-lg font-semibold font-display text-reading-text",
+        // Main headings use Bebas Neue
+        heroTitle: "font-bebas font-normal leading-tight text-sky-950",
+        pageTitle: "text-4xl font-normal font-bebas text-reading-text sm:text-5xl",
+        sectionTitle: "text-3xl font-normal font-bebas text-reading-text sm:text-4xl",
+        subsectionTitle: "text-2xl font-normal font-bebas text-reading-text",
+        cardTitle: "text-3xl font-normal font-bebas text-reading-text",
+        stepTitle: "text-2xl font-normal font-bebas text-reading-text",
+        // Body text uses Inter
         body: "text-base text-reading-text font-ui",
         muted: "text-sm text-reading-text/70 font-ui",
         small: "text-xs text-reading-text/60 font-ui",
@@ -33,15 +37,25 @@ export const dt = {
 
     colors: {
         // Primary brand colors
-        primary: "book-green-600",
-        primaryHover: "book-green-700",
-        primaryLight: "book-green-100",
+        primary: "library-gold",
+        primaryHover: "library-gold/90",
+        primaryLight: "library-gold/15",
+        secondary: "sky-950",
+        secondaryLight: "library-azure",
         // Background colors
-        background: "reading-background",
+        background: "library-parchment/95",
+        backgroundDark: "sky-950",
         surface: "reading-surface",
+        surfaceLight: "library-parchment/95",
         // Text colors
         text: "reading-text",
+        textLight: "white",
+        textDark: "sky-950",
         textMuted: "reading-text/70",
+        textContrast: "sky-950/90",
+        // Accent colors
+        accent: "library-gold",
+        highlight: "library-highlight",
         // State colors
         success: "green-600",
         warning: "yellow-500",
@@ -50,24 +64,35 @@ export const dt = {
     },
 
     interactive: {
-        buttonPrimary: "bg-reading-accent text-reading-text font-semibold py-3 px-6 rounded-full shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-0.5 hover:bg-library-gold/90",
-        buttonSecondary: "border border-reading-accent/20 bg-reading-surface text-reading-text font-semibold py-3 px-6 rounded-full transition-colors hover:bg-library-highlight/10",
-        buttonGhost: "text-reading-text font-semibold py-3 px-6 rounded-full transition-colors hover:bg-library-highlight/10",
+        buttonPrimary: "bg-library-gold text-library-midnight font-semibold py-6 px-10 rounded-full shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1 hover:bg-library-gold/90",
+        buttonSecondary: "border border-library-gold/30 bg-transparent text-sky-950 font-semibold py-6 px-10 rounded-full transition hover:bg-library-azure/40",
+        buttonGhost: "text-reading-text font-semibold py-5 px-6 rounded-full border border-library-gold/25 bg-library-azure/10 transition hover:bg-library-highlight/10",
 
         input: "w-full px-4 py-3 border border-reading-accent/20 rounded-lg focus:ring-2 focus:ring-reading-accent/20 focus:border-reading-accent bg-reading-surface text-reading-text",
 
-        link: "text-reading-accent hover:text-reading-accent/80 underline transition-colors",
+        link: "text-library-gold hover:text-library-gold/80 underline transition-colors",
+        navLink: "text-lg font-medium text-white transition-colors hover:text-library-gold",
     },
 
     components: {
         // Card styling
-        card: "bg-reading-surface border border-reading-accent/15 rounded-3xl shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl",
+        card: "bg-library-parchment/95 border border-library-highlight/30 rounded-[32px] shadow-[0_30px_80px_rgba(4,12,28,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_40px_100px_rgba(4,12,28,0.55)]",
 
         // Book card specific
-        bookCard: "bg-reading-surface rounded-[28px] overflow-hidden shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl",
+        bookCard: "bg-library-parchment/95 border border-library-highlight/30 rounded-[32px] p-6 text-reading-text shadow-[0_30px_80px_rgba(4,12,28,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_40px_100px_rgba(4,12,28,0.55)]",
 
         // Navigation
-        nav: "sticky top-0 z-50 w-full bg-reading-background/80 backdrop-blur-sm",
+        navbar: "w-full border-b border-white/10 bg-sky-950",
+        navLink: "text-lg font-medium text-white transition-colors hover:text-library-gold",
+
+        // Badge
+        badge: "rounded-full bg-library-gold/15 text-sky-950",
+
+        // Info box
+        infoBox: "rounded-3xl border border-library-highlight/30 bg-library-azure/40 p-6 shadow-[0_20px_60px_rgba(6,18,38,0.6)] backdrop-blur",
+
+        // Step card
+        stepCard: "relative rounded-3xl border border-library-gold/15 bg-white/80 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.12)] backdrop-blur",
 
         // Modal/overlay
         modal: "bg-reading-surface border border-reading-accent/20 rounded-xl shadow-2xl",
@@ -84,7 +109,7 @@ export const dt = {
         navDesktop: "hidden lg:flex",
 
         // Text responsive
-        heroTitle: "text-4xl sm:text-5xl lg:text-6xl",
+        heroTitle: "text-3xl sm:text-5xl lg:text-6xl",
         heroSubtitle: "text-lg sm:text-xl lg:text-2xl",
     },
 

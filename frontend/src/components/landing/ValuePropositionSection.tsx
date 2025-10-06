@@ -40,7 +40,7 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                         <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-sky-950">
                             Kako funkcioniše Bookotecha?
                         </div>
-                        <h2 className="font-display text-3xl font-semibold text-reading-text sm:text-4xl">
+                        <h2 className={dt.typography.pageTitle}>
                             Sve što ti treba da započneš korišćenje ove platforme
                         </h2>
 
@@ -48,13 +48,13 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                             {steps.map((step, index) => (
                                 <div
                                     key={step.title}
-                                    className="relative rounded-3xl border border-library-gold/15 bg-white/80 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.12)] backdrop-blur"
+                                    className={dt.components.stepCard}
                                 >
                                     <div className="absolute -left-3 -top-3 flex h-12 w-12 items-center justify-center rounded-3xl bg-library-gold text-lg font-semibold text-library-midnight shadow-lg">
                                         {index + 1}
                                     </div>
-                                    <h3 className="font-display text-lg font-semibold text-reading-text">{step.title}</h3>
-                                    <p className="mt-2 text-sm text-reading-text/70">{step.description}</p>
+                                    <h3 className={dt.typography.stepTitle}>{step.title}</h3>
+                                    <p className={cn(dt.typography.muted, 'mt-2')}>{step.description}</p>
                                 </div>
                             ))}
                         </div>
@@ -70,17 +70,17 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
 
                     <div className="space-y-6">
                         <div className="rounded-3xl border border-library-gold/20 bg-library-linen/80 p-8 shadow-[0_20px_60px_rgba(31,41,51,0.18)]">
-                            <h3 className="font-display text-xl font-semibold text-reading-text">Šta nudimo?</h3>
-                            <p className="mt-3 text-sm text-reading-text/70">
+                            <h3 className={dt.typography.subsectionTitle}>Šta nudimo?</h3>
+                            <p className={cn(dt.typography.muted, 'mt-3')}>
                                 Pretplatom na našu platformu dobijate pristup svim dostupnim knjigama. Kliknite ovde za listu knjiga i njihova promo poglavlja.
                             </p>
                         </div>
 
                         <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">
-                            <p className="text-sm text-reading-text/70">
+                            <p className={dt.typography.muted}>
                                 "Bookotecha nam omugućava da imamo sve knjige koje volimo na jednom mestu. "
                             </p>
-                            <p className="mt-4 text-sm font-semibold text-reading-text">Aleksa, jedan od osnivača Bookotecha platforme </p>
+                            <p className={cn(dt.typography.muted, 'mt-4 font-semibold', `text-${dt.colors.text}`)}>Aleksa, jedan od osnivača Bookotecha platforme </p>
                         </div>
                     </div>
                 </div>

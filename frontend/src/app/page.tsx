@@ -68,14 +68,14 @@ export default function LandingPage() {
 
                 <ValuePropositionSection isAuthenticated={isAuthenticated} />
 
-                <section className="relative overflow-hidden border-t border-library-gold/15 bg-gradient-to-br from-library-azure via-library-midnight to-library-midnight py-24 text-reading-contrast">
+                <section className="relative overflow-hidden border-t border-library-gold/15 bg-sky-950 py-24 text-reading-contrast">
                     <div className="absolute inset-0 -z-10 bg-hero-grid opacity-30" aria-hidden="true" />
                     <div className={dt.layouts.pageContainer}>
                         <div className="mx-auto max-w-3xl text-center">
                             <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/25 bg-library-azure/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-gray">
                                 Spremni za sledeću knjigu?
                             </div>
-                            <h2 className="mt-6 font-display text-3xl font-semibold text-reading-contrast sm:text-4xl">
+                            <h2 className={cn(dt.typography.pageTitle, 'mt-6 text-reading-contrast')}>
                                 Bez obzira da li tek ulaziš u svet čitanja ili želiš da proširiš svoju biblioteku.
                             </h2>
                             {/*<p className="mt-4 text-sm text-reading-contrast/75">*/}
@@ -86,7 +86,7 @@ export default function LandingPage() {
                                 <Button
                                     size="lg"
                                     onClick={handlePrimaryCta}
-                                    className="group flex items-center gap-2 rounded-full bg-library-gold px-10 py-6 text-lg font-semibold text-library-midnight shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1 hover:bg-library-gold/90"
+                                    className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
                                 >
                                     {isAuthenticated ? 'Otvori moju biblioteku' : 'Aktiviraj besplatnu probu'}
                                     <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -96,7 +96,7 @@ export default function LandingPage() {
                                     size="lg"
                                     variant="outline"
                                     onClick={handleBrowse}
-                                    className="rounded-full border-library-gold/30 bg-transparent px-10 py-6 text-lg font-semibold text-reading-contrast transition hover:bg-library-azure/40"
+                                    className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
                                 >
                                     Istraži katalog
                                 </Button>
@@ -106,11 +106,11 @@ export default function LandingPage() {
                 </section>
             </main>
 
-            <footer className="border-t border-library-gold/20 bg-library-midnight/95 text-reading-contrast">
+            <footer className="border-t border-library-gold/20 bg-sky-950 text-reading-contrast">
                 <div className={cn(dt.layouts.pageContainer, 'py-16')}>
                     <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr_1fr]">
                         <div className="space-y-4">
-                            <h3 className="font-display text-2xl font-semibold text-reading-contrast">Bookotecha</h3>
+                            <h3 className={cn(dt.typography.sectionTitle, 'text-reading-contrast')}>Bookotecha</h3>
                             <p className="max-w-sm text-sm text-reading-contrast/75">
                                 Platforma koja spaja vrhunske knjige, pametne preporuke i zajednicu istinskih ljubitelja kompjuterske literature.
                                 Kreirana za sve koji žele da čitaju više i bolje.

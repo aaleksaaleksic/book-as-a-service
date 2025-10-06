@@ -48,6 +48,7 @@ module.exports = {
             },
             fontFamily: {
                 display: ['var(--font-playfair)', 'Playfair Display', 'serif'],
+                bebas: ['var(--font-bebas)', 'Bebas Neue', 'sans-serif'],
                 reading: ['var(--font-inter)', 'Inter', 'sans-serif'],
                 ui: ['var(--font-inter)', 'Inter', 'sans-serif'],
             },

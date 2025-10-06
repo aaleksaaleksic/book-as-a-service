@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Bebas_Neue } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { HttpClientProvider } from "@/context/HttpClientProvider";
@@ -14,6 +14,11 @@ const playfair = Playfair_Display({
     subsets: ["latin"],
     variable: "--font-playfair",
 });
+const bebasNeue = Bebas_Neue({
+    subsets: ["latin"],
+    variable: "--font-bebas",
+    weight: "400",
+});
 
 export const metadata: Metadata = {
     title: "Bookotecha - Your Digital Library",
@@ -27,7 +32,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="sr" suppressHydrationWarning>
-        <body className={cn("bg-reading-background text-foreground", inter.variable, playfair.variable, "font-ui") }>
+        <body className={cn("bg-reading-background text-foreground", inter.variable, playfair.variable, bebasNeue.variable, "font-ui") }>
         <ThemeProvider
             attribute="class"
             defaultTheme="light"

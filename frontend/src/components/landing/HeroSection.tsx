@@ -36,7 +36,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
         : undefined;
 
     return (
-        <section className="relative overflow-hidden border-b border-library-gold/20 bg-gradient-to-br from-library-midnight via-library-azure to-library-midnight text-reading-contrast">
+        <section className="relative overflow-hidden bg-library-parchment/95 text-sky-950">
             <div className="absolute inset-0 -z-10 bg-hero-grid opacity-70" aria-hidden="true" />
             <div className="absolute -top-24 right-10 h-56 w-56 rounded-full border border-library-highlight/30 opacity-40 blur-2xl" />
             <div className="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-[40px] border border-library-gold/20 opacity-60" />
@@ -45,19 +45,20 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                 <div className="py-20 lg:py-32">
                     <div className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
                         <div className="space-y-8">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-azure/30 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-library-gray shadow-sm backdrop-blur">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-azure/30 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-white shadow-sm backdrop-blur">
                                 <Sparkles className="h-4 w-4 text-library-highlight" />
                                 Nova era digitalnog čitanja
                             </div>
 
-                            <h1 className={cn(dt.responsive.heroTitle, 'font-display font-semibold leading-tight text-reading-contrast drop-shadow-[0_25px_60px_rgba(12,24,48,0.45)]')}>
+                            <h1 className={cn(dt.responsive.heroTitle, dt.typography.heroTitle, 'drop-shadow-[0_25px_60px_rgba(12,24,48,0.45)]')}>
                                 Zaronite u biblioteku koja se prilagođava vama
                             </h1>
 
                             <p
                                 className={cn(
                                     dt.responsive.heroSubtitle,
-                                    'max-w-xl text-reading-contrast/80 leading-relaxed',
+                                    'max-w-xl leading-relaxed',
+                                    `text-${dt.colors.textContrast}`
                                 )}
                             >
                                 Knjige koje vas čekaju na svakom uređaju.
@@ -65,9 +66,9 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                             </p>
 
                             {!isAuthenticated && (
-                                <div className="max-w-xl rounded-3xl border border-library-highlight/30 bg-library-azure/40 p-6 shadow-[0_20px_60px_rgba(6,18,38,0.6)] backdrop-blur">
+                                <div className={cn(dt.components.infoBox, 'max-w-xl')}>
                                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-library-highlight">Niste još član?</p>
-                                    <p className="mt-3 text-sm text-reading-contrast/85">
+                                    <p className={cn(dt.typography.muted, `text-${dt.colors.textContrast}`, 'mt-3')}>
                                         Kreirajte nalog za manje od minuta i otključajte sve dostupne naslove.
                                         Vaša avantura počinje besplatnom trodnevnom probom.
                                     </p>
@@ -78,7 +79,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                 <Button
                                     size="lg"
                                     onClick={() => isAuthenticated ? router.push('/dashboard') : router.push('/promo-chapters')}
-                                    className="group flex items-center gap-2 rounded-full bg-library-gold px-10 py-6 text-lg font-semibold text-library-midnight shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1 hover:bg-library-gold/90"
+                                    className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
                                 >
                                     {isAuthenticated ? 'Nastavi čitanje' : (
                                         <>
@@ -93,7 +94,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                     variant="outline"
                                     size="lg"
                                     onClick={() => isAuthenticated ? handleBrowse() : router.push('/auth/register')}
-                                    className="rounded-full border-library-gold/30 bg-transparent px-10 py-6 text-lg font-semibold text-reading-contrast transition hover:bg-library-azure/40"
+                                    className={cn(dt.interactive.buttonSecondary, 'text-lg')}
                                 >
                                     {isAuthenticated ? (
                                         <>
@@ -106,23 +107,6 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                 </Button>
                             </div>
 
-                            {/*<div className="grid grid-cols-1 gap-6 pt-4 text-sm sm:grid-cols-3">*/}
-                            {/*    /!*<div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">*!/*/}
-                            {/*    /!*    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Naslovi</p>*!/*/}
-                            {/*    /!*    <p className="mt-3 text-2xl font-semibold text-reading-contrast">2.000+</p>*!/*/}
-                            {/*    /!*    <p className="mt-2 text-xs text-reading-contrast/70">Svaki žanr koji možete da zamislite</p>*!/*/}
-                            {/*    /!*</div>*!/*/}
-                            {/*    /!*<div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">*!/*/}
-                            {/*    /!*    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Pros. vreme čitanja</p>*!/*/}
-                            {/*    /!*    <p className="mt-3 text-2xl font-semibold text-reading-contrast">36 min/dan</p>*!/*/}
-                            {/*    /!*    <p className="mt-2 text-xs text-reading-contrast/70">Zasnovano na navikama naše zajednice</p>*!/*/}
-                            {/*    /!*</div>*!/*/}
-                            {/*    /!*<div className="rounded-2xl border border-library-gold/25 bg-library-azure/30 p-5 shadow-[0_12px_35px_rgba(7,18,36,0.45)]">*!/*/}
-                            {/*    /!*    <p className="text-xs uppercase tracking-[0.3em] text-library-gray">Zadovoljstvo</p>*!/*/}
-                            {/*    /!*    <p className="mt-3 text-2xl font-semibold text-reading-contrast">4.9/5</p>*!/*/}
-                            {/*    /!*    <p className="mt-2 text-xs text-reading-contrast/70">Ocena članova zajednice</p>*!/*/}
-                            {/*    /!*</div>*!/*/}
-                            {/*</div>*/}
                         </div>
 
                         <div className="relative">
@@ -164,16 +148,16 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                         <div className="space-y-4">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div>
-                                                    <h3 className="font-display text-2xl font-semibold text-reading-text">{topBook.title}</h3>
-                                                    <p className="mt-1 text-sm text-reading-text/70">{topBook.author}</p>
+                                                    <h3 className={dt.typography.cardTitle}>{topBook.title}</h3>
+                                                    <p className={cn(dt.typography.muted, 'mt-1')}>{topBook.author}</p>
                                                 </div>
-                                                <Badge className="rounded-full bg-library-gold/15 text-sky-950">
+                                                <Badge className={dt.components.badge}>
                                                     {topBook.category?.name || 'N/A'}
                                                 </Badge>
                                             </div>
 
                                             {topBook.description && (
-                                                <p className="text-sm text-reading-text/70 line-clamp-4">
+                                                <p className={cn(dt.typography.muted, 'line-clamp-4')}>
                                                     {topBook.description}
                                                 </p>
                                             )}

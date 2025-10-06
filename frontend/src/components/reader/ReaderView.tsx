@@ -909,7 +909,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     }, [pageNumber, numPages, handlePrevious, handleNext]);
 
     return (
-        <div className="min-h-screen w-full bg-slate-950 text-slate-100">
+        <div className="min-h-screen w-full bg-sky-950 text-slate-100">
             {/* Top bar */}
             <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-sm">
                 <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3">
@@ -1004,7 +1004,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-4 px-4 py-4">
                 {/* Main viewer */}
                 <main className="col-span-12 lg:col-span-10">
-                    <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-3 shadow-xl shadow-black/40">
+                    <div className="rounded-2xl border border-slate-800/60 bg-sky-950/40 p-3 shadow-xl shadow-black/40">
                         <div className="flex items-center justify-end px-1 pb-2 text-xs text-slate-400">
                             <div className="flex items-center gap-2">
                                 {isDocumentLoading && !loadError && (
@@ -1017,7 +1017,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                         </div>
 
                         {/* PDF canvas container */}
-                        <div className="relative flex min-h-[72vh] items-start justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                        <div className="relative flex min-h-[72vh] items-start justify-center overflow-hidden rounded-xl border border-slate-800 bg-sky-950">
                             {watermark && (
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                                     <div className="select-none text-center text-6xl font-black uppercase tracking-widest text-slate-100/10 opacity-40 [writing-mode:vertical-rl] sm:[writing-mode:horizontal-tb] sm:rotate-45">
