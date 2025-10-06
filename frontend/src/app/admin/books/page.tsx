@@ -1,4 +1,3 @@
-
 'use client';
 
 import { SyntheticEvent, useState } from 'react';
@@ -6,48 +5,17 @@ import Link from 'next/link';
 import {
     Plus,
     Search,
-    Filter,
     Edit,
     Trash,
     Eye,
     MoreVertical,
     BookOpen,
+    X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useBooks, useDeleteBook } from '@/hooks/use-books';
 import { useCan } from '@/hooks/useAuth';
 import { BookResponseDTO } from '@/api/types/books.types';
-import { dt } from '@/lib/design-tokens';
-import { cn } from '@/lib/utils';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 const FALLBACK_COVER_IMAGE = '/book-placeholder.svg';
@@ -57,26 +25,24 @@ export default function AdminBooksPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [typeFilter, setTypeFilter] = useState<'all' | 'free' | 'premium'>('all');
+    const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
-    // Fetch books sa filterima
     const { data: books, isLoading, error } = useBooks(
         typeFilter === 'all' ? undefined : typeFilter
     );
     const deleteBookMutation = useDeleteBook();
 
-    // Filtriranje knjiga lokalno
     const filteredBooks = books?.filter(book => {
         const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
             book.isbn?.includes(searchQuery);
 
-        const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
+        const matchesCategory = categoryFilter === 'all' || book.category?.name === categoryFilter;
 
         return matchesSearch && matchesCategory;
     }) || [];
 
-    // Unique kategorije za filter
-    const categories = Array.from(new Set(books?.map(b => b.category) || []));
+    const categories = Array.from(new Set(books?.map(b => b.category?.name).filter(Boolean) || []));
 
     const handleDelete = async (id: number) => {
         if (confirm('Da li ste sigurni da želite obrisati ovu knjigu?')) {
@@ -86,241 +52,317 @@ export default function AdminBooksPage() {
 
     const resolveCoverUrl = (book: BookResponseDTO) => resolveApiFileUrl(book.coverImageUrl);
 
+    const formatNumber = (value: number) => new Intl.NumberFormat('sr-RS').format(value);
+
     return (
         <AdminLayout>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className={cn(dt.typography.pageTitle)}>Upravljanje knjigama</h1>
-                        <p className={cn(dt.typography.muted, "mt-1")}>
-                            Ukupno {filteredBooks.length} knjiga
+                        <h1 className="text-2xl font-bold text-gray-900">Upravljanje knjigama</h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Ukupno {formatNumber(filteredBooks.length)} knjiga
                         </p>
                     </div>
 
                     {can('CAN_CREATE_BOOKS') && (
-                        <Button asChild className={cn(dt.interactive.buttonPrimary)}>
-                            <Link href="/admin/books/new">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Dodaj novu knjigu
-                            </Link>
-                        </Button>
+                        <Link
+                            href="/admin/books/new"
+                            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-sky-950 rounded-lg hover:bg-sky-900 transition-colors duration-200"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Dodaj novu knjigu
+                        </Link>
                     )}
                 </div>
 
                 {/* Filters */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            {/* Search */}
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <Input
-                                    placeholder="Pretraži po naslovu, autoru ili ISBN..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-
-                            {/* Category filter */}
-                            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder="Kategorija" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Sve kategorije</SelectItem>
-                                    {categories.map(category => (
-                                        <SelectItem key={category} value={category}>
-                                            {category}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            {/* Type filter */}
-                            <Select value={typeFilter} onValueChange={setTypeFilter as any}>
-                                <SelectTrigger className="w-full sm:w-[150px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Sve knjige</SelectItem>
-                                    <SelectItem value="free">Besplatne</SelectItem>
-                                    <SelectItem value="premium">Premium</SelectItem>
-                                </SelectContent>
-                            </Select>
+                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <input
+                                type="text"
+                                placeholder="Pretraži po naslovu, autoru ili ISBN..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none placeholder:text-gray-500"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
-                    </CardContent>
-                </Card>
+
+                        {/* Category filter */}
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            className="px-4 py-2 text-sm text-sky-950 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none"
+                        >
+                            <option value="all">Sve kategorije</option>
+                            {categories.map(category => (
+                                <option key={category} value={category}>
+                                    {category}
+                                </option>
+                            ))}
+                        </select>
+
+                        {/* Type filter */}
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value as any)}
+                            className="px-4 py-2 text-sm text-sky-950 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none"
+                        >
+                            <option value="all">Sve knjige</option>
+                            <option value="free">Besplatne</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                </div>
 
                 {/* Books Table */}
-                <Card>
-                    <CardContent className="p-0">
-                        {isLoading ? (
-                            <div className="p-6 space-y-4">
-                                {[...Array(5)].map((_, i) => (
-                                    <Skeleton key={i} className="h-16 w-full" />
-                                ))}
-                            </div>
-                        ) : error ? (
-                            <Alert variant="destructive" className="m-6">
-                                <AlertDescription>
-                                    Greška pri učitavanju knjiga. Pokušajte ponovo.
-                                </AlertDescription>
-                            </Alert>
-                        ) : filteredBooks.length === 0 ? (
-                            <div className="p-12 text-center">
-                                <BookOpen className="w-12 h-12 mx-auto mb-4 text-reading-accent/40" />
-                                <p className={cn(dt.typography.muted)}>
-                                    {searchQuery || categoryFilter !== 'all' || typeFilter !== 'all'
-                                        ? 'Nema knjiga koje odgovaraju filterima'
-                                        : 'Nema dodatih knjiga'}
-                                </p>
-                                {can('CAN_CREATE_BOOKS') && !searchQuery && categoryFilter === 'all' && (
-                                    <Button asChild className="mt-4" variant="outline">
-                                        <Link href="/admin/books/new">
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Dodaj prvu knjigu
-                                        </Link>
-                                    </Button>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Cover</TableHead>
-                                            <TableHead>Naslov</TableHead>
-                                            <TableHead>Autor</TableHead>
-                                            <TableHead>Kategorija</TableHead>
-                                            <TableHead>Tip</TableHead>
-                                            <TableHead className="text-center">Čitanja</TableHead>
-                                            <TableHead className="text-center">Ocena</TableHead>
-                                            <TableHead className="text-right">Akcije</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredBooks.map((book) => {
-                                            const coverUrl = resolveCoverUrl(book);
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    {isLoading ? (
+                        <div className="p-6 space-y-4">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
+                            ))}
+                        </div>
+                    ) : error ? (
+                        <div className="p-6 bg-red-50 border border-red-200 rounded-lg m-6">
+                            <p className="text-sm text-red-800">
+                                Greška pri učitavanju knjiga. Pokušajte ponovo.
+                            </p>
+                        </div>
+                    ) : filteredBooks.length === 0 ? (
+                        <div className="p-12 text-center">
+                            <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                            <p className="text-gray-600 mb-4">
+                                {searchQuery || categoryFilter !== 'all' || typeFilter !== 'all'
+                                    ? 'Nema knjiga koje odgovaraju filterima'
+                                    : 'Nema dodatih knjiga'}
+                            </p>
+                            {can('CAN_CREATE_BOOKS') && !searchQuery && categoryFilter === 'all' && (
+                                <Link
+                                    href="/admin/books/new"
+                                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-sky-950 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Dodaj prvu knjigu
+                                </Link>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Naslovna</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Naslov</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Autor</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ISBN</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Kategorija</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Izdavač</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Stranice</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Godina</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Jezik</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Tip</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Čitanja</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Ocena</th>
+                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Akcije</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {filteredBooks.map((book) => {
+                                        const coverUrl = resolveCoverUrl(book);
 
-                                            return (
-                                                <TableRow key={book.id}>
-                                                    {/* Cover */}
-                                                    <TableCell>
-                                                        {coverUrl ? (
-                                                            <img
-                                                                src={coverUrl}
-                                                                alt={book.title}
-                                                                className="w-12 h-16 object-cover rounded"
-                                                                onError={(event: SyntheticEvent<HTMLImageElement>) => {
-                                                                    event.currentTarget.onerror = null;
-                                                                    event.currentTarget.src = FALLBACK_COVER_IMAGE;
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div className="w-12 h-16 bg-reading-accent/10 rounded flex items-center justify-center">
-                                                                <BookOpen className="w-6 h-6 text-reading-accent/40" />
-                                                            </div>
-                                                        )}
-                                                    </TableCell>
-
-                                                {/* Naslov */}
-                                                <TableCell>
-                                                    <div>
-                                                        <p className="font-medium">{book.title}</p>
-                                                        <p className={cn(dt.typography.small, "text-muted-foreground")}>
-                                                            ISBN: {book.isbn}
-                                                        </p>
-                                                    </div>
-                                                </TableCell>
-
-                                                {/* Autor */}
-                                                <TableCell>{book.author}</TableCell>
-
-                                                {/* Kategorija */}
-                                                <TableCell>
-                                                    <Badge variant="outline">{book.category}</Badge>
-                                                </TableCell>
-
-                                                {/* Tip */}
-                                                <TableCell>
-                                                    {book.isPremium ? (
-                                                        <Badge className="bg-yellow-500">Premium</Badge>
+                                        return (
+                                            <tr key={book.id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                {/* Cover */}
+                                                <td className="px-4 py-3">
+                                                    {coverUrl ? (
+                                                        <img
+                                                            src={coverUrl}
+                                                            alt={book.title}
+                                                            className="w-12 h-16 object-cover rounded shadow-sm"
+                                                            onError={(event: SyntheticEvent<HTMLImageElement>) => {
+                                                                event.currentTarget.onerror = null;
+                                                                event.currentTarget.src = FALLBACK_COVER_IMAGE;
+                                                            }}
+                                                        />
                                                     ) : (
-                                                        <Badge variant="secondary">Besplatna</Badge>
+                                                        <div className="w-12 h-16 bg-gray-100 rounded flex items-center justify-center">
+                                                            <BookOpen className="w-6 h-6 text-gray-400" />
+                                                        </div>
                                                     )}
-                                                </TableCell>
+                                                </td>
 
-                                                {/* Čitanja */}
-                                                <TableCell className="text-center">
-                                                    {book.readCount || 0}
-                                                </TableCell>
+                                                {/* Title */}
+                                                <td className="px-4 py-3">
+                                                    <div className="max-w-xs">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{book.title}</p>
+                                                    </div>
+                                                </td>
 
-                                                {/* Ocena */}
-                                                <TableCell className="text-center">
+                                                {/* Author */}
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm text-gray-700">{book.author}</p>
+                                                </td>
+
+                                                {/* ISBN */}
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm text-gray-600 font-mono">{book.isbn || '-'}</p>
+                                                </td>
+
+                                                {/* Category */}
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        {book.category?.name || 'N/A'}
+                                                    </span>
+                                                </td>
+
+                                                {/* Publisher */}
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm text-gray-700">{book.publisher?.name || '-'}</p>
+                                                </td>
+
+                                                {/* Pages */}
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm text-gray-700">{book.pages}</p>
+                                                </td>
+
+                                                {/* Publication Year */}
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm text-gray-700">{book.publicationYear || '-'}</p>
+                                                </td>
+
+                                                {/* Language */}
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm text-gray-700 uppercase">{book.language}</p>
+                                                </td>
+
+                                                {/* Type */}
+                                                <td className="px-4 py-3">
+                                                    {book.isPremium ? (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                            Premium
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                            Besplatna
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* Status */}
+                                                <td className="px-4 py-3">
+                                                    {book.isAvailable ? (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                            Dostupna
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                            Nedostupna
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* Read Count */}
+                                                <td className="px-4 py-3 text-center">
+                                                    <p className="text-sm font-medium text-gray-900">{formatNumber(book.readCount || 0)}</p>
+                                                </td>
+
+                                                {/* Rating */}
+                                                <td className="px-4 py-3 text-center">
                                                     {book.averageRating > 0 ? (
                                                         <div className="flex items-center justify-center gap-1">
-                                                            <span>{book.averageRating.toFixed(1)}</span>
+                                                            <span className="text-sm font-medium text-gray-900">{book.averageRating.toFixed(1)}</span>
                                                             <span className="text-yellow-500">★</span>
                                                         </div>
                                                     ) : (
-                                                        '-'
+                                                        <span className="text-sm text-gray-400">-</span>
                                                     )}
-                                                </TableCell>
+                                                </td>
 
-                                                {/* Akcije */}
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm">
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Akcije</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator />
+                                                {/* Actions */}
+                                                <td className="px-4 py-3 text-right relative">
+                                                    <div className="relative inline-block text-left">
+                                                        <button
+                                                            onClick={() => setOpenDropdownId(openDropdownId === book.id ? null : book.id)}
+                                                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                                        >
+                                                            <MoreVertical className="w-4 h-4" />
+                                                        </button>
 
-                                                            <DropdownMenuItem asChild>
-                                                                <Link href={`/admin/books/${book.id}`}>
-                                                                    <Eye className="w-4 h-4 mr-2" />
-                                                                    Pregledaj
-                                                                </Link>
-                                                            </DropdownMenuItem>
+                                                        {openDropdownId === book.id && (
+                                                            <>
+                                                                <div
+                                                                    className="fixed inset-0 z-10"
+                                                                    onClick={() => setOpenDropdownId(null)}
+                                                                />
+                                                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                                                                    <div className="py-1">
+                                                                        <div className="px-4 py-2 text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-200">
+                                                                            Akcije
+                                                                        </div>
 
-                                                            {can('CAN_UPDATE_BOOKS') && (
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/admin/books/${book.id}/edit`}>
-                                                                        <Edit className="w-4 h-4 mr-2" />
-                                                                        Izmeni
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                            )}
+                                                                        <Link
+                                                                            href={`/admin/books/${book.id}`}
+                                                                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                                                                            onClick={() => setOpenDropdownId(null)}
+                                                                        >
+                                                                            <Eye className="w-4 h-4 mr-2" />
+                                                                            Pregledaj
+                                                                        </Link>
 
-                                                            {can('CAN_DELETE_BOOKS') && (
-                                                                <>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => handleDelete(book.id)}
-                                                                        className="text-red-600"
-                                                                    >
-                                                                        <Trash className="w-4 h-4 mr-2" />
-                                                                        Obriši
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
+                                                                        {can('CAN_UPDATE_BOOKS') && (
+                                                                            <Link
+                                                                                href={`/admin/books/${book.id}/edit`}
+                                                                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                                                                                onClick={() => setOpenDropdownId(null)}
+                                                                            >
+                                                                                <Edit className="w-4 h-4 mr-2" />
+                                                                                Izmeni
+                                                                            </Link>
+                                                                        )}
+
+                                                                        {can('CAN_DELETE_BOOKS') && (
+                                                                            <>
+                                                                                <div className="border-t border-gray-200 my-1" />
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setOpenDropdownId(null);
+                                                                                        handleDelete(book.id);
+                                                                                    }}
+                                                                                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
+                                                                                >
+                                                                                    <Trash className="w-4 h-4 mr-2" />
+                                                                                    Obriši
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </AdminLayout>
     );

@@ -40,6 +40,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Value("${readify.subscription.monthly-price:999}")
     private BigDecimal monthlyPriceRsd;
 
+    @Value("${readify.subscription.six-month-price:4999}")
+    private BigDecimal sixMonthPriceRsd;
+
     @Value("${readify.subscription.yearly-price:9999}")
     private BigDecimal yearlyPriceRsd;
 
@@ -331,6 +334,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private BigDecimal getSubscriptionPrice(SubscriptionType type) {
         return switch (type) {
             case MONTHLY -> monthlyPriceRsd;
+            case SIX_MONTH -> sixMonthPriceRsd;
             case YEARLY -> yearlyPriceRsd;
             case TRIAL -> BigDecimal.ZERO;
         };
@@ -342,6 +346,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private LocalDateTime calculateEndDate(LocalDateTime startDate, SubscriptionType type) {
         return switch (type) {
             case MONTHLY -> startDate.plusMonths(1);
+            case SIX_MONTH -> startDate.plusMonths(6);
             case YEARLY -> startDate.plusYears(1);
             case TRIAL -> startDate.plusDays(trialDurationDays);
         };

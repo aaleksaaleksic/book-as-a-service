@@ -24,4 +24,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPasswordResetToken(String token);
 
+    @Query("SELECT COUNT(u) FROM User u")
+    long countAllUsers();
+
+    @Query("SELECT COUNT(DISTINCT s.user) FROM Subscription s WHERE s.status = 'ACTIVE'")
+    long countUsersWithActiveSubscription();
+
 }

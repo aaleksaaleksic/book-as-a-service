@@ -8,9 +8,7 @@ import me.remontada.readify.dto.response.BookResponseDTO;
 import me.remontada.readify.mapper.BookMapper;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
-import me.remontada.readify.service.BookService;
-import me.remontada.readify.service.FileStorageService;
-import me.remontada.readify.service.UserService;
+import me.remontada.readify.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,14 +31,20 @@ public class AdminBookController {
     private final BookService bookService;
     private final UserService userService;
     private final FileStorageService fileStorageService;
+    private final CategoryService categoryService;
+    private final PublisherService publisherService;
 
     @Autowired
     public AdminBookController(BookService bookService,
                                UserService userService,
-                               FileStorageService fileStorageService) {
+                               FileStorageService fileStorageService,
+                               CategoryService categoryService,
+                               PublisherService publisherService) {
         this.bookService = bookService;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
+        this.categoryService = categoryService;
+        this.publisherService = publisherService;
     }
 
 
@@ -79,15 +83,15 @@ public class AdminBookController {
 
             bookDTO.trimStrings();
 
-            log.info("Creating book with publisher: {}", bookDTO.getPublisher());
+            log.info("Creating book with categoryId: {}, publisherId: {}", bookDTO.getCategoryId(), bookDTO.getPublisherId());
 
-            Book savedBook = bookService.createBook(
+            Book savedBook = ((me.remontada.readify.service.BookServiceImpl) bookService).createBookWithCategoryId(
                     bookDTO.getTitle(),
                     bookDTO.getAuthor(),
                     bookDTO.getDescription(),
                     bookDTO.getIsbn(),
-                    bookDTO.getCategory(),
-                    bookDTO.getPublisher(),
+                    bookDTO.getCategoryId(),
+                    bookDTO.getPublisherId(),
                     bookDTO.getPages(),
                     bookDTO.getLanguage(),
                     bookDTO.getPublicationYear(),
@@ -145,18 +149,33 @@ public class AdminBookController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            log.info("Received update request for book {}: publisher={}", id, updateDTO.getPublisher());
+            log.info("Received update request for book {}: categoryId={}, publisherId={}", id, updateDTO.getCategoryId(), updateDTO.getPublisherId());
 
             Book book = bookService.findById(id)
                     .orElseThrow(() -> new RuntimeException("Book not found"));
 
-            log.info("Book before update: publisher={}", book.getPublisher());
+            log.info("Book before update: category={}, publisher={}", book.getCategory().getName(), book.getPublisher().getName());
+
+            // Update category if provided
+            if (updateDTO.getCategoryId() != null) {
+                me.remontada.readify.model.Category category = categoryService.getCategoryById(updateDTO.getCategoryId())
+                        .orElseThrow(() -> new RuntimeException("Category not found"));
+                book.setCategory(category);
+            }
+
+            // Update publisher if provided
+            if (updateDTO.getPublisherId() != null) {
+                me.remontada.readify.model.Publisher publisher = publisherService.getPublisherById(updateDTO.getPublisherId())
+                        .orElseThrow(() -> new RuntimeException("Publisher not found"));
+                book.setPublisher(publisher);
+            }
+
             updateDTO.applyToBook(book);
-            log.info("Book after applyToBook: publisher={}", book.getPublisher());
+            log.info("Book after applyToBook: category={}, publisher={}", book.getCategory().getName(), book.getPublisher().getName());
 
             Book updatedBook = bookService.save(book);
 
-            log.info("Admin {} updated book ID: {} - publisher after save: {}", authentication.getName(), id, updatedBook.getPublisher());
+            log.info("Admin {} updated book ID: {} - publisher after save: {}", authentication.getName(), id, updatedBook.getPublisher().getName());
 
             response.put("success", true);
             response.put("message", "Book updated successfully");

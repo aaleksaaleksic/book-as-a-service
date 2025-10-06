@@ -1,50 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
     Users,
-    ShieldCheck,
-    Activity,
     Search,
-    Filter,
-    Crown,
-    PhoneCall,
-    CheckCircle2,
+    X,
+    MoreVertical,
+    Eye,
     UserX,
+    Crown,
+    CheckCircle2,
+    PhoneCall,
+    ChevronLeft,
+    ChevronRight,
+    UserCheck,
+    Trash,
 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { dt } from '@/lib/design-tokens';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import {
-    useAdminUsers,
-    useAdminSubscriptions,
-    useAdminSubscriptionStats,
-    useCancelSubscription,
-} from '@/hooks/use-admin';
+import { useAdminUsers, useAdminSubscriptions, useCancelSubscription, useDeactivateUser, useActivateUser, useDeleteUser } from '@/hooks/use-admin';
 import { useCan } from '@/hooks/useAuth';
-import type { AdminSubscription, AdminUser } from '@/types/admin';
-
-const FALLBACK_ACCENTS = ['bg-reading-accent', 'bg-emerald-500', 'bg-cyan-500', 'bg-amber-500'];
-
-const getInitials = (user: AdminUser) => {
-    const first = user.firstName?.[0] ?? user.fullName?.[0] ?? user.email?.[0] ?? '?';
-    const last = user.lastName?.[0] ?? user.fullName?.split(' ')?.[1]?.[0] ?? '';
-    return `${first}${last}`.toUpperCase();
-};
-
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('sr-RS', { style: 'currency', currency: 'RSD' }).format(Number.isFinite(value) ? value : 0);
+import { format } from 'date-fns';
+import type { AdminUser, AdminSubscription } from '@/types/admin';
+import { useMemo } from 'react';
 
 const formatDate = (value?: string) => {
-    if (!value) return 'Nepoznato';
+    if (!value) return '-';
     try {
         return format(new Date(value), 'dd.MM.yyyy.');
     } catch (error) {
@@ -52,33 +33,27 @@ const formatDate = (value?: string) => {
     }
 };
 
-const getSubscriptionHighlight = (subscription: AdminSubscription | undefined) => {
-    if (!subscription) return 'bg-reading-accent/5 text-reading-text/70';
-
-    if (subscription.status === 'ACTIVE' || subscription.isActive) {
-        return 'bg-emerald-50 text-emerald-600 border border-emerald-200';
-    }
-
-    if (subscription.status === 'TRIAL') {
-        return 'bg-amber-50 text-amber-600 border border-amber-200';
-    }
-
-    if (subscription.status === 'CANCELED' || subscription.isCanceled || subscription.isExpired) {
-        return 'bg-rose-50 text-rose-600 border border-rose-200';
-    }
-
-    return 'bg-slate-100 text-slate-600 border border-slate-200';
-};
+const formatNumber = (value: number) => new Intl.NumberFormat('sr-RS').format(value);
 
 export default function AdminUsersPage() {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showOnlyActive, setShowOnlyActive] = useState(false);
     const { can } = useCan();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+    const [currentPage, setCurrentPage] = useState(0);
+    const pageSize = 10;
 
-    const { data: users, isLoading: usersLoading, error: usersError } = useAdminUsers();
-    const { data: subscriptionsData, isLoading: subscriptionsLoading } = useAdminSubscriptions();
-    const { data: subscriptionStats, isLoading: statsLoading } = useAdminSubscriptionStats();
+    const { data: usersData, isLoading: usersLoading, error: usersError } = useAdminUsers(
+        currentPage,
+        pageSize,
+        'lastName',
+        'asc'
+    );
+    const { data: subscriptionsData } = useAdminSubscriptions();
     const cancelSubscription = useCancelSubscription();
+    const deactivateUser = useDeactivateUser();
+    const activateUser = useActivateUser();
+    const deleteUser = useDeleteUser();
 
     const subscriptionMap = useMemo(() => {
         const map = new Map<number, AdminSubscription>();
@@ -102,255 +77,412 @@ export default function AdminUsersPage() {
         return map;
     }, [subscriptionsData?.subscriptions]);
 
-    const filteredUsers = useMemo(() => {
-        if (!users) return [];
-        const query = searchTerm.trim().toLowerCase();
+    const users = usersData?.users || [];
+    const totalPages = usersData?.totalPages || 0;
+    const totalItems = usersData?.totalItems || 0;
 
-        return users
-            .filter((user) => {
-                const subscription = subscriptionMap.get(user.id);
-                if (showOnlyActive && !(subscription?.isActive || subscription?.status === 'ACTIVE')) {
-                    return false;
-                }
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
 
-                if (!query) return true;
+        const matchesStatus = statusFilter === 'all' ||
+            (statusFilter === 'active' && user.hasActiveSubscription) ||
+            (statusFilter === 'inactive' && !user.hasActiveSubscription);
 
-                return (
-                    user.email?.toLowerCase().includes(query) ||
-                    user.firstName?.toLowerCase().includes(query) ||
-                    user.lastName?.toLowerCase().includes(query) ||
-                    user.fullName?.toLowerCase().includes(query)
-                );
-            })
-            .sort((a, b) => {
-                const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return bDate - aDate;
-            });
-    }, [users, searchTerm, showOnlyActive, subscriptionMap]);
+        return matchesSearch && matchesStatus;
+    });
 
-    const isLoading = usersLoading || subscriptionsLoading;
+    const handleCancelSubscription = async (subscriptionId: number) => {
+        if (confirm('Da li ste sigurni da želite otkazati pretplatu ovog korisnika?')) {
+            await cancelSubscription.mutateAsync(subscriptionId);
+        }
+    };
 
-    const renderUserCard = (user: AdminUser, index: number) => {
+    const handleDeactivateUser = async (userId: number) => {
+        if (confirm('Da li ste sigurni da želite deaktivirati ovog korisnika?')) {
+            await deactivateUser.mutateAsync(userId);
+        }
+    };
+
+    const handleActivateUser = async (userId: number) => {
+        if (confirm('Da li ste sigurni da želite aktivirati ovog korisnika?')) {
+            await activateUser.mutateAsync(userId);
+        }
+    };
+
+    const handleDeleteUser = async (userId: number) => {
+        if (confirm('Da li ste sigurni da želite TRAJNO OBRISATI ovog korisnika? Ova akcija se ne može poništiti!')) {
+            await deleteUser.mutateAsync(userId);
+        }
+    };
+
+    const getSubscriptionBadge = (user: AdminUser) => {
         const subscription = subscriptionMap.get(user.id);
-        const accent = FALLBACK_ACCENTS[index % FALLBACK_ACCENTS.length];
-        const initials = getInitials(user);
 
-        return (
-            <Card
-                key={user.id}
-                className="relative overflow-hidden border border-reading-accent/10 bg-white/90 shadow-sm transition hover:shadow-lg"
-            >
-                <div className={cn('absolute -right-10 -top-12 h-32 w-32 rounded-full opacity-20 blur-3xl', accent)} />
-                <div className={cn('absolute -bottom-14 -left-10 h-28 w-28 rounded-full opacity-10 blur-3xl', accent)} />
-                <CardContent className="relative z-10 space-y-4 p-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-4">
-                            <div
-                                className={cn(
-                                    'flex h-14 w-14 items-center justify-center rounded-2xl text-lg font-semibold text-white shadow-lg shadow-reading-accent/20',
-                                    accent,
-                                )}
-                            >
-                                {initials}
-                            </div>
-                            <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <h3 className="text-xl font-semibold text-reading-text">
-                                        {user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email}
-                                    </h3>
-                                    {user.isAdmin && (
-                                        <Badge className="bg-purple-100 text-purple-600">
-                                            <Crown className="mr-1 h-3 w-3" /> Admin
-                                        </Badge>
-                                    )}
-                                    <Badge variant="outline" className="border-reading-accent/40 text-xs uppercase tracking-widest">
-                                        {user.role}
-                                    </Badge>
-                                    {user.emailVerified && (
-                                        <Badge className="bg-emerald-100 text-emerald-700">
-                                            <CheckCircle2 className="mr-1 h-3 w-3" /> Email verifikovan
-                                        </Badge>
-                                    )}
-                                    {user.phoneVerified && (
-                                        <Badge className="bg-sky-100 text-sky-700">
-                                            <PhoneCall className="mr-1 h-3 w-3" /> Telefon verifikovan
-                                        </Badge>
-                                    )}
-                                </div>
-                                <div className="mt-2 space-y-1 text-sm text-reading-text/70">
-                                    <p>{user.email}</p>
-                                    {user.phoneNumber && (
-                                        <p className="flex items-center gap-1 text-xs uppercase tracking-wider">
-                                            <PhoneCall className="h-3 w-3" /> {user.phoneNumber}
-                                        </p>
-                                    )}
-                                    <p>Član od {formatDate(user.createdAt)}</p>
-                                </div>
-                            </div>
-                        </div>
+        // First check if user has active subscription from user object
+        if (user.hasActiveSubscription) {
+            // If we have subscription details, show more specific info
+            if (subscription) {
+                if (subscription.status === 'TRIAL' || subscription.isTrial) {
+                    return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Probna</span>;
+                }
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aktivna</span>;
+            }
+            // Fallback to generic "Aktivna" if we don't have subscription details
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aktivna</span>;
+        }
 
-                        <div className="flex flex-col items-end gap-2 text-sm">
-                            <Badge className={cn('px-3 py-1 text-xs font-semibold', getSubscriptionHighlight(subscription))}>
-                                {subscription?.statusDescription || subscription?.status || 'Bez pretplate'}
-                            </Badge>
-                            {subscription?.priceInRsd && (
-                                <p className="text-sm font-medium text-reading-text">
-                                    {formatCurrency(Number(subscription.priceInRsd))} /{' '}
-                                    {subscription.type?.toUpperCase() === 'YEARLY' ? 'god.' : 'mes.'}
-                                </p>
-                            )}
-                            <p className="text-xs text-reading-text/60">Poslednja aktivnost: {formatDate(user.lastLoginAt)}</p>
-                        </div>
-                    </div>
+        // User doesn't have active subscription
+        if (!subscription) {
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Bez pretplate</span>;
+        }
 
-                    <div className="flex flex-col gap-3 rounded-xl bg-reading-accent/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-reading-text/80">
-                            <div className="flex items-center gap-2">
-                                <ShieldCheck className="h-4 w-4 text-reading-accent" />
-                                <span>Dozvole: {user.permissions?.length ? user.permissions.length : 0}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Activity className="h-4 w-4 text-reading-accent" />
-                                <span>Status pretplate: {subscription?.isActive ? 'Aktivna' : subscription?.statusDescription ?? 'Nema'}</span>
-                            </div>
-                            {subscription?.daysRemaining != null && (
-                                <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-reading-accent" />
-                                    <span>{subscription.daysRemaining} dana preostalo</span>
-                                </div>
-                            )}
-                        </div>
-                        {subscription && can('CAN_CANCEL_SUBSCRIPTION') && (
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                disabled={cancelSubscription.isPending}
-                                onClick={() => {
-                                    if (confirm('Da li ste sigurni da želite otkazati pretplatu ovog korisnika?')) {
-                                        cancelSubscription.mutate(subscription.id);
-                                    }
-                                }}
-                            >
-                                <UserX className="mr-2 h-4 w-4" /> Otkazi pretplatu
-                            </Button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        );
+        // Show specific inactive states if subscription exists
+        if (subscription.status === 'CANCELED' || subscription.isCanceled) {
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Otkazana</span>;
+        }
+
+        if (subscription.status === 'EXPIRED' || subscription.isExpired) {
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Istekla</span>;
+        }
+
+        // Fallback
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{subscription.statusDescription || subscription.status || 'Bez pretplate'}</span>;
     };
 
     return (
         <AdminLayout>
-            <div className="space-y-8">
-                <div className="rounded-3xl bg-reading-accent p-8 text-white shadow-lg">
-                    <div className="space-y-3">
-                        <p className="text-xs uppercase tracking-[0.4em] text-white/70">Upravljanje korisnicima</p>
-                        <h1 className={cn(dt.typography.pageTitle, 'text-white')}>Korisnici platforme</h1>
-                        <p className="max-w-2xl text-sm text-white/80">
-                            Analizirajte angažovanje, upravljajte pretplatama i reagujte brzo na potrebe čitalaca uz pregledne kartice i pametne filtere.
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Upravljanje korisnicima</h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Ukupno {formatNumber(totalItems)} korisnika
                         </p>
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card className="border-none bg-white/90 shadow-lg shadow-reading-accent/10 backdrop-blur">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-reading-text/70">Ukupno korisnika</CardTitle>
-                            <Users className="h-5 w-5 text-reading-accent" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-9 w-24" />
-                            ) : (
-                                <div className="text-3xl font-semibold text-reading-text">
-                                    {subscriptionStats?.totalUsers ?? users?.length ?? 0}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-none bg-white/90 shadow-lg shadow-emerald-200/40 backdrop-blur">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-reading-text/70">Aktivne pretplate</CardTitle>
-                            <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-9 w-24" />
-                            ) : (
-                                <div className="text-3xl font-semibold text-emerald-600">
-                                    {subscriptionStats?.activeSubscriptions ?? subscriptionsData?.subscriptions.filter((sub) => sub.isActive)?.length ?? 0}
-                                </div>
-                            )}
-                            <p className="mt-1 text-xs text-reading-text/60">Pretplate koje su trenutno aktivne</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-none bg-white/90 shadow-lg shadow-amber-200/50 backdrop-blur">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-semibold text-reading-text/70">Stopa konverzije</CardTitle>
-                            <Activity className="h-5 w-5 text-amber-500" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-9 w-24" />
-                            ) : (
-                                <div className="text-3xl font-semibold text-amber-600">
-                                    {subscriptionStats ? `${subscriptionStats.conversionRate.toFixed(1)}%` : '0%'}
-                                </div>
-                            )}
-                            <p className="mt-1 text-xs text-reading-text/60">Udeo korisnika sa aktivnom pretplatom</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <Card className="border border-reading-accent/10 bg-white/90 shadow-sm backdrop-blur">
-                    <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-                        <div className="flex flex-1 items-center gap-3 rounded-2xl border border-reading-accent/10 bg-reading-surface/70 px-4 py-3 shadow-inner">
-                            <Search className="h-4 w-4 text-reading-text/50" />
-                            <Input
-                                value={searchTerm}
-                                onChange={(event) => setSearchTerm(event.target.value)}
-                                placeholder="Pretraži korisnike po imenu ili email adresi"
-                                className="border-none bg-transparent px-0 shadow-none focus-visible:ring-0"
+                {/* Filters */}
+                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <input
+                                type="text"
+                                placeholder="Pretraži po imenu ili email adresi..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none placeholder:text-gray-500"
                             />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
-                        <div className="flex items-center gap-3 rounded-2xl border border-reading-accent/10 bg-reading-surface/70 px-4 py-3 text-sm text-reading-text/80 shadow-inner">
-                            <Filter className="h-4 w-4 text-reading-text/50" />
-                            <span>Aktivne pretplate</span>
-                            <Switch checked={showOnlyActive} onCheckedChange={setShowOnlyActive} />
-                        </div>
-                    </CardContent>
-                </Card>
 
-                {usersError ? (
-                    <Alert variant="destructive">
-                        <AlertDescription>
-                            Nije moguće učitati korisnike. Proverite dozvole ili pokušajte ponovo kasnije.
-                        </AlertDescription>
-                    </Alert>
-                ) : isLoading ? (
-                    <div className="grid gap-4 md:grid-cols-2">
-                        {[...Array(4)].map((_, index) => (
-                            <Skeleton key={index} className="h-52 rounded-2xl" />
-                        ))}
+                        {/* Status filter */}
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            className="px-4 py-2 text-sm text-sky-950 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none"
+                        >
+                            <option value="all">Svi korisnici</option>
+                            <option value="active">Sa aktivnom pretplatom</option>
+                            <option value="inactive">Bez pretplate</option>
+                        </select>
                     </div>
-                ) : filteredUsers.length === 0 ? (
-                    <Card className="border border-dashed border-reading-accent/20 bg-white/70 py-16 text-center">
-                        <Users className="mx-auto mb-4 h-12 w-12 text-reading-accent/30" />
-                        <p className={cn(dt.typography.body, 'text-reading-text/70')}>
-                            {searchTerm
-                                ? 'Nema korisnika koji odgovaraju pretrazi.'
-                                : 'Još uvek nema registrovanih korisnika sa aktivnim pretplatama.'}
-                        </p>
-                    </Card>
-                ) : (
-                    <div className="grid gap-4 md:grid-cols-2">
-                        {filteredUsers.map((user, index) => renderUserCard(user, index))}
-                    </div>
-                )}
+                </div>
+
+                {/* Users Table */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    {usersLoading ? (
+                        <div className="p-6 space-y-4">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
+                            ))}
+                        </div>
+                    ) : usersError ? (
+                        <div className="p-6 bg-red-50 border border-red-200 rounded-lg m-6">
+                            <p className="text-sm text-red-800">
+                                Greška pri učitavanju korisnika. Pokušajte ponovo.
+                            </p>
+                        </div>
+                    ) : filteredUsers.length === 0 ? (
+                        <div className="p-12 text-center">
+                            <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                            <p className="text-gray-600 mb-4">
+                                {searchQuery || statusFilter !== 'all'
+                                    ? 'Nema korisnika koji odgovaraju filterima'
+                                    : 'Nema registrovanih korisnika'}
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ime</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Email</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Telefon</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Pretplata</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Član od</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Poslednja aktivnost</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Akcije</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {filteredUsers.map((user, index) => {
+                                            const subscription = subscriptionMap.get(user.id);
+                                            const isLastRow = index === filteredUsers.length - 1;
+
+                                            return (
+                                                <tr key={user.id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                    {/* Name */}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-medium text-gray-900">
+                                                                    {user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email}
+                                                                </p>
+                                                                {user.isAdmin && (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                                                        <Crown className="w-3 h-3" />
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 uppercase tracking-wider">{user.role}</p>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Email */}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm text-gray-700">{user.email}</p>
+                                                            {user.emailVerified && (
+                                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" title="Email verifikovan" />
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Phone */}
+                                                    <td className="px-4 py-3">
+                                                        {user.phoneNumber ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm text-gray-700">{user.phoneNumber}</p>
+                                                                {user.phoneVerified && (
+                                                                    <PhoneCall className="w-4 h-4 text-sky-600" title="Telefon verifikovan" />
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Status */}
+                                                    <td className="px-4 py-3">
+                                                        {user.active !== false ? (
+                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                Aktivan
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                                Neaktivan
+                                                            </span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Subscription */}
+                                                    <td className="px-4 py-3">
+                                                        {getSubscriptionBadge(user)}
+                                                    </td>
+
+                                                    {/* Created At */}
+                                                    <td className="px-4 py-3">
+                                                        <p className="text-sm text-gray-700">{formatDate(user.createdAt)}</p>
+                                                    </td>
+
+                                                    {/* Last Login */}
+                                                    <td className="px-4 py-3">
+                                                        <p className="text-sm text-gray-700">{formatDate(user.lastLoginAt)}</p>
+                                                    </td>
+
+                                                    {/* Actions */}
+                                                    <td className="px-4 py-3 text-right relative">
+                                                        <div className="relative inline-block text-left">
+                                                            <button
+                                                                onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
+                                                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                                            >
+                                                                <MoreVertical className="w-4 h-4" />
+                                                            </button>
+
+                                                            {openDropdownId === user.id && (
+                                                                <>
+                                                                    <div
+                                                                        className="fixed inset-0 z-10"
+                                                                        onClick={() => setOpenDropdownId(null)}
+                                                                    />
+                                                                    <div className={`absolute right-0 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-96 overflow-y-auto ${isLastRow ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+                                                                        <div className="py-1">
+                                                                            <div className="px-4 py-2 text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-200">
+                                                                                Akcije
+                                                                            </div>
+
+                                                                            <Link
+                                                                                href={`/admin/users/${user.id}`}
+                                                                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                                                                                onClick={() => setOpenDropdownId(null)}
+                                                                            >
+                                                                                <Eye className="w-4 h-4 mr-2" />
+                                                                                Pregledaj
+                                                                            </Link>
+
+                                                                            {can('CAN_DELETE_USERS') && (
+                                                                                <>
+                                                                                    <div className="border-t border-gray-200 my-1" />
+                                                                                    {user.active !== false ? (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setOpenDropdownId(null);
+                                                                                                handleDeactivateUser(user.id);
+                                                                                            }}
+                                                                                            className="w-full flex items-center px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 transition-colors duration-150"
+                                                                                        >
+                                                                                            <UserX className="w-4 h-4 mr-2" />
+                                                                                            Deaktiviraj korisnika
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setOpenDropdownId(null);
+                                                                                                handleActivateUser(user.id);
+                                                                                            }}
+                                                                                            className="w-full flex items-center px-4 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors duration-150"
+                                                                                        >
+                                                                                            <UserCheck className="w-4 h-4 mr-2" />
+                                                                                            Aktiviraj korisnika
+                                                                                        </button>
+                                                                                    )}
+                                                                                </>
+                                                                            )}
+
+                                                                            {subscription && can('CAN_CANCEL_SUBSCRIPTION') && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setOpenDropdownId(null);
+                                                                                        handleCancelSubscription(subscription.id);
+                                                                                    }}
+                                                                                    className="w-full flex items-center px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors duration-150"
+                                                                                >
+                                                                                    <UserX className="w-4 h-4 mr-2" />
+                                                                                    Otkazi pretplatu
+                                                                                </button>
+                                                                            )}
+
+                                                                            {can('CAN_DELETE_USERS') && (
+                                                                                <>
+                                                                                    <div className="border-t border-gray-200 my-1" />
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setOpenDropdownId(null);
+                                                                                            handleDeleteUser(user.id);
+                                                                                        }}
+                                                                                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
+                                                                                    >
+                                                                                        <Trash className="w-4 h-4 mr-2" />
+                                                                                        Obriši korisnika
+                                                                                    </button>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                                    <div className="flex-1 flex justify-between sm:hidden">
+                                        <button
+                                            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                                            disabled={currentPage === 0}
+                                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Prethodna
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+                                            disabled={currentPage >= totalPages - 1}
+                                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Sledeća
+                                        </button>
+                                    </div>
+                                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="text-sm text-gray-700">
+                                                Prikazano <span className="font-medium">{currentPage * pageSize + 1}</span> do{' '}
+                                                <span className="font-medium">{Math.min((currentPage + 1) * pageSize, totalItems)}</span> od{' '}
+                                                <span className="font-medium">{totalItems}</span> rezultata
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                                <button
+                                                    onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                                                    disabled={currentPage === 0}
+                                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <span className="sr-only">Prethodna</span>
+                                                    <ChevronLeft className="h-5 w-5" />
+                                                </button>
+                                                {[...Array(totalPages)].map((_, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => setCurrentPage(idx)}
+                                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                                            idx === currentPage
+                                                                ? 'z-10 bg-sky-950 border-sky-950 text-white'
+                                                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {idx + 1}
+                                                    </button>
+                                                ))}
+                                                <button
+                                                    onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+                                                    disabled={currentPage >= totalPages - 1}
+                                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <span className="sr-only">Sledeća</span>
+                                                    <ChevronRight className="h-5 w-5" />
+                                                </button>
+                                            </nav>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
         </AdminLayout>
     );

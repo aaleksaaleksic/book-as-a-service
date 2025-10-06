@@ -1,11 +1,14 @@
+import { CategoryResponseDTO } from '../categories';
+import { PublisherResponseDTO } from './publishers.types';
+
 export interface BookResponseDTO {
     id: number;
     title: string;
     author: string;
     description: string;
     isbn?: string;
-    category: string;
-    publisher?: string;
+    category: CategoryResponseDTO;
+    publisher?: PublisherResponseDTO;
     pages: number;
     language: string;
     publicationYear?: number;
@@ -26,8 +29,8 @@ export interface CreateBookRequest {
     author: string;
     description: string;
     isbn?: string;
-    category: string;
-    publisher?: string;
+    categoryId: number;
+    publisherId: number;
     pages: number;
     language: string;
     publicationYear?: number;

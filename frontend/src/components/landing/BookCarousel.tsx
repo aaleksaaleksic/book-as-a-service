@@ -13,6 +13,8 @@ import {
     CarouselPrevious,
 } from '@/components/ui/carousel';
 import { useAuth } from '@/hooks/useAuth';
+import { useHttpClient } from '@/context/HttpClientProvider';
+import { analyticsApi } from '@/api/analytics';
 import { dt } from '@/lib/design-tokens';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
 
@@ -128,7 +130,7 @@ export const BookCarousel = ({ title, books, viewAllHref }: BookCarouselProps) =
 
                                     <div className="p-4 flex flex-col flex-1">
                                         <Badge variant="outline" className="text-xs mb-2">
-                                            {book.category}
+                                            {book.category?.name || 'N/A'}
                                         </Badge>
                                         <h3 className="font-semibold text-reading-text text-sm line-clamp-2 leading-tight">
                                             {book.title}

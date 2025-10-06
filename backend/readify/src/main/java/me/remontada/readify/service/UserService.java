@@ -1,6 +1,8 @@
 package me.remontada.readify.service;
 
 import me.remontada.readify.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +12,8 @@ public interface UserService {
     Optional<User> findByEmail(String email);
 
     List<User> findAll();
+
+    Page<User> findAll(Pageable pageable);
 
     User save(User user);
 
@@ -38,4 +42,14 @@ public interface UserService {
     Optional<User> findByPasswordResetToken(String token);
 
     void resetPassword(String token, String newPassword);
+
+    User deactivateUser(Long id);
+
+    User activateUser(Long id);
+
+    void deleteUser(Long id);
+
+    List<String> getAllUserEmails();
+
+    List<String> getActiveUserEmails();
 }

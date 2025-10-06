@@ -101,7 +101,13 @@ public class BookAnalyticsMapper {
 
     private static String extractBookCategory(Book book) {
         try {
-            return book != null ? book.getCategory() : "Uncategorized";
+            if (book == null) {
+                return "Uncategorized";
+            }
+            if (book.getCategory() == null) {
+                return "Uncategorized";
+            }
+            return book.getCategory().getName();
         } catch (Exception e) {
             log.warn("Failed to extract Book category from BookAnalytics", e);
             return "Uncategorized";

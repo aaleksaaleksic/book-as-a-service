@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -315,5 +316,34 @@ public class EmailServiceImpl implements EmailService {
                 userName != null && !userName.isEmpty() ? userName : "",
                 resetUrl
         );
+    }
+
+    @Override
+    public void sendBulkEmail(List<String> recipients, String subject, String htmlContent) {
+        if (!emailEnabled) {
+            log.warn("Email service is disabled. Skipping bulk email send.");
+            return;
+        }
+
+        if (recipients == null || recipients.isEmpty()) {
+            log.warn("No recipients provided for bulk email");
+            return;
+        }
+
+        int successCount = 0;
+        int failureCount = 0;
+
+        for (String recipient : recipients) {
+            try {
+                sendHtmlEmail(recipient, subject, htmlContent);
+                successCount++;
+                log.debug("Email sent successfully to: {}", recipient);
+            } catch (Exception e) {
+                failureCount++;
+                log.error("Failed to send email to: {}", recipient, e);
+            }
+        }
+
+        log.info("Bulk email completed. Success: {}, Failed: {}", successCount, failureCount);
     }
 }

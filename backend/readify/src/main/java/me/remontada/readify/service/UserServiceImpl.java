@@ -4,6 +4,8 @@ import me.remontada.readify.model.User;
 import me.remontada.readify.model.Permission;
 import me.remontada.readify.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -35,6 +38,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> findAll() {
         return userRepository.findAll();
+    }
+
+    @Override
+    public Page<User> findAll(Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
 
     @Override
@@ -291,6 +299,59 @@ public class UserServiceImpl implements UserService {
         user.setPasswordResetTokenExpiry(null);
 
         save(user);
+    }
+
+    @Override
+    public User deactivateUser(Long id) {
+        Optional<User> userOpt = findById(id);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
+
+        User user = userOpt.get();
+        user.setActive(false);
+        return save(user);
+    }
+
+    @Override
+    public User activateUser(Long id) {
+        Optional<User> userOpt = findById(id);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
+
+        User user = userOpt.get();
+        user.setActive(true);
+        return save(user);
+    }
+
+    @Override
+    public void deleteUser(Long id) {
+        Optional<User> userOpt = findById(id);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
+
+        deleteById(id);
+    }
+
+    @Override
+    public List<String> getAllUserEmails() {
+        return userRepository.findAll()
+                .stream()
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> getActiveUserEmails() {
+        return userRepository.findAll()
+                .stream()
+                .filter(User::hasActiveSubscription)
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isEmpty())
+                .collect(Collectors.toList());
     }
 
     private String generateSixDigitCode() {

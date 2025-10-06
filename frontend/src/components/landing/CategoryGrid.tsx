@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { BookOpen, Clock, Globe, Beaker, User, Zap } from 'lucide-react';
+import { BookOpen, Clock, Globe, Beaker, User, Zap, Tag } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useCategories } from '@/hooks/use-categories';
 import { dt } from '@/lib/design-tokens';
 
 interface Category {
@@ -77,12 +78,46 @@ const defaultCategories: Category[] = [
     },
 ];
 
-export const CategoryGrid = ({ categories = defaultCategories }: CategoryGridProps) => {
+export const CategoryGrid = ({ categories: customCategories }: CategoryGridProps) => {
     const router = useRouter();
+    const { data: apiCategories, isLoading } = useCategories();
+
+    // Use API categories if available, otherwise fall back to default categories
+    const displayCategories = apiCategories?.slice(0, 6).map((cat, index) => ({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.name.toLowerCase().replace(/\s+/g, '-'),
+        description: cat.description || '',
+        bookCount: 0, // This would come from backend analytics
+        icon: [BookOpen, Clock, Beaker, User, Zap, Globe][index % 6],
+        color: [
+            'from-blue-400 to-blue-600',
+            'from-amber-400 to-amber-600',
+            'from-green-400 to-green-600',
+            'from-purple-400 to-purple-600',
+            'from-orange-400 to-orange-600',
+            'from-teal-400 to-teal-600'
+        ][index % 6],
+    })) || customCategories || defaultCategories;
 
     const handleCategoryClick = (slug: string) => {
         router.push(`/category/${slug}`);
     };
+
+    if (isLoading) {
+        return (
+            <section className={dt.spacing.pageSections}>
+                <div className="mb-12 pl-4">
+                    <h2 className={`${dt.typography.sectionTitle} text-reading-text mb-4`}>
+                        Istražite kategorije
+                    </h2>
+                    <p className={`${dt.typography.body} text-reading-text/70 max-w-2xl`}>
+                        Učitavanje kategorija...
+                    </p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className={dt.spacing.pageSections}>
@@ -97,7 +132,7 @@ export const CategoryGrid = ({ categories = defaultCategories }: CategoryGridPro
             </div>
 
             <div className={dt.responsive.categoryGrid}>
-                {categories.map((category) => {
+                {displayCategories.map((category) => {
                     const Icon = category.icon;
                     return (
                         <Card
@@ -122,9 +157,11 @@ export const CategoryGrid = ({ categories = defaultCategories }: CategoryGridPro
                                     </p>
                                 </div>
 
-                                <Badge variant="secondary" className="bg-book-green-100 text-reading-accent">
-                                    {category.bookCount.toLocaleString()} knjiga
-                                </Badge>
+                                {category.bookCount > 0 && (
+                                    <Badge variant="secondary" className="bg-book-green-100 text-reading-accent">
+                                        {category.bookCount.toLocaleString()} knjiga
+                                    </Badge>
+                                )}
                             </CardContent>
                         </Card>
                     );

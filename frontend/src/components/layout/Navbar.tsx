@@ -70,7 +70,7 @@ export const Navbar = () => {
     const navigation: NavigationItem[] = PUBLIC_ITEMS;
 
     return (
-        <header className="w-full border-b border-white/10 bg-amber-300 backdrop-blur-lg">
+        <header className="w-full border-b border-white/10 bg-gradient-to-r from-library-gold via-amber-300 to-library-gold">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2">
@@ -100,7 +100,7 @@ export const Navbar = () => {
                     {isAuthenticated && isAdmin && (
                         <Link
                             href="/admin"
-                            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:from-amber-600 hover:to-orange-600 hover:shadow-xl"
+                            className="flex items-center gap-1.5 rounded-full  bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:from-amber-600 hover:to-orange-600 hover:shadow-xl"
                         >
                             <ShieldCheck className="h-4 w-4" />
                             Admin Panel
@@ -110,13 +110,7 @@ export const Navbar = () => {
 
                 {/* Desktop actions */}
                 <div className="hidden items-center gap-4 lg:flex">
-                    <div className="flex w-64 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2">
-                        <Search className="h-4 w-4 text-blue-950" />
-                        <Input
-                            placeholder="Pretraži knjige"
-                            className="h-auto border-none bg-transparent p-0 text-sm text-blue-950 placeholder:text-blue-950 focus-visible:ring-0"
-                        />
-                    </div>
+
 
                     {isAuthenticated && user ? (
                         <DropdownMenu>

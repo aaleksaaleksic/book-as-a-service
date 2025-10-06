@@ -448,4 +448,114 @@ public class AnalyticsController {
 
         return response;
     }
+
+    // Publisher Analytics Endpoints
+
+    @GetMapping("/admin/analytics/publishers/clicks")
+    @PreAuthorize("hasAuthority('CAN_VIEW_ANALYTICS')")
+    public ResponseEntity<Map<String, Object>> getClicksByPublisher(
+            @RequestParam(defaultValue = "30") int days,
+            Authentication authentication) {
+        try {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusDays(days);
+
+            List<Map<String, Object>> publisherClicks = analyticsService.getClicksByPublisher(startDate, endDate);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "publishers", publisherClicks,
+                    "period", Map.of(
+                            "startDate", startDate,
+                            "endDate", endDate,
+                            "days", days
+                    )
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to get clicks by publisher", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/admin/analytics/publishers/reading-time")
+    @PreAuthorize("hasAuthority('CAN_VIEW_ANALYTICS')")
+    public ResponseEntity<Map<String, Object>> getReadingTimeByPublisher(
+            @RequestParam(defaultValue = "30") int days,
+            Authentication authentication) {
+        try {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusDays(days);
+
+            List<Map<String, Object>> publisherReadingTime = analyticsService.getReadingMinutesByPublisher(startDate, endDate);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "publishers", publisherReadingTime,
+                    "period", Map.of(
+                            "startDate", startDate,
+                            "endDate", endDate,
+                            "days", days
+                    )
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to get reading time by publisher", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/admin/analytics/publishers/{publisherId}")
+    @PreAuthorize("hasAuthority('CAN_VIEW_ANALYTICS')")
+    public ResponseEntity<Map<String, Object>> getPublisherAnalytics(
+            @PathVariable Long publisherId,
+            @RequestParam(defaultValue = "30") int days,
+            Authentication authentication) {
+        try {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusDays(days);
+
+            Map<String, Object> publisherSummary = analyticsService.getPublisherAnalyticsSummary(publisherId, startDate, endDate);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "analytics", publisherSummary
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to get publisher analytics", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/admin/analytics/books/last-30-days")
+    @PreAuthorize("hasAuthority('CAN_VIEW_ANALYTICS')")
+    public ResponseEntity<Map<String, Object>> getMostClickedBooksLast30Days(
+            Authentication authentication) {
+        try {
+            List<Map<String, Object>> books = analyticsService.getMostClickedBooksLast30Days();
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "books", books,
+                    "period", "Last 30 days"
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to get most clicked books in last 30 days", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }

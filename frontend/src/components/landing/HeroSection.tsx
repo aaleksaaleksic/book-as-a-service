@@ -130,7 +130,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                             <div className="absolute -right-12 bottom-10 hidden h-28 w-28 rounded-3xl border border-dashed border-library-gold/30 opacity-70 lg:block" />
 
                             <div className="relative mx-auto max-w-md rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6 text-reading-text shadow-[0_30px_80px_rgba(4,12,28,0.45)] backdrop-blur">
-                                <div className="absolute -top-10 left-6 hidden items-center gap-2 rounded-full border border-library-gold/20 bg-library-parchment px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-library-copper shadow-lg lg:flex animate-float-slow">
+                                <div className="absolute -top-10 left-6 hidden items-center gap-2 rounded-full border border-library-gold/20 bg-library-parchment px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-sky-950 shadow-lg lg:flex animate-float-slow">
                                     <Users className="h-4 w-4" />
                                     Najčitanija knjiga ove nedelje
                                 </div>
@@ -167,8 +167,8 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                                                     <h3 className="font-display text-2xl font-semibold text-reading-text">{topBook.title}</h3>
                                                     <p className="mt-1 text-sm text-reading-text/70">{topBook.author}</p>
                                                 </div>
-                                                <Badge className="rounded-full bg-library-gold/15 text-library-copper">
-                                                    {topBook.category}
+                                                <Badge className="rounded-full bg-library-gold/15 text-sky-950">
+                                                    {topBook.category?.name || 'N/A'}
                                                 </Badge>
                                             </div>
 

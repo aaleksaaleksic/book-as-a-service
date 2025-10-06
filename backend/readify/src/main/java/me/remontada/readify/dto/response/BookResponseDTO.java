@@ -20,8 +20,8 @@ public class BookResponseDTO {
     private String author;
     private String description;
     private String isbn;
-    private String category;
-    private String publisher;
+    private CategoryResponseDTO category;
+    private PublisherResponseDTO publisher;
     private Integer pages;
     private String language;
     private Integer publicationYear;

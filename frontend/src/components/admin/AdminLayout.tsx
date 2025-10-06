@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -11,18 +11,16 @@ import {
     DollarSign,
     Shield,
     LogOut,
-    Menu
+    Menu,
+    Tag,
+    Building2,
+    X,
+    Mail
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { dt } from '@/lib/design-tokens';
-import { useState } from 'react';
 
 interface AdminLayoutProps {
     children: ReactNode;
@@ -54,6 +52,18 @@ const navItems: NavItem[] = [
         permission: 'CAN_CREATE_BOOKS',
     },
     {
+        title: 'Kategorije',
+        href: '/admin/categories',
+        icon: <Tag className="w-5 h-5" />,
+        permission: 'CAN_CREATE_BOOKS',
+    },
+    {
+        title: 'Izdavači',
+        href: '/admin/publishers',
+        icon: <Building2 className="w-5 h-5" />,
+        permission: 'CAN_CREATE_BOOKS',
+    },
+    {
         title: 'Korisnici',
         href: '/admin/users',
         icon: <Users className="w-5 h-5" />,
@@ -82,28 +92,23 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         !item.permission || hasPermission(item.permission as any)
     );
 
-    const SidebarContent = () => (
-        <div className="flex h-full flex-col">
-            {/* Admin Header */}
-            <div className="px-5 pb-6 pt-8">
-                <div className="flex items-center gap-3 rounded-2xl bg-reading-accent/10 p-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-reading-accent text-white shadow">
-                        <Shield className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-reading-text">Admin panel</h2>
-                        <p className="text-sm text-reading-text/70">
-                            {user?.firstName} {user?.lastName}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <Separator className="border-reading-accent/10" />
+    const SidebarContent = ({ showCloseButton = false }: { showCloseButton?: boolean }) => (
+        <div className="flex h-full flex-col bg-white">
+            {/* Mobile Close Button */}
+            {showCloseButton && (
+                <button
+                    type="button"
+                    onClick={() => setMobileOpen(false)}
+                    className="absolute top-3 right-3 p-1.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg transition-colors duration-200"
+                >
+                    <X className="w-5 h-5" />
+                    <span className="sr-only">Close menu</span>
+                </button>
+            )}
 
             {/* Navigation */}
-            <ScrollArea className="flex-1 px-3 py-6">
-                <nav className="space-y-2">
+            <div className="flex-1 overflow-y-auto px-3 py-6">
+                <nav className="space-y-1.5">
                     {filteredNavItems.map((item) => {
                         const isActive = pathname === item.href ||
                             (item.href !== '/admin' && pathname.startsWith(item.href));
@@ -114,40 +119,40 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                                 href={item.href}
                                 onClick={() => setMobileOpen(false)}
                                 className={cn(
-                                    "group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all", 
-                                    "hover:bg-reading-accent/10 hover:text-reading-text",
+                                    "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                                     isActive
-                                        ? "bg-reading-accent text-white shadow"
-                                        : "text-reading-text/80"
+                                        ? "bg-sky-950 text-white shadow-md"
+                                        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                                 )}
                             >
                                 <span className={cn(
-                                    "flex h-9 w-9 items-center justify-center rounded-lg border border-transparent",
+                                    "flex h-8 w-8 items-center justify-center rounded-md transition-colors duration-200",
                                     isActive
-                                        ? "bg-white/20"
-                                        : "bg-reading-accent/5 text-reading-text/70 group-hover:border-reading-accent/30"
+                                        ? "bg-sky-900 text-white"
+                                        : "bg-gray-100 text-gray-500 group-hover:bg-gray-200 group-hover:text-gray-700"
                                 )}>
                                     {item.icon}
                                 </span>
-                                <span className="font-semibold tracking-wide">{item.title}</span>
+                                <span className="flex-1">{item.title}</span>
                             </Link>
                         );
                     })}
                 </nav>
-            </ScrollArea>
+            </div>
 
-            <Separator className="border-reading-accent/10" />
+            {/* Divider */}
+            <div className="h-px bg-gray-200 mx-4" />
 
             {/* Logout Button */}
-            <div className="px-5 pb-8 pt-6">
-                <Button
+            <div className="px-5 pb-6 pt-5">
+                <button
+                    type="button"
                     onClick={logout}
-                    variant="ghost"
-                    className="w-full justify-start gap-3 rounded-xl bg-reading-accent/5 px-4 py-3 text-reading-text transition-colors hover:bg-reading-accent/15"
+                    className="w-full flex items-center justify-start gap-3 rounded-lg bg-red-50 px-4 py-3 text-red-700 font-medium text-sm transition-colors duration-200 hover:bg-red-100 hover:text-red-800"
                 >
                     <LogOut className="h-5 w-5" />
-                    <span className="font-semibold">Odjavi se</span>
-                </Button>
+                    <span>Odjavi se</span>
+                </button>
             </div>
         </div>
     );
@@ -162,62 +167,80 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
             }
         >
-            <div className="flex min-h-screen bg-reading-surface text-reading-text">
+            <div className="flex min-h-screen bg-gray-50">
                 {/* Desktop Sidebar */}
-                <aside className="hidden w-72 flex-col border-r border-reading-accent/10 bg-white/90 shadow-xl backdrop-blur lg:flex">
-                    <SidebarContent />
+                <aside className="hidden lg:flex fixed top-0 left-0 z-40 w-64 h-screen border-r border-gray-200 shadow-lg">
+                    <SidebarContent showCloseButton={false} />
                 </aside>
 
+                {/* Mobile Sidebar Overlay */}
+                {mobileOpen && (
+                    <div
+                        className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden transition-opacity duration-300"
+                        onClick={() => setMobileOpen(false)}
+                    />
+                )}
+
                 {/* Mobile Sidebar */}
-                <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                    <SheetContent side="left" className="w-72 border-none bg-white/95 p-0 shadow-xl">
-                        <SidebarContent />
-                    </SheetContent>
-                </Sheet>
+                <aside
+                    className={cn(
+                        "fixed top-0 left-0 z-50 w-64 h-screen transition-transform duration-300 transform lg:hidden",
+                        mobileOpen ? "translate-x-0" : "-translate-x-full"
+                    )}
+                >
+                    <SidebarContent showCloseButton={true} />
+                </aside>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col lg:ml-64">
                     {/* Top Bar */}
-                    <header className="h-20 border-b border-reading-accent/10 bg-white/80 px-4 shadow-sm backdrop-blur lg:px-8">
-                        <div className="flex h-full items-center justify-between">
+                    <header className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white shadow-sm">
+                        <div className="flex h-full items-center justify-between px-4 lg:px-8">
                             {/* Mobile Menu Button */}
-                            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                                <SheetTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="lg:hidden"
-                                    >
-                                        <Menu className="w-5 h-5" />
-                                    </Button>
-                                </SheetTrigger>
-                            </Sheet>
+                            <button
+                                type="button"
+                                onClick={() => setMobileOpen(true)}
+                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200 lg:hidden"
+                            >
+                                <Menu className="w-5 h-5" />
+                                <span className="sr-only">Open menu</span>
+                            </button>
 
-                            {/* Page Title */}
-                            <div className="hidden flex-col gap-1 lg:flex">
-                                <span className="text-xs uppercase tracking-[0.2em] text-reading-text/60">Readify admin</span>
-                                <h1 className={cn(dt.typography.sectionTitle)}>
-                                    {navItems.find(item => pathname.startsWith(item.href))?.title || 'Dashboard'}
-                                </h1>
-                            </div>
+                            {/* Spacer for mobile */}
+                            <div className="flex-1 lg:hidden" />
 
-                            {/* User Info */}
-                            <div className="flex items-center gap-4">
-                                <div className="hidden flex-col text-right text-sm text-reading-text/70 sm:flex">
-                                    <span className="font-semibold text-reading-text">{user?.firstName} {user?.lastName}</span>
-                                    <span className="text-xs uppercase tracking-widest text-reading-text/60">{user?.role}</span>
-                                </div>
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-reading-accent/15 text-lg font-semibold text-reading-accent shadow-inner">
-                                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                            {/* Right Side - Mail Sender & User Info */}
+                            <div className="flex items-center gap-3">
+                                {/* Mail Sender */}
+                                <Link
+                                    href="/admin/mail-sender"
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+                                >
+                                    <Mail className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Mail Sender</span>
+                                </Link>
+
+                                {/* Divider */}
+                                <div className="hidden sm:block h-8 w-px bg-gray-300" />
+
+                                {/* User Info */}
+                                <div className="flex items-center gap-3">
+                                    <div className="hidden sm:flex flex-col text-right">
+                                        <span className="text-sm font-semibold text-gray-900">{user?.firstName} {user?.lastName}</span>
+                                        <span className="text-xs font-medium uppercase tracking-wider text-gray-500">{user?.role}</span>
+                                    </div>
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-950 text-sm font-semibold text-white shadow-md">
+                                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </header>
 
                     {/* Page Content */}
-                    <main className="flex-1 overflow-auto px-4 pb-10 pt-6 lg:px-8 lg:pt-8">
-                        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-                            <div className="w-full rounded-3xl border border-reading-accent/10 bg-white/85 p-6 shadow-sm backdrop-blur">
+                    <main className="flex-1 overflow-auto p-4 lg:p-8">
+                        <div className="mx-auto w-full max-w-full">
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                                 {children}
                             </div>
                         </div>

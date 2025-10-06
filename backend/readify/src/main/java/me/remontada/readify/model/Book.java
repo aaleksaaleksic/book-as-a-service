@@ -36,11 +36,13 @@ public class Book {
     @Column(nullable = false, unique = true, length = 20)
     private String isbn;
 
-    @Column(nullable = false, length = 100)
-    private String category;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
-    @Column(length = 255)
-    private String publisher;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "publisher_id", nullable = false)
+    private Publisher publisher;
 
     @Column(nullable = false)
     private Integer pages;
@@ -56,7 +58,7 @@ public class Book {
 
     @Column(nullable = false, name = "is_premium")
     @Builder.Default
-    private Boolean isPremium = false;
+    private Boolean isPremium = true;
 
     @Column(nullable = false, name = "is_available")
     @Builder.Default

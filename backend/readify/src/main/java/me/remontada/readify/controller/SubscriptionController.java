@@ -288,6 +288,44 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * ADMIN: Get all subscriptions for a specific user
+     */
+    @GetMapping("/admin/users/{userId}/subscriptions")
+    @PreAuthorize("hasAuthority('CAN_MANAGE_SUBSCRIPTIONS')")
+    public ResponseEntity<Map<String, Object>> getUserSubscriptions(
+            @PathVariable Long userId,
+            Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+            logger.info("Admin {} requesting subscriptions for user {}", currentUser.getEmail(), userId);
+
+            Optional<User> userOpt = userService.findById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "User not found with id: " + userId
+                ));
+            }
+
+            List<Subscription> subscriptions = subscriptionService.getUserSubscriptionHistory(userOpt.get());
+            List<SubscriptionResponseDTO> subscriptionDTOs = SubscriptionMapper.toResponseDTOList(subscriptions);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "subscriptions", subscriptionDTOs,
+                    "totalCount", subscriptions.size()
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to get subscriptions for user {}", userId, e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
 
     private User getCurrentUser(Authentication authentication) {
         MyUserDetails userDetails = (MyUserDetails) authentication.getPrincipal();

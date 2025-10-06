@@ -37,4 +37,16 @@ public interface AnalyticsService {
     void processDailyAnalytics();
 
     void cleanupStaleReadingSessions();
+
+    // Publisher analytics
+    List<Map<String, Object>> getClicksByPublisher(LocalDate startDate, LocalDate endDate);
+
+    List<Map<String, Object>> getReadingMinutesByPublisher(LocalDate startDate, LocalDate endDate);
+
+    List<Map<String, Object>> getActiveBooksCountByPublisher(LocalDate startDate, LocalDate endDate);
+
+    // Last 30 days analytics
+    List<Map<String, Object>> getMostClickedBooksLast30Days();
+
+    Map<String, Object> getPublisherAnalyticsSummary(Long publisherId, LocalDate startDate, LocalDate endDate);
 }

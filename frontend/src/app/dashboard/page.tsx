@@ -78,7 +78,7 @@ export default function DashboardPage() {
                                             </div>
                                             {book.category && (
                                                 <Badge className="rounded-full bg-library-gold/15 text-library-copper">
-                                                    {book.category}
+                                                    {book.category?.name || 'N/A'}
                                                 </Badge>
                                             )}
                                         </div>

@@ -6,12 +6,17 @@ import me.remontada.readify.mapper.UserMapper;
 import me.remontada.readify.model.User;
 import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,16 +39,47 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('CAN_READ_USERS')")
-    public ResponseEntity<List<UserResponseDTO>> getAllUsers(Authentication authentication) {
+    public ResponseEntity<?> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "lastName") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection,
+            Authentication authentication) {
         try {
             User currentUser = getCurrentUser(authentication);
-            log.info("Admin {} requesting all users", currentUser.getEmail());
+            log.info("Admin {} requesting all users (page: {}, size: {}, sortBy: {}, direction: {})",
+                    currentUser.getEmail(), page, size, sortBy, sortDirection);
 
-            List<User> users = userService.findAll();
+            // If size is -1, return all users without pagination (for backward compatibility)
+            if (size == -1) {
+                List<User> users = userService.findAll();
+                List<UserResponseDTO> userDTOs = UserMapper.toResponseDTOList(users);
+                return ResponseEntity.ok(userDTOs);
+            }
 
-            List<UserResponseDTO> userDTOs = UserMapper.toResponseDTOList(users);
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
 
-            return ResponseEntity.ok(userDTOs);
+            // Create pageable
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            // Get paginated users
+            Page<User> usersPage = userService.findAll(pageable);
+
+            // Map to DTOs
+            List<UserResponseDTO> userDTOs = UserMapper.toResponseDTOList(usersPage.getContent());
+
+            // Create response with pagination info
+            Map<String, Object> response = new HashMap<>();
+            response.put("users", userDTOs);
+            response.put("currentPage", usersPage.getNumber());
+            response.put("totalItems", usersPage.getTotalElements());
+            response.put("totalPages", usersPage.getTotalPages());
+            response.put("pageSize", usersPage.getSize());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error fetching all users", e);
             return ResponseEntity.status(500).build();
@@ -281,6 +317,108 @@ public class UserController {
         }
     }
 
+
+    @PutMapping("/{id}/deactivate")
+    @PreAuthorize("hasAuthority('CAN_DELETE_USERS')")
+    public ResponseEntity<Map<String, Object>> deactivateUser(@PathVariable Long id, Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+            log.info("Admin {} deactivating user with ID: {}", currentUser.getEmail(), id);
+
+            // Prevent self-deactivation
+            if (currentUser.getId().equals(id)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Cannot deactivate your own account"
+                ));
+            }
+
+            User user = userService.deactivateUser(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User deactivated successfully",
+                    "user", UserMapper.toResponseDTO(user)
+            ));
+        } catch (RuntimeException e) {
+            log.error("Error deactivating user with ID: {}", id, e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Error deactivating user with ID: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Failed to deactivate user"
+            ));
+        }
+    }
+
+    @PutMapping("/{id}/activate")
+    @PreAuthorize("hasAuthority('CAN_DELETE_USERS')")
+    public ResponseEntity<Map<String, Object>> activateUser(@PathVariable Long id, Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+            log.info("Admin {} activating user with ID: {}", currentUser.getEmail(), id);
+
+            User user = userService.activateUser(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User activated successfully",
+                    "user", UserMapper.toResponseDTO(user)
+            ));
+        } catch (RuntimeException e) {
+            log.error("Error activating user with ID: {}", id, e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Error activating user with ID: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Failed to activate user"
+            ));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('CAN_DELETE_USERS')")
+    public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable Long id, Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+            log.info("Admin {} deleting user with ID: {}", currentUser.getEmail(), id);
+
+            // Prevent self-deletion
+            if (currentUser.getId().equals(id)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Cannot delete your own account"
+                ));
+            }
+
+            userService.deleteUser(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User deleted successfully"
+            ));
+        } catch (RuntimeException e) {
+            log.error("Error deleting user with ID: {}", id, e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Error deleting user with ID: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Failed to delete user"
+            ));
+        }
+    }
 
     private User getCurrentUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {

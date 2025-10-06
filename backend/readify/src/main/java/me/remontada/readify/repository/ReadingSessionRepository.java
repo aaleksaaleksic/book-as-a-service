@@ -49,4 +49,7 @@ public interface ReadingSessionRepository extends JpaRepository<ReadingSession, 
 
     @Query("SELECT COALESCE(AVG(rs.durationMinutes), 0) FROM ReadingSession rs WHERE rs.book = :book AND rs.sessionEnd IS NOT NULL")
     Double getAverageReadingTimeByBook(@Param("book") Book book);
+
+    @Query("SELECT rs FROM ReadingSession rs WHERE rs.user = :user AND rs.book = :book AND rs.sessionStart >= :startDate")
+    List<ReadingSession> findByUserAndBookAndSessionStartAfter(@Param("user") User user, @Param("book") Book book, @Param("startDate") LocalDateTime startDate);
 }

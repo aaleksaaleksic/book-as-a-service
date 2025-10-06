@@ -100,6 +100,7 @@ export function useTopRatedBooks() {
 
 type CreateBookMutationPayload = Omit<CreateBookRequest, 'price'> & {
     price?: number;
+    categoryId: number;
     pdfFile?: File | null;
     coverFile?: File | null;
     promoChapterFile?: File | null;
@@ -118,7 +119,7 @@ export function useCreateBook() {
                     author: data.author.trim(),
                     description: data.description.trim(),
                     isbn: data.isbn?.replace(/[\s-]/g, ""),
-                    category: data.category,
+                    categoryId: data.categoryId,
                     publisher: data.publisher?.trim(),
                     pages: data.pages,
                     language: data.language,
@@ -195,8 +196,8 @@ export function useUpdateBook() {
             if (data.title !== undefined) updateData.title = data.title;
             if (data.author !== undefined) updateData.author = data.author;
             if (data.description !== undefined) updateData.description = data.description;
-            if (data.category !== undefined) updateData.category = data.category;
-            if (data.publisher !== undefined) updateData.publisher = data.publisher;
+            if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+            if (data.publisherId !== undefined) updateData.publisherId = data.publisherId;
             if (data.pages !== undefined) updateData.pages = data.pages;
             if (data.language !== undefined) updateData.language = data.language;
             if (data.publicationYear !== undefined) updateData.publicationYear = data.publicationYear;

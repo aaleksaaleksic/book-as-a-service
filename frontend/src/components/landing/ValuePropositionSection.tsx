@@ -10,15 +10,15 @@ interface ValuePropositionSectionProps {
 
 const steps = [
     {
-        title: 'Kreiraš nalog',
-        description: 'Registracija traje manje od jednog minuta. Unesi osnovne informacije i potvrdi email i broj telefona.'
+        title: 'Kreirajte nalog',
+        description: 'Registracija traje manje od jednog minuta. Unesite osnovne informacije i potvrdite email i broj telefona.'
     },
     {
-        title: 'Izabereš svoj ritam',
-        description: 'Probaj režim čitanja prelistavajući promo poglavlja knjiga u našem čitaču.'
+        title: 'Probajte režim čitanja',
+        description: 'Prelistajte promo poglavlja knjiga u našem čitaču.'
     },
     {
-        title: 'Odaberi plan koji ti odgovara',
+        title: 'Odaberite plan koji ti odgovara',
         description: 'Od naša tri dostupna plana pretplate izaberite onaj koji vam najviše odgovara.'
     },
     {
@@ -27,24 +27,6 @@ const steps = [
     },
 ];
 
-const benefits = [
-    {
-        icon: Layers,
-        title: 'Sve na jednom mestu',
-    },
-    {
-        icon: Headphones,
-        title: 'Slušamo vaše predloge za nove naslove',
-    },
-    {
-        icon: Users,
-        title: 'Zajednica čitalaca',
-    },
-    {
-        icon: Compass,
-        title: 'Čitanje knjiga u pretplati',
-    },
-];
 
 export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSectionProps) => {
     return (
@@ -55,16 +37,12 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
             <div className={cn(dt.layouts.pageContainer, 'relative z-10 py-20')}>
                 <div className="grid gap-16 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-8">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-copper">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-sky-950">
                             Kako funkcioniše Bookotecha?
                         </div>
                         <h2 className="font-display text-3xl font-semibold text-reading-text sm:text-4xl">
                             Sve što ti treba da započneš korišćenje ove platforme
                         </h2>
-                        {/*<p className="max-w-xl text-sm text-reading-text/70">*/}
-                        {/*    Bookotecha je više od digitalne biblioteke – to je lični asistent za čitanje koji ti pomaže da pronađeš prave knjige, držiš fokus i deliš inspiraciju sa drugima.*/}
-                        {/*    Svaki korak je osmišljen da ti uštedi vreme i otkrije nove priče.*/}
-                        {/*</p>*/}
 
                         <div className="space-y-6">
                             {steps.map((step, index) => (
@@ -92,22 +70,10 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
 
                     <div className="space-y-6">
                         <div className="rounded-3xl border border-library-gold/20 bg-library-linen/80 p-8 shadow-[0_20px_60px_rgba(31,41,51,0.18)]">
-                            <h3 className="font-display text-xl font-semibold text-reading-text">Zašto nas korisnici biraju</h3>
+                            <h3 className="font-display text-xl font-semibold text-reading-text">Šta nudimo?</h3>
                             <p className="mt-3 text-sm text-reading-text/70">
-                                Spojili smo tehnologiju i ljubav prema knjigama kako bismo olakšali čitanje literature koja nas unapređuje.
+                                Pretplatom na našu platformu dobijate pristup svim dostupnim knjigama. Kliknite ovde za listu knjiga i njihova promo poglavlja.
                             </p>
-                            <div className="mt-6 grid gap-5">
-                                {benefits.map((benefit) => (
-                                    <div key={benefit.title} className="flex gap-4">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-library-gold/25 bg-white text-library-gold shadow-sm">
-                                            <benefit.icon className="h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-display text-base font-semibold text-reading-text">{benefit.title}</h4>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
 
                         <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">

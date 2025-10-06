@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.remontada.readify.dto.response.BookResponseDTO;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.User;
+import me.remontada.readify.model.Category;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,8 +31,8 @@ public class BookMapper {
                     .author(book.getAuthor())
                     .description(book.getDescription())
                     .isbn(book.getIsbn())
-                    .category(book.getCategory())
-                    .publisher(book.getPublisher())
+                    .category(CategoryMapper.toResponseDTO(book.getCategory()))
+                    .publisher(PublisherMapper.toResponseDTO(book.getPublisher()))
                     .pages(book.getPages())
                     .language(book.getLanguage())
                     .publicationYear(book.getPublicationYear())

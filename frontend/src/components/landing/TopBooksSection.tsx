@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, BarChart3, Flame } from 'lucide-react';
+import { Clock3 } from 'lucide-react';
 import type { BookResponseDTO } from '@/api/types/books.types';
 import { dt } from '@/lib/design-tokens';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
@@ -33,7 +33,7 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
 
             <div className={cn(dt.layouts.pageContainer, 'relative')}>
                 <div className="text-center">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-copper">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-linen/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-sky-950">
                         Top 6 knjiga poslednjih 30 dana
                     </div>
                     <h2 className="mt-6 font-display text-3xl font-semibold text-reading-text sm:text-4xl">
@@ -51,14 +51,13 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                         ? Array.from({ length: 6 }).map((_, index) => (
                               <div
                                   key={`skeleton-${index}`}
-                                  className="flex animate-pulse flex-col gap-4 rounded-3xl border border-library-gold/10 bg-library-linen/60 p-6"
+                                  className="flex animate-pulse flex-col gap-5 rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6"
                               >
-                                  <div className="h-8 w-12 rounded-full bg-library-azure/20" />
-                                  <div className="h-40 w-full rounded-3xl bg-library-azure/20" />
+                                  <div className="h-64 w-full rounded-3xl bg-library-azure/30" />
                                   <div className="space-y-3">
-                                      <div className="h-5 w-3/4 rounded bg-library-azure/10" />
-                                      <div className="h-4 w-1/2 rounded bg-library-azure/10" />
-                                      <div className="h-16 w-full rounded bg-library-azure/10" />
+                                      <div className="h-6 w-3/4 rounded bg-library-azure/40" />
+                                      <div className="h-4 w-1/2 rounded bg-library-azure/40" />
+                                      <div className="h-20 w-full rounded bg-library-azure/30" />
                                   </div>
                               </div>
                           ))
@@ -70,62 +69,64 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
                               return (
                                   <article
                                       key={book.id}
-                                      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border border-library-gold/15 bg-white/90 p-6 shadow-[0_18px_45px_rgba(31,41,51,0.12)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_30px_80px_rgba(31,41,51,0.2)]"
+                                      className="relative cursor-pointer rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6 text-reading-text shadow-[0_30px_80px_rgba(4,12,28,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_40px_100px_rgba(4,12,28,0.55)]"
                                       onClick={() => handleViewBook(book.id)}
                                   >
-                                      {/*<div className="absolute right-6 top-4 text-5xl font-display font-semibold text-library-slate">*/}
-                                      {/*    {String(index + 1).padStart(2, '0')}*/}
-                                      {/*</div>*/}
+                                      <div className="absolute -top-3 right-6 rounded-full border border-library-gold/20 bg-library-parchment px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-sky-950 shadow-lg">
+                                          #{index + 1} u poslednjih 30 dana
+                                      </div>
 
-                                      <div className="relative flex flex-1 flex-col gap-6">
-                                          <div className="flex flex-col gap-6 sm:flex-row">
-                                              <div className="relative mx-auto w-40 shrink-0 sm:mx-0">
-                                                  <div className="absolute inset-0 scale-95 rounded-[28px] bg-library-highlight/20 opacity-0 blur-xl transition group-hover:opacity-100" />
-                                                  <div className="relative overflow-hidden rounded-[28px] shadow-xl transition group-hover:rotate-1 group-hover:scale-[1.03]">
-                                                      {coverUrl ? (
-                                                          <img
-                                                              src={coverUrl}
-                                                              alt={book.title}
-                                                              className="h-48 w-full object-cover"
-                                                          />
-                                                      ) : (
-                                                          <div className="flex h-48 items-center justify-center bg-library-fog text-sm text-reading-text/60">
-                                                              Naslovnica u pripremi
-                                                          </div>
-                                                      )}
+                                      <div className="space-y-6">
+                                          <div className="relative overflow-hidden rounded-3xl bg-library-parchment/95 p-4 shadow-xl">
+                                              {coverUrl ? (
+                                                  <div className="flex min-h-[18rem] items-center justify-center sm:min-h-[22rem]">
+                                                      <img
+                                                          src={coverUrl}
+                                                          alt={book.title}
+                                                          className="max-h-[18rem] w-auto object-contain drop-shadow-xl sm:max-h-[22rem]"
+                                                      />
                                                   </div>
-                                              </div>
-
-                                              <div className="flex flex-1 flex-col justify-between gap-4">
-                                                  <div className="space-y-2">
-                                                      <Badge className="w-fit rounded-full bg-library-gold/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-library-copper">
-                                                          {book.category}
-                                                      </Badge>
-                                                      <h3 className="font-display text-xl font-semibold text-reading-text">{book.title}</h3>
-                                                      <p className="text-sm text-reading-text/70">{book.author}</p>
-                                                      {book.description && (
-                                                          <p className="text-sm text-reading-text/70 line-clamp-3">{book.description}</p>
-                                                      )}
+                                              ) : (
+                                                  <div className="flex min-h-[18rem] w-full items-center justify-center rounded-2xl bg-library-azure/15 text-reading-text/60 sm:min-h-[22rem]">
+                                                      Nema dostupne naslovnice
                                                   </div>
-
-                                              </div>
+                                              )}
                                           </div>
 
-                                          <div className="mt-auto flex items-center justify-between">
-                                              <span className="text-xs uppercase tracking-[0.32em] text-reading-text/50">
-                                                  #{index + 1} u poslednjih 30 dana
-                                              </span>
+                                          <div className="space-y-4">
+                                              <div className="flex items-start justify-between gap-4">
+                                                  <div>
+                                                      <h3 className="font-display text-2xl font-semibold text-reading-text">{book.title}</h3>
+                                                      <p className="mt-1 text-sm text-reading-text/70">{book.author}</p>
+                                                  </div>
+                                                  <Badge className="rounded-full bg-library-gold/15 text-sky-950">
+                                                      {book.category?.name || 'N/A'}
+                                                  </Badge>
+                                              </div>
+
+                                              {book.description && (
+                                                  <p className="text-sm text-reading-text/70 line-clamp-4">
+                                                      {book.description}
+                                                  </p>
+                                              )}
+
+                                              <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-reading-text/60">
+                                                  <div className="flex items-center gap-2 rounded-full border border-library-gold/25 px-3 py-1">
+                                                      <Clock3 className="h-3.5 w-3.5 text-library-gold" />
+                                                      {book.pages} strana
+                                                  </div>
+                                              </div>
+
                                               <Button
-                                                  size="sm"
+                                                  size="lg"
                                                   variant="ghost"
-                                                  className="rounded-full border border-library-gold/25 px-4 text-reading-text transition hover:bg-library-highlight/15"
                                                   onClick={(event) => {
                                                       event.stopPropagation();
                                                       handleViewBook(book.id);
                                                   }}
+                                                  className="w-full rounded-full border border-library-gold/25 bg-library-azure/10 py-5 text-reading-text transition hover:bg-library-highlight/10"
                                               >
-                                                  Vidi knjigu
-                                                  <ArrowRight className="ml-1 h-4 w-4" />
+                                                  Otvori detalje knjige
                                               </Button>
                                           </div>
                                       </div>

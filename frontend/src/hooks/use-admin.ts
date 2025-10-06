@@ -82,14 +82,49 @@ const parseNumber = (value: unknown): number => {
     return 0;
 };
 
-export function useAdminUsers() {
+type AdminUsersResponse = {
+    users?: AdminUser[];
+    currentPage?: number;
+    totalItems?: number;
+    totalPages?: number;
+    pageSize?: number;
+};
+
+export function useAdminUsers(
+    page?: number,
+    size?: number,
+    sortBy: string = 'lastName',
+    sortDirection: 'asc' | 'desc' = 'asc'
+) {
     const client = useHttpClient();
 
-    return useQuery<AdminUser[]>({
-        queryKey: ['admin', 'users'],
+    return useQuery<{ users: AdminUser[]; totalItems: number; totalPages: number; currentPage: number; pageSize: number }>({
+        queryKey: ['admin', 'users', page, size, sortBy, sortDirection],
         queryFn: async () => {
-            const response = await client.get<AdminUser[]>('/api/v1/users');
-            return response.data ?? [];
+            // If no pagination params, request all users
+            if (page === undefined || size === undefined) {
+                const response = await client.get<AdminUser[]>('/api/v1/users?size=-1');
+                const users = response.data ?? [];
+                return {
+                    users,
+                    totalItems: users.length,
+                    totalPages: 1,
+                    currentPage: 0,
+                    pageSize: users.length,
+                };
+            }
+
+            const response = await client.get<AdminUsersResponse>(
+                `/api/v1/users?page=${page}&size=${size}&sortBy=${sortBy}&sortDirection=${sortDirection}`
+            );
+            const payload = response.data ?? {};
+            return {
+                users: payload.users ?? [],
+                totalItems: payload.totalItems ?? 0,
+                totalPages: payload.totalPages ?? 0,
+                currentPage: payload.currentPage ?? 0,
+                pageSize: payload.pageSize ?? size,
+            };
         },
     });
 }
@@ -107,6 +142,23 @@ export function useAdminSubscriptions() {
                 totalCount: payload.totalCount ?? payload.subscriptions?.length ?? 0,
             };
         },
+    });
+}
+
+export function useUserSubscriptions(userId: number) {
+    const client = useHttpClient();
+
+    return useQuery<{ subscriptions: AdminSubscription[]; totalCount: number }>({
+        queryKey: ['admin', 'users', userId, 'subscriptions'],
+        queryFn: async () => {
+            const response = await client.get<AdminSubscriptionsResponse>(`/api/v1/admin/users/${userId}/subscriptions`);
+            const payload = response.data ?? {};
+            return {
+                subscriptions: payload.subscriptions ?? [],
+                totalCount: payload.totalCount ?? payload.subscriptions?.length ?? 0,
+            };
+        },
+        enabled: !!userId,
     });
 }
 
@@ -146,6 +198,87 @@ export function useCancelSubscription() {
         },
         onError: (error: any) => {
             const message = error?.response?.data?.message ?? 'Nije moguće otkazati pretplatu.';
+            toast({
+                title: 'Greška',
+                description: message,
+                variant: 'destructive',
+            });
+        },
+    });
+}
+
+export function useDeactivateUser() {
+    const client = useHttpClient();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (userId: number) => {
+            const response = await client.put(`/api/v1/users/${userId}/deactivate`);
+            return response.data;
+        },
+        onSuccess: () => {
+            toast({
+                title: 'Korisnik deaktiviran',
+                description: 'Korisnik je uspešno deaktiviran.',
+            });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+        },
+        onError: (error: any) => {
+            const message = error?.response?.data?.message ?? 'Nije moguće deaktivirati korisnika.';
+            toast({
+                title: 'Greška',
+                description: message,
+                variant: 'destructive',
+            });
+        },
+    });
+}
+
+export function useActivateUser() {
+    const client = useHttpClient();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (userId: number) => {
+            const response = await client.put(`/api/v1/users/${userId}/activate`);
+            return response.data;
+        },
+        onSuccess: () => {
+            toast({
+                title: 'Korisnik aktiviran',
+                description: 'Korisnik je uspešno aktiviran.',
+            });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+        },
+        onError: (error: any) => {
+            const message = error?.response?.data?.message ?? 'Nije moguće aktivirati korisnika.';
+            toast({
+                title: 'Greška',
+                description: message,
+                variant: 'destructive',
+            });
+        },
+    });
+}
+
+export function useDeleteUser() {
+    const client = useHttpClient();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (userId: number) => {
+            const response = await client.delete(`/api/v1/users/${userId}`);
+            return response.data;
+        },
+        onSuccess: () => {
+            toast({
+                title: 'Korisnik obrisan',
+                description: 'Korisnik je trajno obrisan iz sistema.',
+            });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+        },
+        onError: (error: any) => {
+            const message = error?.response?.data?.message ?? 'Nije moguće obrisati korisnika.';
             toast({
                 title: 'Greška',
                 description: message,
@@ -261,6 +394,21 @@ export function useAdminTopReaders(days = 30) {
             const response = await client.get<TopReadersResponse>(`/api/v1/admin/analytics/readers/top?days=${days}`);
             return {
                 readers: response.data?.readers ?? [],
+                period: response.data?.period,
+            };
+        },
+    });
+}
+
+export function useAdminPublishersByClicks(days = 30) {
+    const client = useHttpClient();
+
+    return useQuery<{ publishers: Array<{ publisherId: number; publisherName: string; totalClicks: number }>; period?: { startDate: string; endDate: string; days: number } }>({
+        queryKey: ['admin', 'analytics', 'publishers-clicks', days],
+        queryFn: async () => {
+            const response = await client.get<{ publishers: Array<{ publisherId: number; publisherName: string; totalClicks: number }>; period?: { startDate: string; endDate: string; days: number } }>(`/api/v1/admin/analytics/publishers/clicks?days=${days}`);
+            return {
+                publishers: response.data?.publishers ?? [],
                 period: response.data?.period,
             };
         },

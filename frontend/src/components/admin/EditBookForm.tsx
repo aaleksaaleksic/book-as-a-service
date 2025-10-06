@@ -14,23 +14,13 @@ import {
     Upload,
     Image,
     FileText,
-    Download
+    ChevronDown,
+    X
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { useUpdateBook, useUploadBookFiles } from '@/hooks/use-books';
-import { BOOK_CATEGORIES, POPULAR_CATEGORIES } from '@/utils/book-categories';
+import { useCategories } from '@/hooks/use-categories';
+import { usePublishers } from '@/hooks/use-publishers';
 import { BookResponseDTO } from '@/api/types/books.types';
-import { dt } from '@/lib/design-tokens';
-import { cn } from '@/lib/utils';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
 
 // Validation schema za edit (sva polja su opciona jer šaljemo samo promenjene)
@@ -47,11 +37,8 @@ const editBookSchema = z.object({
         .min(10, 'Opis mora imati najmanje 10 karaktera')
         .max(2000, 'Opis ne može biti duži od 2000 karaktera')
         .optional(),
-    category: z.string().optional(),
-    publisher: z.string()
-        .min(1, 'Izdavač je obavezan')
-        .max(255, 'Izdavač ne može biti duži od 255 karaktera')
-        .optional(),
+    categoryId: z.number().optional(),
+    publisherId: z.number().optional(),
     pages: z.number()
         .min(1, 'Broj strana mora biti pozitivan')
         .max(10000, 'Broj strana ne može biti veći od 10000')
@@ -87,6 +74,8 @@ export function EditBookForm({ book }: EditBookFormProps) {
     const router = useRouter();
     const updateBookMutation = useUpdateBook();
     const uploadFilesMutation = useUploadBookFiles();
+    const { data: categories, isLoading: categoriesLoading } = useCategories();
+    const { data: publishers, isLoading: publishersLoading } = usePublishers();
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
 
@@ -103,8 +92,8 @@ export function EditBookForm({ book }: EditBookFormProps) {
             title: book.title,
             author: book.author,
             description: book.description,
-            category: book.category,
-            publisher: book.publisher || '',
+            categoryId: book.category?.id,
+            publisherId: book.publisher?.id,
             pages: book.pages,
             language: book.language || 'Serbian',
             publicationYear: book.publicationYear,
@@ -112,9 +101,6 @@ export function EditBookForm({ book }: EditBookFormProps) {
             isAvailable: book.isAvailable,
         }
     });
-
-    const popularCategorySet = new Set<string>([...POPULAR_CATEGORIES]);
-    const otherCategories = BOOK_CATEGORIES.filter(category => !popularCategorySet.has(category));
 
     // Track changes
     useEffect(() => {
@@ -163,14 +149,8 @@ export function EditBookForm({ book }: EditBookFormProps) {
             if (data.title !== book.title) changedData.title = data.title;
             if (data.author !== book.author) changedData.author = data.author;
             if (data.description !== book.description) changedData.description = data.description;
-            if (data.category !== book.category) changedData.category = data.category;
-
-            // Handle publisher with proper null/empty string comparison
-            const currentPublisher = book.publisher || '';
-            const newPublisher = (data.publisher || '').trim();
-            if (newPublisher !== currentPublisher && newPublisher !== '') {
-                changedData.publisher = newPublisher;
-            }
+            if (data.categoryId !== book.category?.id) changedData.categoryId = data.categoryId;
+            if (data.publisherId !== book.publisher?.id) changedData.publisherId = data.publisherId;
 
             if (data.pages !== book.pages) changedData.pages = data.pages;
             if (data.language !== book.language) changedData.language = data.language;
@@ -209,38 +189,46 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Status badge */}
+            {/* Status badges */}
             <div className="flex gap-2">
                 {book.isPremium && (
-                    <Badge className="bg-yellow-500">Premium</Badge>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Premium
+                    </span>
                 )}
                 {!book.isAvailable && (
-                    <Badge variant="destructive">Nedostupna</Badge>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Nedostupna
+                    </span>
                 )}
-                <Badge variant="outline">ID: {book.id}</Badge>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+                    ID: {book.id}
+                </span>
             </div>
 
             {/* Osnovne informacije */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="w-5 h-5" />
-                        Osnovne informacije
-                    </CardTitle>
-                    <CardDescription>
-                        Izmeni osnovne podatke o knjizi
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className={cn(dt.spacing.formFields)}>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="border-b border-gray-200 px-6 py-4">
+                    <div className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-sky-950" />
+                        <h3 className="text-lg font-semibold text-gray-900">Osnovne informacije</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">Izmeni osnovne podatke o knjizi</p>
+                </div>
+                <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Naslov */}
                         <div className="space-y-2">
-                            <Label htmlFor="title">Naslov</Label>
-                            <Input
+                            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                                Naslov
+                            </label>
+                            <input
                                 id="title"
                                 {...register('title')}
                                 placeholder="npr. Atomske navike"
-                                className={errors.title ? 'border-red-500' : ''}
+                                className={`w-full px-3 py-2 text-sm text-gray-900 border rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none ${
+                                    errors.title ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
                             {errors.title && (
                                 <p className="text-sm text-red-500">{errors.title.message}</p>
@@ -249,12 +237,16 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
                         {/* Autor */}
                         <div className="space-y-2">
-                            <Label htmlFor="author">Autor</Label>
-                            <Input
+                            <label htmlFor="author" className="block text-sm font-medium text-gray-700">
+                                Autor
+                            </label>
+                            <input
                                 id="author"
                                 {...register('author')}
                                 placeholder="npr. James Clear"
-                                className={errors.author ? 'border-red-500' : ''}
+                                className={`w-full px-3 py-2 text-sm text-gray-900 border rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none ${
+                                    errors.author ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
                             {errors.author && (
                                 <p className="text-sm text-red-500">{errors.author.message}</p>
@@ -263,66 +255,62 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
                         {/* Kategorija */}
                         <div className="space-y-2">
-                            <Label htmlFor="category">Kategorija</Label>
-                            <Select
-                                value={watch('category') || undefined}
-                                onValueChange={(value) => {
-                                    setValue('category', value, { shouldDirty: true });
-                                }}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-96">
-                                    {/* Popularne kategorije */}
-                                    <div className="px-2 py-1.5">
-                                        <p className="text-xs font-semibold text-muted-foreground mb-2">
-                                            Popularne kategorije
-                                        </p>
-                                        {[...popularCategorySet].map(category => (
-                                            <SelectItem key={`popular-${category}`} value={category}>
-                                                {category}
-                                            </SelectItem>
-                                        ))}
-                                    </div>
-                                    <Separator />
-                                    {/* Sve kategorije */}
-                                    <div className="px-2 py-1.5">
-                                        <p className="text-xs font-semibold text-muted-foreground mb-2">
-                                            Sve kategorije
-                                        </p>
-                                        {otherCategories.map(category => (
-                                            <SelectItem key={`all-${category}`} value={category}>
-                                                {category}
-                                            </SelectItem>
-                                        ))}
-                                    </div>
-                                </SelectContent>
-                            </Select>
+                            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
+                                Kategorija
+                            </label>
+                            <div className="relative">
+                                <select
+                                    value={watch('categoryId') || ''}
+                                    onChange={(e) => setValue('categoryId', parseInt(e.target.value), { shouldDirty: true })}
+                                    disabled={categoriesLoading}
+                                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none"
+                                >
+                                    <option value="">{categoriesLoading ? 'Učitavanje...' : 'Izaberite kategoriju'}</option>
+                                    {categories?.map(category => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
 
                         {/* Izdavač */}
                         <div className="space-y-2">
-                            <Label htmlFor="publisher">Izdavač *</Label>
-                            <Input
-                                id="publisher"
-                                {...register('publisher')}
-                                placeholder="npr. Laguna"
-                                className={errors.publisher ? 'border-red-500' : ''}
-                            />
-                            {errors.publisher && (
-                                <p className="text-sm text-red-500">{errors.publisher.message}</p>
-                            )}
+                            <label htmlFor="publisherId" className="block text-sm font-medium text-gray-700">
+                                Izdavač
+                            </label>
+                            <div className="relative">
+                                <select
+                                    value={watch('publisherId') || ''}
+                                    onChange={(e) => setValue('publisherId', parseInt(e.target.value), { shouldDirty: true })}
+                                    disabled={publishersLoading}
+                                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none"
+                                >
+                                    <option value="">{publishersLoading ? 'Učitavanje...' : 'Izaberi izdavača'}</option>
+                                    {publishers?.map((publisher) => (
+                                        <option key={publisher.id} value={publisher.id}>
+                                            {publisher.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
 
                         {/* Broj strana */}
                         <div className="space-y-2">
-                            <Label htmlFor="pages">Broj strana</Label>
-                            <Input
+                            <label htmlFor="pages" className="block text-sm font-medium text-gray-700">
+                                Broj strana
+                            </label>
+                            <input
                                 id="pages"
                                 type="number"
                                 {...register('pages', { valueAsNumber: true })}
-                                className={errors.pages ? 'border-red-500' : ''}
+                                className={`w-full px-3 py-2 text-sm text-gray-900 border rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none ${
+                                    errors.pages ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
                             {errors.pages && (
                                 <p className="text-sm text-red-500">{errors.pages.message}</p>
@@ -331,36 +319,41 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
                         {/* Jezik */}
                         <div className="space-y-2">
-                            <Label htmlFor="language">Jezik</Label>
-                            <Select
-                                defaultValue={book.language || 'Serbian'}
-                                onValueChange={(value) => setValue('language', value)}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Serbian">Srpski</SelectItem>
-                                    <SelectItem value="English">Engleski</SelectItem>
-                                    <SelectItem value="German">Nemački</SelectItem>
-                                    <SelectItem value="French">Francuski</SelectItem>
-                                    <SelectItem value="Spanish">Španski</SelectItem>
-                                    <SelectItem value="Russian">Ruski</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <label htmlFor="language" className="block text-sm font-medium text-gray-700">
+                                Jezik
+                            </label>
+                            <div className="relative">
+                                <select
+                                    value={watch('language') || 'Serbian'}
+                                    onChange={(e) => setValue('language', e.target.value)}
+                                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none"
+                                >
+                                    <option value="Serbian">Srpski</option>
+                                    <option value="English">Engleski</option>
+                                    <option value="German">Nemački</option>
+                                    <option value="French">Francuski</option>
+                                    <option value="Spanish">Španski</option>
+                                    <option value="Russian">Ruski</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
 
                         {/* Godina izdanja */}
                         <div className="space-y-2">
-                            <Label htmlFor="publicationYear">Godina izdanja</Label>
-                            <Input
+                            <label htmlFor="publicationYear" className="block text-sm font-medium text-gray-700">
+                                Godina izdanja
+                            </label>
+                            <input
                                 id="publicationYear"
                                 type="number"
                                 {...register('publicationYear', {
                                     valueAsNumber: true,
                                     setValueAs: v => v === "" ? null : parseInt(v)
                                 })}
-                                className={errors.publicationYear ? 'border-red-500' : ''}
+                                className={`w-full px-3 py-2 text-sm text-gray-900 border rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none ${
+                                    errors.publicationYear ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
                             {errors.publicationYear && (
                                 <p className="text-sm text-red-500">{errors.publicationYear.message}</p>
@@ -369,23 +362,27 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
                         {/* ISBN (readonly) */}
                         <div className="space-y-2">
-                            <Label>ISBN</Label>
-                            <Input
+                            <label className="block text-sm font-medium text-gray-700">ISBN</label>
+                            <input
                                 value={book.isbn}
                                 disabled
-                                className="bg-muted"
+                                className="w-full px-3 py-2 text-sm text-gray-500 bg-gray-100 border border-gray-300 rounded-lg"
                             />
                         </div>
                     </div>
 
                     {/* Opis */}
                     <div className="space-y-2">
-                        <Label htmlFor="description">Opis</Label>
-                        <Textarea
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                            Opis
+                        </label>
+                        <textarea
                             id="description"
                             {...register('description')}
                             rows={4}
-                            className={errors.description ? 'border-red-500' : ''}
+                            className={`w-full px-3 py-2 text-sm text-gray-900 border rounded-lg focus:ring-2 focus:ring-sky-950 focus:border-transparent outline-none resize-none ${
+                                errors.description ? 'border-red-500' : 'border-gray-300'
+                            }`}
                         />
                         {errors.description && (
                             <p className="text-sm text-red-500">{errors.description.message}</p>
@@ -395,77 +392,109 @@ export function EditBookForm({ book }: EditBookFormProps) {
                     {/* Switches */}
                     <div className="space-y-4">
                         {/* Premium toggle */}
-                        <div className="flex items-center justify-between p-4 bg-book-green-50 rounded-lg">
+                        <div className="flex items-center justify-between p-4 bg-sky-50 rounded-lg border border-sky-100">
                             <div className="space-y-1">
-                                <Label htmlFor="isPremium" className="text-base">
+                                <label htmlFor="isPremium" className="text-sm font-medium text-gray-900">
                                     Premium knjiga
-                                </Label>
-                                <p className={cn(dt.typography.muted)}>
+                                </label>
+                                <p className="text-sm text-gray-600">
                                     Premium knjige zahtevaju pretplatu za čitanje
                                 </p>
                             </div>
-                            <Switch
-                                id="isPremium"
-                                checked={watch('isPremium')}
-                                onCheckedChange={(checked) => setValue('isPremium', checked)}
-                            />
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={watch('isPremium')}
+                                onClick={() => setValue('isPremium', !watch('isPremium'), { shouldDirty: true })}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                                    watch('isPremium') ? 'bg-sky-950' : 'bg-gray-300'
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                        watch('isPremium') ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                                />
+                            </button>
                         </div>
 
                         {/* Available toggle */}
-                        <div className="flex items-center justify-between p-4 bg-book-green-50 rounded-lg">
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="space-y-1">
-                                <Label htmlFor="isAvailable" className="text-base">
+                                <label htmlFor="isAvailable" className="text-sm font-medium text-gray-900">
                                     Dostupna za čitanje
-                                </Label>
-                                <p className={cn(dt.typography.muted)}>
+                                </label>
+                                <p className="text-sm text-gray-600">
                                     Kontroliši da li je knjiga vidljiva korisnicima
                                 </p>
                             </div>
-                            <Switch
-                                id="isAvailable"
-                                checked={watch('isAvailable')}
-                                onCheckedChange={(checked) => setValue('isAvailable', checked)}
-                            />
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={watch('isAvailable')}
+                                onClick={() => setValue('isAvailable', !watch('isAvailable'), { shouldDirty: true })}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                                    watch('isAvailable') ? 'bg-sky-950' : 'bg-gray-300'
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                        watch('isAvailable') ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                                />
+                            </button>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Upload novih fajlova */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Upload className="w-5 h-5" />
-                        Zameni fajlove
-                    </CardTitle>
-                    <CardDescription>
-                        Opciono: Upload novi PDF ili cover sliku
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className={cn(dt.spacing.formFields)}>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="border-b border-gray-200 px-6 py-4">
+                    <div className="flex items-center gap-2">
+                        <Upload className="w-5 h-5 text-sky-950" />
+                        <h3 className="text-lg font-semibold text-gray-900">Zameni fajlove</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">Opciono: Upload novi PDF ili cover sliku</p>
+                </div>
+                <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Current/New Cover */}
                         <div className="space-y-2">
-                            <Label>Cover slika</Label>
-                            <div className="border-2 border-dashed border-reading-accent/20 rounded-lg p-4">
+                            <label className="block text-sm font-medium text-gray-700">Cover slika</label>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-sky-950 transition-colors">
                                 {getCoverUrl() ? (
-                                    <img
-                                        src={getCoverUrl()!}
-                                        alt="Book cover"
-                                        className="w-32 h-48 object-cover mx-auto rounded mb-4"
-                                    />
+                                    <div className="relative inline-block w-full">
+                                        <img
+                                            src={getCoverUrl()!}
+                                            alt="Book cover"
+                                            className="w-32 h-48 object-cover mx-auto rounded mb-4"
+                                        />
+                                        {previewUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setPreviewUrl(null);
+                                                    setValue('newCoverFile', undefined as any);
+                                                }}
+                                                className="absolute top-0 right-1/2 translate-x-[4.5rem] -translate-y-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
                                 ) : (
-                                    <div className="w-32 h-48 bg-reading-accent/10 mx-auto rounded mb-4 flex items-center justify-center">
-                                        <Image className="w-12 h-12 text-reading-accent/40" />
+                                    <div className="w-32 h-48 bg-gray-100 mx-auto rounded mb-4 flex items-center justify-center">
+                                        <Image className="w-12 h-12 text-gray-400" />
                                     </div>
                                 )}
-                                <Label
+                                <label
                                     htmlFor="newCoverFile"
-                                    className="cursor-pointer text-reading-accent hover:underline block text-center"
+                                    className="cursor-pointer text-sky-950 hover:underline font-medium block text-center"
                                 >
                                     {getCoverUrl() ? 'Zameni cover sliku' : 'Dodaj cover sliku'}
-                                </Label>
-                                <Input
+                                </label>
+                                <input
                                     id="newCoverFile"
                                     type="file"
                                     accept="image/jpeg,image/jpg,image/png"
@@ -477,19 +506,19 @@ export function EditBookForm({ book }: EditBookFormProps) {
 
                         {/* New PDF */}
                         <div className="space-y-2">
-                            <Label>PDF fajl</Label>
-                            <div className="border-2 border-dashed border-reading-accent/20 rounded-lg p-4 text-center">
-                                <FileText className="w-12 h-12 mx-auto mb-4 text-reading-accent/40" />
-                                <p className={cn(dt.typography.muted, "mb-2")}>
+                            <label className="block text-sm font-medium text-gray-700">PDF fajl</label>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-sky-950 transition-colors">
+                                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                                <p className="text-sm text-gray-600 mb-2">
                                     {book.contentUrl ? 'PDF već postoji' : 'PDF nije uploadovan'}
                                 </p>
-                                <Label
+                                <label
                                     htmlFor="newPdfFile"
-                                    className="cursor-pointer text-reading-accent hover:underline"
+                                    className="cursor-pointer text-sky-950 hover:underline font-medium"
                                 >
                                     Zameni PDF fajl
-                                </Label>
-                                <Input
+                                </label>
+                                <input
                                     id="newPdfFile"
                                     type="file"
                                     accept=".pdf"
@@ -497,38 +526,38 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                     className="hidden"
                                 />
                                 {watch('newPdfFile') && (
-                                    <Badge variant="secondary" className="mt-3">
+                                    <div className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                         Novi PDF: {watch('newPdfFile')?.name}
-                                    </Badge>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <Separator className="my-6" />
+                    <div className="h-px bg-gray-200" />
 
                     {/* Promo Chapter */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-lg font-semibold mb-1">Promo poglavlje (opciono)</h3>
-                            <p className={cn(dt.typography.muted)}>
+                            <h3 className="text-base font-semibold text-gray-900 mb-1">Promo poglavlje (opciono)</h3>
+                            <p className="text-sm text-gray-600">
                                 Dodajte ili zamenite besplatno promo poglavlje
                             </p>
                         </div>
                         <div className="space-y-2">
-                            <Label>Promo poglavlje PDF</Label>
-                            <div className="border-2 border-dashed border-book-green-500/20 rounded-lg p-4 text-center">
-                                <FileText className="w-12 h-12 mx-auto mb-4 text-book-green-500/40" />
-                                <p className={cn(dt.typography.muted, "mb-2")}>
+                            <label className="block text-sm font-medium text-gray-700">Promo poglavlje PDF</label>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-sky-950 transition-colors">
+                                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                                <p className="text-sm text-gray-600 mb-2">
                                     {book.promoChapterPath ? 'Promo poglavlje postoji' : 'Promo poglavlje nije dodato'}
                                 </p>
-                                <Label
+                                <label
                                     htmlFor="newPromoChapterFile"
-                                    className="cursor-pointer text-book-green-600 hover:underline"
+                                    className="cursor-pointer text-sky-950 hover:underline font-medium"
                                 >
                                     {book.promoChapterPath ? 'Zameni promo poglavlje' : 'Dodaj promo poglavlje'}
-                                </Label>
-                                <Input
+                                </label>
+                                <input
                                     id="newPromoChapterFile"
                                     type="file"
                                     accept=".pdf"
@@ -536,34 +565,34 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                     className="hidden"
                                 />
                                 {watch('newPromoChapterFile') && (
-                                    <Badge variant="secondary" className="mt-3 bg-book-green-100 text-book-green-700">
+                                    <div className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                         Novi promo: {watch('newPromoChapterFile')?.name}
-                                    </Badge>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Submit dugmići */}
             <div className="flex justify-between items-center">
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-600">
                     {hasChanges ? '• Imate nesačuvane izmene' : '• Nema izmena'}
                 </div>
                 <div className="flex gap-4">
-                    <Button
+                    <button
                         type="button"
-                        variant="outline"
                         onClick={() => router.push('/admin/books')}
                         disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
                     >
                         Otkaži
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                         type="submit"
                         disabled={isSubmitting || !hasChanges}
-                        className={cn(dt.interactive.buttonPrimary)}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-sky-950 rounded-lg hover:bg-sky-900 transition-colors duration-200 disabled:opacity-50"
                     >
                         {isSubmitting ? (
                             <>
@@ -576,20 +605,22 @@ export function EditBookForm({ book }: EditBookFormProps) {
                                 Sačuvaj izmene
                             </>
                         )}
-                    </Button>
+                    </button>
                 </div>
             </div>
 
             {/* Error alert */}
             {(updateBookMutation.isError || uploadFilesMutation.isError) && (
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                        {(updateBookMutation.error as any)?.response?.data?.message ||
-                            (uploadFilesMutation.error as any)?.response?.data?.message ||
-                            'Greška pri ažuriranju knjige. Pokušajte ponovo.'}
-                    </AlertDescription>
-                </Alert>
+                <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                        <p className="text-sm text-red-800">
+                            {(updateBookMutation.error as any)?.response?.data?.message ||
+                                (uploadFilesMutation.error as any)?.response?.data?.message ||
+                                'Greška pri ažuriranju knjige. Pokušajte ponovo.'}
+                        </p>
+                    </div>
+                </div>
             )}
         </form>
     );

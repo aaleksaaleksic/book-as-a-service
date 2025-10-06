@@ -1,6 +1,7 @@
 package me.remontada.readify.repository;
 
 import me.remontada.readify.model.Book;
+import me.remontada.readify.model.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,7 +17,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findAllByOrderByCreatedAtDesc();
     List<Book> findByIsAvailableTrueAndIsPremiumFalseOrderByCreatedAtDesc();
     List<Book> findByIsAvailableTrueAndIsPremiumTrueOrderByCreatedAtDesc();
-    List<Book> findByCategoryAndIsAvailableTrueOrderByTitle(String category);
+    List<Book> findByCategoryAndIsAvailableTrueOrderByTitle(Category category);
     List<Book> findByAuthorContainingIgnoreCaseAndIsAvailableTrue(String author);
 
     @Query("SELECT b FROM Book b WHERE b.isAvailable = true AND " +
@@ -30,8 +31,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             "  b.totalReads DESC, b.averageRating DESC")
     List<Book> searchBooks(@Param("searchTerm") String searchTerm);
 
-    @Query("SELECT DISTINCT b.category FROM Book b WHERE b.isAvailable = true ORDER BY b.category")
-    List<String> findDistinctCategories();
+    @Query("SELECT DISTINCT c FROM Category c JOIN Book b ON b.category = c WHERE b.isAvailable = true ORDER BY c.name")
+    List<Category> findDistinctCategories();
 
     @Query(value = "SELECT * FROM books WHERE is_available = true " +
             "ORDER BY total_reads DESC NULLS LAST LIMIT 10",
@@ -76,7 +77,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT COALESCE(AVG(b.averageRating), 0) FROM Book b WHERE b.isAvailable = true AND b.ratingsCount > 0")
     Double getAverageRatingAcrossAllBooks();
 
-    @Query("SELECT b.category, COUNT(b) FROM Book b WHERE b.isAvailable = true GROUP BY b.category ORDER BY COUNT(b) DESC")
+    @Query("SELECT c.name, COUNT(b) FROM Book b JOIN b.category c WHERE b.isAvailable = true GROUP BY c.name ORDER BY COUNT(b) DESC")
     List<Object[]> getCategoryStatistics();
 
     @Query("SELECT b.author, COUNT(b), COALESCE(SUM(b.totalReads), 0) FROM Book b WHERE b.isAvailable = true GROUP BY b.author ORDER BY SUM(b.totalReads) DESC")

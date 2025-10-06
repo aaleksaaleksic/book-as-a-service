@@ -1,0 +1,21 @@
+package me.remontada.readify.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class PublisherResponseDTO {
+    private Long id;
+    private String name;
+    private String description;
+    private String website;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

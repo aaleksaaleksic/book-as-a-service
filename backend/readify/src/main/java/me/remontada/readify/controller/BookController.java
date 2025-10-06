@@ -1,16 +1,17 @@
 package me.remontada.readify.controller;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import me.remontada.readify.dto.request.RatingCreateDTO;
 import me.remontada.readify.dto.response.BookResponseDTO;
+import me.remontada.readify.dto.response.RatingResponseDTO;
 import me.remontada.readify.mapper.BookMapper;
 import me.remontada.readify.model.Book;
+import me.remontada.readify.model.Category;
+import me.remontada.readify.model.Publisher;
 import me.remontada.readify.model.User;
-import me.remontada.readify.service.BookService;
-import me.remontada.readify.service.FileStorageService;
-import me.remontada.readify.service.PdfStreamingService;
-import me.remontada.readify.service.StreamingSessionService;
+import me.remontada.readify.service.*;
 import me.remontada.readify.service.StreamingSessionService.StreamingSessionDescriptor;
-import me.remontada.readify.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,18 +34,27 @@ public class BookController {
     private final FileStorageService fileStorageService;
     private final PdfStreamingService pdfStreamingService;
     private final StreamingSessionService streamingSessionService;
+    private final CategoryService categoryService;
+    private final PublisherService publisherService;
+    private final RatingService ratingService;
 
     @Autowired
     public BookController(BookService bookService,
                           UserService userService,
                           FileStorageService fileStorageService,
                           PdfStreamingService pdfStreamingService,
-                          StreamingSessionService streamingSessionService) {
+                          StreamingSessionService streamingSessionService,
+                          CategoryService categoryService,
+                          PublisherService publisherService,
+                          RatingService ratingService) {
         this.bookService = bookService;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
         this.pdfStreamingService = pdfStreamingService;
         this.streamingSessionService = streamingSessionService;
+        this.categoryService = categoryService;
+        this.publisherService = publisherService;
+        this.ratingService = ratingService;
     }
 
 
@@ -343,20 +353,38 @@ public class BookController {
 
             // Create update data object
             Book bookData = new Book();
-            if (request.get("title") != null) bookData.setTitle(extractString(request.get("title")));
-            if (request.get("author") != null) bookData.setAuthor(extractString(request.get("author")));
-            if (request.get("description") != null) bookData.setDescription(extractString(request.get("description")));
-            if (request.get("category") != null) bookData.setCategory(extractString(request.get("category")));
-            if (request.get("publisher") != null) bookData.setPublisher(extractString(request.get("publisher")));
-            if (request.get("pages") != null) bookData.setPages(extractInteger(request.get("pages")));
-            if (request.get("language") != null) bookData.setLanguage(extractString(request.get("language")));
-            if (request.get("isbn") != null) bookData.setIsbn(extractString(request.get("isbn")));
-            if (request.get("publicationYear") != null) bookData.setPublicationYear(extractInteger(request.get("publicationYear")));
-            if (request.get("isPremium") != null) bookData.setIsPremium(extractBoolean(request.get("isPremium")));
-            if (request.get("isAvailable") != null) bookData.setIsAvailable(extractBoolean(request.get("isAvailable")));
+            if (request.containsKey("title")) bookData.setTitle(extractString(request.get("title")));
+            if (request.containsKey("author")) bookData.setAuthor(extractString(request.get("author")));
+            if (request.containsKey("description")) bookData.setDescription(extractString(request.get("description")));
+
+            // Handle category update via categoryId
+            if (request.containsKey("categoryId")) {
+                Integer categoryId = extractInteger(request.get("categoryId"));
+                if (categoryId != null) {
+                    Category category = categoryService.getCategoryById(categoryId.longValue())
+                        .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+                    bookData.setCategory(category);
+                }
+            }
+
+            // Handle publisher update via publisherId
+            if (request.containsKey("publisherId")) {
+                Integer publisherId = extractInteger(request.get("publisherId"));
+                if (publisherId != null) {
+                    me.remontada.readify.model.Publisher publisher = publisherService.getPublisherById(publisherId.longValue())
+                        .orElseThrow(() -> new RuntimeException("Publisher not found with id: " + publisherId));
+                    bookData.setPublisher(publisher);
+                }
+            }
+            if (request.containsKey("pages")) bookData.setPages(extractInteger(request.get("pages")));
+            if (request.containsKey("language")) bookData.setLanguage(extractString(request.get("language")));
+            if (request.containsKey("isbn")) bookData.setIsbn(extractString(request.get("isbn")));
+            if (request.containsKey("publicationYear")) bookData.setPublicationYear(extractInteger(request.get("publicationYear")));
+            if (request.containsKey("isPremium")) bookData.setIsPremium(extractBoolean(request.get("isPremium")));
+            if (request.containsKey("isAvailable")) bookData.setIsAvailable(extractBoolean(request.get("isAvailable")));
 
             // Handle price update
-            if (request.get("price") != null) {
+            if (request.containsKey("price")) {
                 bookData.setPrice(parsePrice(request.get("price")));
             }
 
@@ -420,6 +448,7 @@ public class BookController {
             response.put("message", "Book content accessed");
 
             // CRITICAL FIX: Return DTO instead of entity
+
             response.put("book", BookMapper.toResponseDTO(book));
             response.put("contentPreview", book.getContentPreview());
             response.put("canAccess", book.isAccessibleToUser(user));
@@ -534,6 +563,151 @@ public class BookController {
             }
         } else {
             throw new IllegalArgumentException("Price must be a number or string");
+        }
+    }
+
+    // ==================== RATING ENDPOINTS ====================
+
+    /**
+     * Add or update rating for a book
+     * POST /api/v1/books/{id}/rating
+     */
+    @PostMapping("/{id}/rating")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
+    public ResponseEntity<Map<String, Object>> addOrUpdateRating(@PathVariable Long id,
+                                                                  @Valid @RequestBody RatingCreateDTO ratingDTO,
+                                                                  Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+
+            RatingResponseDTO rating = ratingService.addOrUpdateRating(id, ratingDTO, currentUser);
+
+            log.info("User {} rated book {} with {} stars", currentUser.getEmail(), id, ratingDTO.getRating());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Rating submitted successfully",
+                    "rating", rating
+            ));
+
+        } catch (Exception e) {
+            log.error("Error adding rating for book {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", "Error submitting rating: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get user's rating for a specific book
+     * GET /api/v1/books/{id}/rating/me
+     */
+    @GetMapping("/{id}/rating/me")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
+    public ResponseEntity<Map<String, Object>> getUserRating(@PathVariable Long id,
+                                                              Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+
+            Optional<RatingResponseDTO> rating = ratingService.getUserRatingForBook(id, currentUser);
+
+            if (rating.isPresent()) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "rating", rating.get()
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "rating", (Object) null,
+                        "message", "No rating found"
+                ));
+            }
+
+        } catch (Exception e) {
+            log.error("Error fetching user rating for book {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", "Error fetching rating: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get all ratings for a book
+     * GET /api/v1/books/{id}/ratings
+     */
+    @GetMapping("/{id}/ratings")
+    public ResponseEntity<Map<String, Object>> getBookRatings(@PathVariable Long id) {
+        try {
+            List<RatingResponseDTO> ratings = ratingService.getBookRatings(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "ratings", ratings,
+                    "count", ratings.size()
+            ));
+
+        } catch (Exception e) {
+            log.error("Error fetching ratings for book {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", "Error fetching ratings: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get ratings with reviews for a book
+     * GET /api/v1/books/{id}/reviews
+     */
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<Map<String, Object>> getBookReviews(@PathVariable Long id) {
+        try {
+            List<RatingResponseDTO> reviews = ratingService.getBookRatingsWithReviews(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "reviews", reviews,
+                    "count", reviews.size()
+            ));
+
+        } catch (Exception e) {
+            log.error("Error fetching reviews for book {}", id, e);
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", "Error fetching reviews: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Delete user's rating for a book
+     * DELETE /api/v1/books/ratings/{ratingId}
+     */
+    @DeleteMapping("/ratings/{ratingId}")
+    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
+    public ResponseEntity<Map<String, Object>> deleteRating(@PathVariable Long ratingId,
+                                                             Authentication authentication) {
+        try {
+            User currentUser = getCurrentUser(authentication);
+
+            ratingService.deleteRating(ratingId, currentUser);
+
+            log.info("User {} deleted rating {}", currentUser.getEmail(), ratingId);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Rating deleted successfully"
+            ));
+
+        } catch (Exception e) {
+            log.error("Error deleting rating {}", ratingId, e);
+            return ResponseEntity.status(400).body(Map.of(
+                    "success", false,
+                    "message", "Error deleting rating: " + e.getMessage()
+            ));
         }
     }
 }

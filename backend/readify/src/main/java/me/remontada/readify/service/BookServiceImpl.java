@@ -2,6 +2,8 @@ package me.remontada.readify.service;
 
 import lombok.extern.slf4j.Slf4j;
 import me.remontada.readify.model.Book;
+import me.remontada.readify.model.Category;
+import me.remontada.readify.model.Publisher;
 import me.remontada.readify.model.User;
 import me.remontada.readify.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,10 +21,14 @@ import java.util.Optional;
 public class BookServiceImpl implements BookService {
 
     private final BookRepository bookRepository;
+    private final CategoryService categoryService;
+    private final PublisherService publisherService;
 
     @Autowired
-    public BookServiceImpl(BookRepository bookRepository) {
+    public BookServiceImpl(BookRepository bookRepository, CategoryService categoryService, PublisherService publisherService) {
         this.bookRepository = bookRepository;
+        this.categoryService = categoryService;
+        this.publisherService = publisherService;
     }
 
     @Override
@@ -62,9 +68,20 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Book> findByCategory(String category) {
-        if (category == null || category.trim().isEmpty()) {
+    public List<Book> findByCategory(String categoryName) {
+        if (categoryName == null || categoryName.trim().isEmpty()) {
             log.warn("Attempted to search books with empty category");
+            return List.of();
+        }
+
+        // Find category by name first, then find books
+        Category category = categoryService.getAllCategories().stream()
+                .filter(c -> c.getName().equalsIgnoreCase(categoryName.trim()))
+                .findFirst()
+                .orElse(null);
+
+        if (category == null) {
+            log.warn("Category not found: {}", categoryName);
             return List.of();
         }
 
@@ -96,7 +113,9 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional(readOnly = true)
     public List<String> getAllCategories() {
-        return bookRepository.findDistinctCategories();
+        return bookRepository.findDistinctCategories().stream()
+                .map(Category::getName)
+                .toList();
     }
 
     @Override
@@ -112,21 +131,52 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
+    @Deprecated
     public Book createBook(String title, String author, String description, String isbn,
                            String category, String publisher, Integer pages, String language, Integer publicationYear,
                            BigDecimal price, Boolean isPremium, Boolean isAvailable, User addedBy) {
 
         validateBookCreationData(title, author, isbn, pages, price, addedBy);
 
-        log.info("BookService.createBook called with publisher: {}", publisher);
+        log.info("BookService.createBook (DEPRECATED) called with publisher: {}", publisher);
+
+        // This method is deprecated - use createBookWithCategoryId instead
+        // For backward compatibility, try to find category by name
+        Category categoryEntity = null;
+        if (category != null && !category.trim().isEmpty()) {
+            categoryEntity = categoryService.getAllCategories().stream()
+                    .filter(c -> c.getName().equalsIgnoreCase(category.trim()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (categoryEntity == null) {
+            throw new IllegalArgumentException("Category not found: " + category);
+        }
+
+        // For backward compatibility, try to find publisher by name or create a default one
+        Publisher publisherEntity = null;
+        if (publisher != null && !publisher.trim().isEmpty()) {
+            publisherEntity = publisherService.getAllPublishers().stream()
+                    .filter(p -> p.getName().equalsIgnoreCase(publisher.trim()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        // Create a new publisher if it doesn't exist
+                        return publisherService.createPublisher(publisher.trim(), null, null);
+                    });
+        }
+
+        if (publisherEntity == null) {
+            throw new IllegalArgumentException("Publisher is required");
+        }
 
         Book book = Book.builder()
                 .title(sanitizeString(title))
                 .author(sanitizeString(author))
                 .description(sanitizeString(description))
                 .isbn(sanitizeIsbn(isbn))
-                .category(category != null ? category.trim() : "General")
-                .publisher(publisher != null ? publisher.trim() : null)
+                .category(categoryEntity)
+                .publisher(publisherEntity)
                 .pages(pages)
                 .language(language != null ? language.trim() : "Serbian")
                 .publicationYear(publicationYear)
@@ -143,7 +193,49 @@ public class BookServiceImpl implements BookService {
 
         log.info("Created new book: '{}' by '{}' (ID: {}) - Publisher: '{}' - Premium: {}, Price: {} RSD",
                 savedBook.getTitle(), savedBook.getAuthor(), savedBook.getId(),
-                savedBook.getPublisher(), savedBook.getIsPremium(), savedBook.getPrice());
+                savedBook.getPublisher().getName(), savedBook.getIsPremium(), savedBook.getPrice());
+
+        return savedBook;
+    }
+
+    public Book createBookWithCategoryId(String title, String author, String description, String isbn,
+                           Long categoryId, Long publisherId, Integer pages, String language, Integer publicationYear,
+                           BigDecimal price, Boolean isPremium, Boolean isAvailable, User addedBy) {
+
+        validateBookCreationData(title, author, isbn, pages, price, addedBy);
+
+        Category category = categoryService.getCategoryById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Category not found with id: " + categoryId));
+
+        Publisher publisher = publisherService.getPublisherById(publisherId)
+                .orElseThrow(() -> new IllegalArgumentException("Publisher not found with id: " + publisherId));
+
+        log.info("BookService.createBookWithCategoryId called with category: {}, publisher: {}", category.getName(), publisher.getName());
+
+        Book book = Book.builder()
+                .title(sanitizeString(title))
+                .author(sanitizeString(author))
+                .description(sanitizeString(description))
+                .isbn(sanitizeIsbn(isbn))
+                .category(category)
+                .publisher(publisher)
+                .pages(pages)
+                .language(language != null ? language.trim() : "Serbian")
+                .publicationYear(publicationYear)
+                .price(price)
+                .isPremium(isPremium != null ? isPremium : false)
+                .isAvailable(isAvailable != null ? isAvailable : Boolean.TRUE)
+                .addedBy(addedBy)
+                .totalReads(0L)
+                .averageRating(BigDecimal.ZERO)
+                .ratingsCount(0L)
+                .build();
+
+        Book savedBook = bookRepository.save(book);
+
+        log.info("Created new book: '{}' by '{}' (ID: {}) - Category: '{}' - Publisher: '{}' - Premium: {}, Price: {} RSD",
+                savedBook.getTitle(), savedBook.getAuthor(), savedBook.getId(),
+                savedBook.getCategory().getName(), savedBook.getPublisher().getName(), savedBook.getIsPremium(), savedBook.getPrice());
 
         return savedBook;
     }
@@ -185,11 +277,11 @@ public class BookServiceImpl implements BookService {
         }
 
         if (bookData.getCategory() != null) {
-            existingBook.setCategory(bookData.getCategory().trim());
+            existingBook.setCategory(bookData.getCategory());
         }
 
         if (bookData.getPublisher() != null) {
-            existingBook.setPublisher(bookData.getPublisher().trim());
+            existingBook.setPublisher(bookData.getPublisher());
         }
 
         if (bookData.getPages() != null && bookData.getPages() > 0) {
@@ -217,8 +309,6 @@ public class BookServiceImpl implements BookService {
         }
 
         Book updatedBook = bookRepository.save(existingBook);
-
-
 
         return updatedBook;
     }
