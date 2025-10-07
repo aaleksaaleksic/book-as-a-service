@@ -9,7 +9,6 @@ import {
     BookOpen,
     LogOut,
     Menu,
-    Search,
     Settings,
     ShieldCheck,
     Sparkles,
@@ -17,7 +16,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -38,20 +36,10 @@ interface NavigationItem {
 
 const PUBLIC_ITEMS: NavigationItem[] = [
     { label: 'Početna', href: '/' },
-    { label: 'Biblioteka', href: '/browse' },
     { label: 'Promo Poglavlja', href: '/promo-chapters' },
     { label: 'Cene', href: '/pricing' },
 ];
 
-const AUTH_ITEMS: NavigationItem[] = [
-    { label: 'Moja Biblioteka', href: '/dashboard', auth: true },
-    { label: 'Moj Profil', href: '/my-profile', auth: true },
-    { label: 'Pretplata', href: '/subscription', auth: true },
-];
-
-const ADMIN_ITEMS: NavigationItem[] = [
-    { label: 'Admin Panel', href: '/admin', admin: true },
-];
 
 export const Navbar = () => {
     const router = useRouter();
@@ -59,6 +47,12 @@ export const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const isAdmin = user?.permissions?.includes('CAN_CREATE_BOOKS');
+
+    const canReadPremium = user?.permissions?.includes('CAN_READ_PREMIUM_BOOKS') ?? false;
+    const hasActiveSubscription =
+        (user as unknown as { hasActiveSubscription?: boolean })?.hasActiveSubscription === true ||
+        user?.subscriptionStatus === 'ACTIVE';
+    const canAccessLibrary = Boolean(isAuthenticated && (canReadPremium || hasActiveSubscription));
 
     const handleLogout = () => {
         logout();
@@ -97,6 +91,15 @@ export const Navbar = () => {
                             {item.label}
                         </Link>
                     ))}
+
+                    {canAccessLibrary && (
+                        <Link
+                            href="/library"
+                            className="text-lg font-medium text-white transition-colors hover:text-library-gold"
+                        >
+                            Biblioteka
+                        </Link>
+                    )}
 
                     {/* Admin Panel - Special styling to stand out */}
                     {isAuthenticated && isAdmin && (
@@ -189,13 +192,15 @@ export const Navbar = () => {
                                     </div>
                                 </div>
 
-                                <DropdownMenuItem
-                                    onClick={() => router.push('/dashboard')}
-                                    className="cursor-pointer"
-                                >
-                                    <BookOpen className="mr-2 h-4 w-4" />
-                                    Moja Biblioteka
-                                </DropdownMenuItem>
+                                {canAccessLibrary && (
+                                    <DropdownMenuItem
+                                        onClick={() => router.push('/library')}
+                                        className="cursor-pointer"
+                                    >
+                                        <BookOpen className="mr-2 h-4 w-4" />
+                                        Moja biblioteka
+                                    </DropdownMenuItem>
+                                )}
 
                                 <DropdownMenuItem
                                     onClick={() => router.push('/my-profile')}
@@ -260,15 +265,17 @@ export const Navbar = () => {
                                 <>
                                     <div className="my-4 border-t border-reading-accent/10" />
 
-                                    <button
-                                        onClick={() => {
-                                            setIsMenuOpen(false);
-                                            router.push('/dashboard');
-                                        }}
-                                        className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-reading-text transition-colors hover:bg-reading-accent/10"
-                                    >
-                                        📚 Moja Biblioteka
-                                    </button>
+                                    {canAccessLibrary && (
+                                        <button
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                router.push('/library');
+                                            }}
+                                            className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-reading-text transition-colors hover:bg-reading-accent/10"
+                                        >
+                                            📚 Moja biblioteka
+                                        </button>
+                                    )}
 
                                     <button
                                         onClick={() => {

@@ -37,7 +37,7 @@ export default function LandingPage() {
 
     const handlePrimaryCta = () => {
         if (isAuthenticated) {
-            router.push('/dashboard');
+            router.push('/library');
             return;
         }
 
@@ -93,7 +93,7 @@ export default function LandingPage() {
                                     <>
                                         <Button
                                             size="lg"
-                                            onClick={() => router.push('/dashboard')}
+                                            onClick={() => router.push('/library')}
                                             className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
                                         >
                                             Otvori moju biblioteku

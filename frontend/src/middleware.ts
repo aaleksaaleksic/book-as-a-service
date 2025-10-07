@@ -9,7 +9,7 @@ const protectedRoutes = {
     '/admin/users': ['ADMIN'],
     '/admin/payments': ['ADMIN'],
     '/admin/analytics': ['ADMIN', 'MODERATOR'],
-    '/dashboard': ['USER', 'ADMIN', 'MODERATOR'],
+    '/library': ['USER', 'ADMIN', 'MODERATOR'],
     '/reader': ['USER', 'ADMIN', 'MODERATOR'],
     '/reader/[id]': ['USER', 'ADMIN', 'MODERATOR'],
     '/subscription': ['USER', 'ADMIN', 'MODERATOR'],

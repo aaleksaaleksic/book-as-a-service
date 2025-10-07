@@ -21,7 +21,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
 
     const handlePrimaryCta = () => {
         if (isAuthenticated) {
-            router.push('/dashboard');
+            router.push('/library');
             return;
         }
 
@@ -83,7 +83,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                                     <>
                                         <Button
                                             size="lg"
-                                            onClick={() => router.push('/dashboard')}
+                                            onClick={() => router.push('/library')}
                                             className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
                                         >
                                             Nastavi čitanje
