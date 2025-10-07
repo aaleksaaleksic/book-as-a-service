@@ -15,8 +15,11 @@ import { ArrowUpRight, Mail } from 'lucide-react';
 
 export default function LandingPage() {
     const router = useRouter();
-    const { isAuthenticated, isLoading, refreshUser } = useAuth();
+    const { isAuthenticated, isLoading, refreshUser, user } = useAuth();
     const { data: popularBooks = [], isLoading: isPopularLoading } = usePopularBooks();
+
+    // Check if user has active subscription from the user object
+    const hasActiveSubscription = (user as any)?.hasActiveSubscription ?? false;
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -62,6 +65,7 @@ export default function LandingPage() {
                     topBook={topBook}
                     isAuthenticated={isAuthenticated}
                     isBooksLoading={isPopularLoading}
+                    hasActiveSubscription={hasActiveSubscription}
                 />
 
                 <TopBooksSection books={popularBooks} isLoading={isPopularLoading} />
@@ -83,23 +87,71 @@ export default function LandingPage() {
                             {/*</p>*/}
 
                             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                                <Button
-                                    size="lg"
-                                    onClick={handlePrimaryCta}
-                                    className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
-                                >
-                                    {isAuthenticated ? 'Otvori moju biblioteku' : 'Aktiviraj besplatnu probu'}
-                                    <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-                                </Button>
+                                {/* Show different buttons based on authentication and subscription status */}
+                                {isAuthenticated && hasActiveSubscription ? (
+                                    // Authenticated with active subscription: Show "Otvori moju biblioteku" + "Istraži katalog"
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={() => router.push('/dashboard')}
+                                            className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
+                                        >
+                                            Otvori moju biblioteku
+                                            <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        </Button>
 
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    onClick={handleBrowse}
-                                    className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
-                                >
-                                    Istraži katalog
-                                </Button>
+                                        <Button
+                                            size="lg"
+                                            variant="outline"
+                                            onClick={handleBrowse}
+                                            className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
+                                        >
+                                            Istraži katalog
+                                        </Button>
+                                    </>
+                                ) : isAuthenticated && !hasActiveSubscription ? (
+                                    // Authenticated WITHOUT active subscription: Show "Pogledaj planove" + "Istraži katalog"
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={() => router.push('/pricing')}
+                                            className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
+                                        >
+                                            Pogledaj planove
+                                            <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        </Button>
+
+                                        <Button
+                                            size="lg"
+                                            variant="outline"
+                                            onClick={() => router.push('/promo-chapters')}
+                                            className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
+                                        >
+                                            Istraži katalog
+                                        </Button>
+                                    </>
+                                ) : (
+                                    // Not authenticated: Show "Aktiviraj besplatnu probu" + "Istraži katalog"
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={() => router.push('/auth/register')}
+                                            className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
+                                        >
+                                            Aktiviraj besplatnu probu
+                                            <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        </Button>
+
+                                        <Button
+                                            size="lg"
+                                            variant="outline"
+                                            onClick={handleBrowse}
+                                            className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
+                                        >
+                                            Istraži katalog
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

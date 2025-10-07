@@ -24,7 +24,7 @@ const Document = dynamic(() => import("react-pdf").then(mod => ({ default: mod.D
 const Page = dynamic(() => import("react-pdf").then(mod => ({ default: mod.Page })), {
     ssr: false,
 });
-import { ChevronLeft, ChevronRight, Minus, Plus, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, Maximize2, ZoomIn, ZoomOut, Bookmark, BookmarkCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,8 @@ import type { PdfMetadata } from "@/api/types/pdf.types";
 import type { ReaderWatermark, SecureStreamDescriptor } from "@/types/reader";
 import type { PdfRangeTransport } from "@/api/types/pdf.types";
 import { useDownloadPrevention } from "@/hooks/useDownloadPrevention";
+import { bookmarksApi } from "@/api/bookmarks";
+import { AiChatPanel } from "@/components/ai-chat/AiChatPanel";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -172,6 +174,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
     const abortControllerRef = useRef<AbortController | null>(null);
     const hasTriedFallbackRef = useRef<boolean>(false);
     const metadataAbortControllerRef = useRef<AbortController | null>(null);
+    const bookmarkLoadedForBookRef = useRef<number | null>(null);
 
     // FIX 3: Memoize streamSignature properly
     const streamSignature = useMemo(() => createStreamSignature(stream), [stream]);
@@ -908,14 +911,62 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [pageNumber, numPages, handlePrevious, handleNext]);
 
+    // Load bookmarked page ONCE on mount (init block - runs only once per bookId)
+    useEffect(() => {
+        // Only load bookmark once per bookId
+        if (bookmarkLoadedForBookRef.current === bookId) {
+            return;
+        }
+
+        if (!isClient || !bookId) {
+            return;
+        }
+
+        bookmarkLoadedForBookRef.current = bookId;
+
+        // Fire and forget - load bookmark page
+        bookmarksApi.getBookmarkForBook(api, bookId)
+            .then(response => {
+                if (response.data?.pageNumber && response.data.pageNumber > 1) {
+                    console.log("[Bookmark Init] Loading bookmarked page", response.data.pageNumber);
+                    // Directly set internal page state (only in uncontrolled mode)
+                    if (controlledPageNumber === undefined) {
+                        setInternalPageNumber(response.data.pageNumber);
+                        setPageInput(String(response.data.pageNumber));
+                    }
+                }
+            })
+            .catch(() => {
+                // No bookmark or error - silently ignore, start from page 1
+                console.log("[Bookmark Init] No bookmark found, starting from page 1");
+            });
+    }, [bookId, isClient, controlledPageNumber]);
+
+    // Simple fire-and-forget bookmark save - no state management needed
+    const handleSaveBookmark = () => {
+        console.log("[Bookmark Save] Click handler fired - bookId:", bookId, "pageNumber:", pageNumber);
+
+        // Fire and forget - just call the API (not using useCallback to avoid dependency issues)
+        bookmarksApi.saveBookmark(api, {
+            bookId,
+            pageNumber,
+        })
+            .then(() => {
+                console.log("[Bookmark Save] ✅ Success! Bookmark saved for book", bookId, "at page", pageNumber);
+            })
+            .catch(error => {
+                console.error("[Bookmark Save] ❌ Failed to save bookmark:", error);
+            });
+    };
+
     return (
-        <div className="min-h-screen w-full bg-sky-950 text-slate-100">
+        <div className="min-h-screen w-full bg-slate-950 text-slate-100">
             {/* Top bar */}
-            <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-sm">
+            <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-900 backdrop-blur-sm">
                 <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3">
                     <div className="flex items-center gap-3">
                         <div>
-                            <p className="text-lg font-bold">{bookTitle ?? "Bookotecha"}</p>
+                            <p className="text-lg font-semibold uppercase tracking-[0.1em]">{bookTitle ?? "Bookotecha"}</p>
                         </div>
                     </div>
 
@@ -1003,8 +1054,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             {/* Body grid */}
             <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-4 px-4 py-4">
                 {/* Main viewer */}
-                <main className="col-span-12 lg:col-span-10">
-                    <div className="rounded-2xl border border-slate-800/60 bg-sky-950/40 p-3 shadow-xl shadow-black/40">
+                <main className="col-span-12 lg:col-span-9">
+                    <div className="rounded-2xl border border-slate-800/60 bg-slate-900/60 p-3 shadow-xl shadow-black/40">
                         <div className="flex items-center justify-end px-1 pb-2 text-xs text-slate-400">
                             <div className="flex items-center gap-2">
                                 {isDocumentLoading && !loadError && (
@@ -1017,7 +1068,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                         </div>
 
                         {/* PDF canvas container */}
-                        <div className="relative flex min-h-[72vh] items-start justify-center overflow-hidden rounded-xl border border-slate-800 bg-sky-950">
+                        <div className="relative flex min-h-[72vh] items-start justify-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
                             {watermark && (
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                                     <div className="select-none text-center text-6xl font-black uppercase tracking-widest text-slate-100/10 opacity-40 [writing-mode:vertical-rl] sm:[writing-mode:horizontal-tb] sm:rotate-45">
@@ -1107,7 +1158,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 </main>
 
                 {/* Right sidebar: navigation and controls */}
-                <aside className="col-span-12 lg:col-span-2">
+                <aside className="col-span-12 lg:col-span-3">
                     <div className="rounded-xl border border-slate-800/60 bg-slate-900/40">
                         <div className="px-4 py-3 text-sm font-medium border-b border-slate-800/60">Navigacija</div>
                         <div className="p-3 space-y-4">
@@ -1143,6 +1194,23 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                                             Strana {pageNumber + 1}
                                         </div>
                                     )}
+                                </button>
+                            </div>
+
+                            {/* Bookmark button */}
+                            <div className="space-y-2">
+                                <button
+                                    className="w-full rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left transition hover:border-slate-700 disabled:opacity-50"
+                                    onClick={handleSaveBookmark}
+                                    disabled={!pageNumber}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Bookmark className="h-4 w-4 text-amber-400" />
+                                        <span className="text-sm">Sačuvaj dokle sam stao</span>
+                                    </div>
+                                    <div className="text-xs text-slate-400 mt-1">
+                                        Strana {pageNumber}
+                                    </div>
                                 </button>
                             </div>
 
@@ -1194,6 +1262,9 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     </div>
                 </aside>
             </div>
+
+            {/* AI Chat Panel */}
+            <AiChatPanel bookId={bookId} bookTitle={bookTitle} />
         </div>
     );
 };

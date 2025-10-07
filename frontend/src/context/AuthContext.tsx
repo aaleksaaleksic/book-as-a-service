@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useRouter } from 'next/navigation';
 import { api, tokenManager } from '@/lib/api-client';
 import { AUTH_CONFIG, API_CONFIG } from '@/utils/constants';
+import { getQueryClient } from '@/context/QueryProvider';
 import type {
     AuthContextType,
     AuthState,
@@ -231,6 +232,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
      */
     const logout = useCallback(() => {
         tokenManager.clearTokens();
+
+        // Clear React Query cache
+        const queryClient = getQueryClient();
+        queryClient.clear();
 
         setAuthState({
             user: null,

@@ -1,13 +1,25 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSubscription } from '@/hooks/use-user-subscription';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { dt } from '@/lib/design-tokens';
-import { Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { useHttpClient } from '@/context/HttpClientProvider';
+import { subscriptionsApi } from '@/api/subscriptions';
+import { toast } from 'sonner';
 
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -46,7 +58,10 @@ const getStatusBadge = (status: string) => {
 
 export default function MyProfilePage() {
     const { user, isLoading: authLoading } = useAuth();
-    const { data: subscription, isLoading: subLoading } = useUserSubscription();
+    const { data: subscription, isLoading: subLoading, refetch } = useUserSubscription();
+    const httpClient = useHttpClient();
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
 
     if (authLoading || subLoading) {
         return (
@@ -66,6 +81,25 @@ export default function MyProfilePage() {
     const isAutoRenew = subscription?.autoRenew;
     const planType = subscription?.type || subscription?.planType;
     const isMonthly = planType === 'MONTHLY';
+
+    const handleCancelSubscription = async () => {
+        if (!subscription?.id) return;
+
+        setIsCanceling(true);
+        try {
+            const response = await subscriptionsApi.cancelSubscription(httpClient, subscription.id);
+
+            if (response.data.success) {
+                toast.success('Pretplata je uspešno otkazana');
+                setIsCancelDialogOpen(false);
+                await refetch();
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Greška pri otkazivanju pretplate');
+        } finally {
+            setIsCanceling(false);
+        }
+    };
 
     return (
         <div className={cn(dt.layouts.mainPage,"bg-library-parchment/95")}>
@@ -221,6 +255,17 @@ export default function MyProfilePage() {
                                     </div>
                                 )}
 
+                                {/* Cancel Subscription Button */}
+                                <div className="mt-6">
+                                    <Button
+                                        onClick={() => setIsCancelDialogOpen(true)}
+                                        variant="outline"
+                                        className="w-full bg-red-400 border-red-300 text-sky-950 hover:border-red-700"
+                                    >
+                                        Otkaži pretplatu
+                                    </Button>
+                                </div>
+
                             </div>
                         ) : (
                             <div className={cn(dt.components.infoBox, "text-center space-y-4")}>
@@ -240,6 +285,55 @@ export default function MyProfilePage() {
                         )}
                     </div>
                 </div>
+
+                {/* Cancel Subscription Dialog */}
+                <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="rounded-full bg-red-100 p-2">
+                                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                                </div>
+                                <DialogTitle className="text-xl">Otkazivanje pretplate</DialogTitle>
+                            </div>
+                            <DialogDescription className="text-base pt-2">
+                                Da li ste sigurni da želite da otkažete vašu pretplatu?
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="py-4">
+                            <div className="rounded-lg border border-library-highlight/30 bg-library-azure/20 p-4">
+                                <p className="text-sm text-reading-text/90">
+                                    <strong className="text-reading-contrast">Važno:</strong> Čak i nakon otkazivanja, zadržaćete pristup svim sadržajima do datuma isteka vaše trenutne pretplate:
+                                </p>
+                                {subscription?.endDate && (
+                                    <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-reading-contrast">
+                                        <Calendar className="h-4 w-4 text-library-gold" />
+                                        Pristup do: {formatDate(subscription.endDate)}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsCancelDialogOpen(false)}
+                                disabled={isCanceling}
+                            >
+                                Zatvori
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleCancelSubscription}
+                                disabled={isCanceling}
+                                className="bg-red-600 hover:bg-red-700"
+                            >
+                                {isCanceling ? 'Otkazivanje...' : 'Potvrdi otkazivanje'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
     );

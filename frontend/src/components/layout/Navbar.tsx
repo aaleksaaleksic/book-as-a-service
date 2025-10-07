@@ -205,22 +205,6 @@ export const Navbar = () => {
                                     Moj profil
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    onClick={() => router.push('/subscription')}
-                                    className="cursor-pointer"
-                                >
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                    Pretplata
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                    onClick={() => router.push('/settings')}
-                                    className="cursor-pointer"
-                                >
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Podešavanja
-                                </DropdownMenuItem>
-
                                 <DropdownMenuSeparator />
 
                                 <DropdownMenuItem
@@ -296,16 +280,6 @@ export const Navbar = () => {
                                         👤 Moj Profil
                                     </button>
 
-                                    <button
-                                        onClick={() => {
-                                            setIsMenuOpen(false);
-                                            router.push('/subscription');
-                                        }}
-                                        className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-reading-text transition-colors hover:bg-reading-accent/10"
-                                    >
-                                        ✨ Pretplata
-                                    </button>
-
                                     {/* Admin Panel - Special styling */}
                                     {isAdmin && (
                                         <button
@@ -318,16 +292,6 @@ export const Navbar = () => {
                                             🛡️ Admin Panel
                                         </button>
                                     )}
-
-                                    <button
-                                        onClick={() => {
-                                            setIsMenuOpen(false);
-                                            router.push('/settings');
-                                        }}
-                                        className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-reading-text transition-colors hover:bg-reading-accent/10"
-                                    >
-                                        ⚙️ Podešavanja
-                                    </button>
 
                                     <div className="my-4 border-t border-reading-accent/10" />
 

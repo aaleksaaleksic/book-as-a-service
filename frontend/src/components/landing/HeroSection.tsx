@@ -13,9 +13,10 @@ interface HeroSectionProps {
     topBook?: BookResponseDTO;
     isAuthenticated: boolean;
     isBooksLoading: boolean;
+    hasActiveSubscription: boolean;
 }
 
-export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSectionProps) => {
+export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiveSubscription }: HeroSectionProps) => {
     const router = useRouter();
 
     const handlePrimaryCta = () => {
@@ -67,7 +68,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
 
                             {!isAuthenticated && (
                                 <div className={cn(dt.components.infoBox, 'max-w-xl')}>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-library-highlight">Niste još član?</p>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-950">Niste još član?</p>
                                     <p className={cn(dt.typography.muted, `text-${dt.colors.textContrast}`, 'mt-3')}>
                                         Kreirajte nalog za manje od minuta i otključajte sve dostupne naslove.
                                         Vaša avantura počinje besplatnom trodnevnom probom.
@@ -76,35 +77,74 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                             )}
 
                             <div className="flex flex-col gap-4 sm:flex-row">
-                                <Button
-                                    size="lg"
-                                    onClick={() => isAuthenticated ? router.push('/dashboard') : router.push('/promo-chapters')}
-                                    className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
-                                >
-                                    {isAuthenticated ? 'Nastavi čitanje' : (
-                                        <>
-                                            <Sparkles className="h-5 w-5" />
-                                            Čitaj promo poglavlja
-                                        </>
-                                    )}
-                                    <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-                                </Button>
+                                {/* Show different buttons based on authentication and subscription status */}
+                                {isAuthenticated && hasActiveSubscription ? (
+                                    // Authenticated with active subscription: Show "Nastavi čitanje" + "Pogledaj katalog"
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={() => router.push('/dashboard')}
+                                            className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
+                                        >
+                                            Nastavi čitanje
+                                            <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        </Button>
 
-                                <Button
-                                    variant="outline"
-                                    size="lg"
-                                    onClick={() => isAuthenticated ? handleBrowse() : router.push('/auth/register')}
-                                    className={cn(dt.interactive.buttonSecondary, 'text-lg')}
-                                >
-                                    {isAuthenticated ? (
-                                        <>
+                                        <Button
+                                            variant="outline"
+                                            size="lg"
+                                            onClick={handleBrowse}
+                                            className={cn(dt.interactive.buttonSecondary, 'text-lg')}
+                                        >
                                             <BookOpen className="mr-2 h-5 w-5" />
                                             Pogledaj katalog
-                                        </>
-                                    ) : (
-                                        'Registruj se besplatno'
-                                    )}
-                                </Button>
+                                        </Button>
+                                    </>
+                                ) : isAuthenticated && !hasActiveSubscription ? (
+                                    // Authenticated WITHOUT active subscription: Show "Pogledaj planove" + "Pogledaj katalog"
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={() => router.push('/pricing')}
+                                            className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
+                                        >
+                                            Pogledaj planove
+                                            <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="lg"
+                                            onClick={() => router.push('/promo-chapters')}
+                                            className={cn(dt.interactive.buttonSecondary, 'text-lg')}
+                                        >
+                                            <BookOpen className="mr-2 h-5 w-5" />
+                                            Pogledaj katalog
+                                        </Button>
+                                    </>
+                                ) : (
+                                    // Not authenticated: Show "Čitaj promo poglavlja" + "Registruj se"
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={() => router.push('/promo-chapters')}
+                                            className={cn(dt.interactive.buttonPrimary, 'group flex items-center gap-2 text-lg')}
+                                        >
+                                            <Sparkles className="h-5 w-5" />
+                                            Čitaj promo poglavlja
+                                            <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="lg"
+                                            onClick={() => router.push('/auth/register')}
+                                            className={cn(dt.interactive.buttonSecondary, 'text-lg')}
+                                        >
+                                            Registruj se besplatno
+                                        </Button>
+                                    </>
+                                )}
                             </div>
 
                         </div>
@@ -116,7 +156,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading }: HeroSe
                             <div className="relative mx-auto max-w-md rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6 text-reading-text shadow-[0_30px_80px_rgba(4,12,28,0.45)] backdrop-blur">
                                 <div className="absolute -top-10 left-6 hidden items-center gap-2 rounded-full border border-library-gold/20 bg-library-parchment px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-sky-950 shadow-lg lg:flex animate-float-slow">
                                     <Users className="h-4 w-4" />
-                                    Najčitanija knjiga ove nedelje
+                                    Najčitanija knjiga meseca
                                 </div>
                                 {isBooksLoading ? (
                                     <div className="space-y-5">

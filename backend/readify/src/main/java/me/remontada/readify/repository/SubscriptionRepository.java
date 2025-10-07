@@ -38,7 +38,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     long countByStatus(SubscriptionStatus status);
 
 
-    @Query("SELECT s FROM Subscription s WHERE s.status = 'ACTIVE' AND s.endDate < :expiredBefore")
+    @Query("SELECT s FROM Subscription s WHERE (s.status = 'ACTIVE' OR s.status = 'CANCELED') AND s.endDate < :expiredBefore")
     List<Subscription> findActiveSubscriptionsExpiredBefore(@Param("expiredBefore") LocalDateTime expiredBefore);
 
 

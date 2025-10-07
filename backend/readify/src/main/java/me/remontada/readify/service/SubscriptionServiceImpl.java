@@ -98,10 +98,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             subscription.setActivatedAt(LocalDateTime.now());
             subscription = subscriptionRepository.save(subscription);
 
+            // Grant CAN_READ_PREMIUM_BOOKS permission to user
+            grantSubscriptionPermission(user);
+
             logger.info("Subscription activated for user: {} subscription_id: {}",
                     user.getEmail(), subscription.getId());
         } else {
-            // Mark subscription as failed if payment failed
+            // Mark subscription as failed if payment failedproblem
             subscription.setStatus(SubscriptionStatus.PAYMENT_FAILED);
             subscription = subscriptionRepository.save(subscription);
 
@@ -258,6 +261,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 subscription.setUpdatedAt(LocalDateTime.now());
                 subscriptionRepository.save(subscription);
 
+                // Remove CAN_READ_PREMIUM_BOOKS permission from user
+                revokeSubscriptionPermission(subscription.getUser());
+
                 logger.info("Expired subscription: {} for user: {}",
                         subscription.getId(), subscription.getUser().getEmail());
             }
@@ -305,5 +311,25 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             case SIX_MONTH -> startDate.plusMonths(6);
             case YEARLY -> startDate.plusYears(1);
         };
+    }
+
+    /**
+     * Grant CAN_READ_PREMIUM_BOOKS permission to user when subscription is activated
+     */
+    private void grantSubscriptionPermission(User user) {
+        if (!user.hasPermission(Permission.CAN_READ_PREMIUM_BOOKS)) {
+            user.getPermissions().add(Permission.CAN_READ_PREMIUM_BOOKS);
+            logger.info("Granted CAN_READ_PREMIUM_BOOKS permission to user: {}", user.getEmail());
+        }
+    }
+
+    /**
+     * Revoke CAN_READ_PREMIUM_BOOKS permission from user when subscription expires
+     */
+    private void revokeSubscriptionPermission(User user) {
+        if (user.hasPermission(Permission.CAN_READ_PREMIUM_BOOKS)) {
+            user.getPermissions().remove(Permission.CAN_READ_PREMIUM_BOOKS);
+            logger.info("Revoked CAN_READ_PREMIUM_BOOKS permission from user: {}", user.getEmail());
+        }
     }
 }

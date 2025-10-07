@@ -3,10 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React from "react";
 
-export function QueryProvider({ children }: { children: React.ReactNode }) {
-    const [queryClient] = React.useState(
-        () =>
-            new QueryClient({
+// Create a singleton queryClient instance that can be accessed globally
+let globalQueryClient: QueryClient | null = null;
+
+export function getQueryClient(): QueryClient {
+    if (!globalQueryClient) {
+        globalQueryClient = new QueryClient({
                 defaultOptions: {
                     queries: {
                         staleTime: 60 * 1000, // 1 minute
@@ -27,8 +29,13 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
                         retry: false,
                     },
                 },
-            })
-    );
+            });
+    }
+    return globalQueryClient;
+}
+
+export function QueryProvider({ children }: { children: React.ReactNode }) {
+    const [queryClient] = React.useState(() => getQueryClient());
 
     return (
         <QueryClientProvider client={queryClient}>

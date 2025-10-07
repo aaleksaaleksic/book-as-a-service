@@ -79,7 +79,8 @@ public class User {
     }
 
     public boolean hasActiveSubscription() {
-        // TODO: Implement proper subscription check when SubscriptionService is injected
+        // Check if user has the CAN_READ_PREMIUM_BOOKS permission
+        // This permission is granted only when user has an active subscription
         return hasPermission(Permission.CAN_READ_PREMIUM_BOOKS);
     }
 
