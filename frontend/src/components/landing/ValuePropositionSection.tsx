@@ -1,8 +1,11 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Compass, Headphones, Layers, Sparkles, Users } from 'lucide-react';
+
 import { dt } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface ValuePropositionSectionProps {
     isAuthenticated: boolean;
@@ -29,6 +32,8 @@ const steps = [
 
 
 export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSectionProps) => {
+    const router = useRouter();
+
     return (
         <section className="relative overflow-hidden border-y border-library-gold/15 bg-gradient-to-br from-library-fog via-library-parchment to-white">
             <div className="absolute -left-10 top-16 h-40 w-40 rounded-full border border-library-highlight/20 opacity-60 blur-2xl" />
@@ -74,6 +79,13 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                             <p className={cn(dt.typography.muted, 'mt-3')}>
                                 Pretplatom na našu platformu dobijate pristup svim dostupnim knjigama. Kliknite ovde za listu knjiga i njihova promo poglavlja.
                             </p>
+                            <Button
+                                size="lg"
+                                onClick={() => router.push('/promo-chapters')}
+                                className={cn(dt.interactive.buttonSecondary, 'mt-6 text-base')}
+                            >
+                                Pogledaj promo poglavlja
+                            </Button>
                         </div>
 
                         <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">

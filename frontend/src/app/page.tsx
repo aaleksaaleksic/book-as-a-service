@@ -89,7 +89,7 @@ export default function LandingPage() {
                             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                                 {/* Show different buttons based on authentication and subscription status */}
                                 {isAuthenticated && hasActiveSubscription ? (
-                                    // Authenticated with active subscription: Show "Otvori moju biblioteku" + "Istraži katalog"
+                                    // Authenticated with active subscription: Show "Otvori moju biblioteku" + "Istraži katalog" + "Promo poglavlja"
                                     <>
                                         <Button
                                             size="lg"
@@ -108,9 +108,18 @@ export default function LandingPage() {
                                         >
                                             Istraži katalog
                                         </Button>
+
+                                        <Button
+                                            size="lg"
+                                            variant="ghost"
+                                            onClick={() => router.push('/promo-chapters')}
+                                            className={cn(dt.interactive.buttonGhost, 'text-lg text-reading-contrast')}
+                                        >
+                                            Promo poglavlja
+                                        </Button>
                                     </>
                                 ) : isAuthenticated && !hasActiveSubscription ? (
-                                    // Authenticated WITHOUT active subscription: Show "Pogledaj planove" + "Istraži katalog"
+                                    // Authenticated WITHOUT active subscription: Show "Pogledaj planove" + "Pogledaj promo poglavlja"
                                     <>
                                         <Button
                                             size="lg"
@@ -127,11 +136,11 @@ export default function LandingPage() {
                                             onClick={() => router.push('/promo-chapters')}
                                             className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
                                         >
-                                            Istraži katalog
+                                            Pogledaj promo poglavlja
                                         </Button>
                                     </>
                                 ) : (
-                                    // Not authenticated: Show "Aktiviraj besplatnu probu" + "Istraži katalog"
+                                    // Not authenticated: Show "Aktiviraj besplatnu probu" + "Pogledaj promo poglavlja" + "Istraži katalog"
                                     <>
                                         <Button
                                             size="lg"
@@ -145,8 +154,17 @@ export default function LandingPage() {
                                         <Button
                                             size="lg"
                                             variant="outline"
-                                            onClick={handleBrowse}
+                                            onClick={() => router.push('/promo-chapters')}
                                             className={cn(dt.interactive.buttonSecondary, 'text-lg text-reading-contrast')}
+                                        >
+                                            Pogledaj promo poglavlja
+                                        </Button>
+
+                                        <Button
+                                            size="lg"
+                                            variant="ghost"
+                                            onClick={handleBrowse}
+                                            className={cn(dt.interactive.buttonGhost, 'text-lg text-reading-contrast')}
                                         >
                                             Istraži katalog
                                         </Button>
