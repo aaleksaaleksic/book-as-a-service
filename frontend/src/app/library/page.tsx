@@ -59,11 +59,44 @@ export default function LibraryPage() {
         isLoading: isBooksLoading,
         isFetching: isBooksFetching,
     } = useBooks();
-    const { data: categories = [], isLoading: isCategoriesLoading } = useBookCategories();
-
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
+
+    const { data: categories = [], isLoading: isCategoriesLoading } = useBookCategories();
+
+    const categoryOptions = useMemo(() => {
+        if (!Array.isArray(categories)) {
+            return [];
+        }
+
+        const uniqueCategories = new Map<string, { id: number; name: string }>();
+
+        for (const category of categories) {
+            const name = category?.name?.trim();
+
+            if (!name) {
+                continue;
+            }
+
+            const key = name.toLowerCase();
+
+            if (!uniqueCategories.has(key)) {
+                uniqueCategories.set(key, { id: category.id, name });
+            }
+        }
+
+        return Array.from(uniqueCategories.values());
+    }, [categories]);
+
+    useEffect(() => {
+        if (
+            selectedCategory !== "all" &&
+            !categoryOptions.some(option => option.name.toLowerCase() === selectedCategory.toLowerCase())
+        ) {
+            setSelectedCategory("all");
+        }
+    }, [categoryOptions, selectedCategory]);
 
     const canReadPremium = useMemo(
         () => user?.permissions?.includes("CAN_READ_PREMIUM_BOOKS") ?? false,
@@ -145,7 +178,7 @@ export default function LibraryPage() {
 
             const matchesCategory =
                 normalizedCategory === "all" ||
-                book.category?.name?.toLowerCase() === normalizedCategory;
+                (book.category?.name?.trim().toLowerCase() ?? "") === normalizedCategory;
 
             return matchesQuery && matchesCategory;
         });
@@ -308,11 +341,19 @@ export default function LibraryPage() {
                             </SelectTrigger>
                             <SelectContent className="rounded-3xl border border-library-highlight/20 bg-library-parchment/95">
                                 <SelectItem value="all">Sve kategorije</SelectItem>
-                                {categories.map(category => (
-                                    <SelectItem key={category.id} value={category.name}>
-                                        {category.name}
+                                {categoryOptions.length ? (
+                                    categoryOptions.map(category => (
+                                        <SelectItem key={category.id} value={category.name}>
+                                            {category.name}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <SelectItem value="no-categories" disabled>
+                                        {isCategoriesLoading
+                                            ? "Učitavamo kategorije…"
+                                            : "Kategorije trenutno nisu dostupne"}
                                     </SelectItem>
-                                ))}
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
