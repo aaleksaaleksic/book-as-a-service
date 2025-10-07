@@ -79,7 +79,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                             <div className="flex flex-col gap-4 sm:flex-row">
                                 {/* Show different buttons based on authentication and subscription status */}
                                 {isAuthenticated && hasActiveSubscription ? (
-                                    // Authenticated with active subscription: Show "Nastavi čitanje" + "Pogledaj katalog"
+                                    // Authenticated with active subscription: Show "Nastavi čitanje" + "Pogledaj katalog" + "Promo poglavlja"
                                     <>
                                         <Button
                                             size="lg"
@@ -99,9 +99,18 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                                             <BookOpen className="mr-2 h-5 w-5" />
                                             Pogledaj katalog
                                         </Button>
+
+                                        <Button
+                                            variant="ghost"
+                                            size="lg"
+                                            onClick={() => router.push('/promo-chapters')}
+                                            className={cn(dt.interactive.buttonGhost, 'text-lg')}
+                                        >
+                                            Promo poglavlja
+                                        </Button>
                                     </>
                                 ) : isAuthenticated && !hasActiveSubscription ? (
-                                    // Authenticated WITHOUT active subscription: Show "Pogledaj planove" + "Pogledaj katalog"
+                                    // Authenticated WITHOUT active subscription: Show "Pogledaj planove" + "Pogledaj promo poglavlja"
                                     <>
                                         <Button
                                             size="lg"
@@ -119,11 +128,11 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                                             className={cn(dt.interactive.buttonSecondary, 'text-lg')}
                                         >
                                             <BookOpen className="mr-2 h-5 w-5" />
-                                            Pogledaj katalog
+                                            Pogledaj promo poglavlja
                                         </Button>
                                     </>
                                 ) : (
-                                    // Not authenticated: Show "Čitaj promo poglavlja" + "Registruj se"
+                                    // Not authenticated: Show "Čitaj promo poglavlja" + "Registruj se" + "Istraži katalog"
                                     <>
                                         <Button
                                             size="lg"
@@ -142,6 +151,15 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                                             className={cn(dt.interactive.buttonSecondary, 'text-lg')}
                                         >
                                             Registruj se besplatno
+                                        </Button>
+
+                                        <Button
+                                            variant="ghost"
+                                            size="lg"
+                                            onClick={handleBrowse}
+                                            className={cn(dt.interactive.buttonGhost, 'text-lg')}
+                                        >
+                                            Istraži katalog
                                         </Button>
                                     </>
                                 )}

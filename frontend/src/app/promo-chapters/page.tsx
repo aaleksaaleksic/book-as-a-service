@@ -1,24 +1,132 @@
 'use client';
 
-import { usePromoChapters } from '@/hooks/use-books';
-import { BookOpen, Sparkles, Eye, ArrowUpRight } from 'lucide-react';
+import type { ChangeEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Sparkles, BookOpen, ArrowUpRight, Compass } from 'lucide-react';
+
+import { usePromoChapters } from '@/hooks/use-books';
+import type { BookResponseDTO } from '@/api/types/books.types';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
+import { cn } from '@/lib/utils';
+import { dt } from '@/lib/design-tokens';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { dt } from '@/lib/design-tokens';
-import { cn } from '@/lib/utils';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+
+const PROMO_BOOKS_PER_PAGE = 6;
+const FALLBACK_COVER_IMAGE = '/book-placeholder.svg';
+
+const ensureBooksArray = (rawData: unknown): BookResponseDTO[] => {
+    if (!rawData) {
+        return [];
+    }
+
+    if (Array.isArray(rawData)) {
+        return rawData as BookResponseDTO[];
+    }
+
+    const potentialCollection = (rawData as { data?: unknown; books?: unknown }).books ??
+        (rawData as { data?: unknown; books?: unknown }).data;
+
+    if (Array.isArray(potentialCollection)) {
+        return potentialCollection as BookResponseDTO[];
+    }
+
+    return [];
+};
 
 export default function PromoChaptersPage() {
     const router = useRouter();
-    const { data: books, isLoading, error } = usePromoChapters();
+    const { data, isLoading, isFetching, error } = usePromoChapters();
 
-    if (isLoading) {
+    const books = useMemo(() => ensureBooksArray(data), [data]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const highlightBook = books[0];
+
+    const categoryOptions = useMemo(() => {
+        if (!books.length) {
+            return [] as string[];
+        }
+
+        const uniqueCategories = new Map<string, string>();
+
+        for (const book of books) {
+            const name = book?.category?.name?.trim();
+
+            if (!name) {
+                continue;
+            }
+
+            const key = name.toLowerCase();
+
+            if (!uniqueCategories.has(key)) {
+                uniqueCategories.set(key, name);
+            }
+        }
+
+        return Array.from(uniqueCategories.values()).sort((categoryA, categoryB) =>
+            categoryA.localeCompare(categoryB, 'sr', { sensitivity: 'base' }),
+        );
+    }, [books]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedCategory]);
+
+    const filteredBooks = useMemo(() => {
+        if (!books.length) {
+            return [] as BookResponseDTO[];
+        }
+
+        const normalizedQuery = searchTerm.trim().toLowerCase();
+        const normalizedCategory = selectedCategory.toLowerCase();
+
+        return books.filter(book => {
+            const title = book.title?.toLowerCase() ?? '';
+            const author = book.author?.toLowerCase() ?? '';
+            const description = book.description?.toLowerCase() ?? '';
+            const categoryName = book.category?.name?.trim().toLowerCase() ?? '';
+
+            const matchesQuery =
+                !normalizedQuery ||
+                title.includes(normalizedQuery) ||
+                author.includes(normalizedQuery) ||
+                description.includes(normalizedQuery);
+
+            const matchesCategory = normalizedCategory === 'all' || categoryName === normalizedCategory;
+
+            return matchesQuery && matchesCategory;
+        });
+    }, [books, searchTerm, selectedCategory]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredBooks.length / PROMO_BOOKS_PER_PAGE));
+    const paginatedBooks = filteredBooks.slice(
+        (currentPage - 1) * PROMO_BOOKS_PER_PAGE,
+        currentPage * PROMO_BOOKS_PER_PAGE,
+    );
+
+    const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(event.target.value);
+    };
+
+    if (isLoading && !books.length) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-reading-background">
-                <LoadingSpinner size="lg" text="Učitavanje promo poglavlja..." />
+                <LoadingSpinner size="lg" text="Učitavamo promo poglavlja…" />
             </div>
         );
     }
@@ -26,166 +134,318 @@ export default function PromoChaptersPage() {
     if (error) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-reading-background">
-                <div className="text-center">
-                    <p className="text-red-600">Greška pri učitavanju knjiga</p>
+                <div className="rounded-3xl border border-destructive/30 bg-white/90 p-10 text-center text-destructive shadow-lg">
+                    <p className="text-lg font-semibold">Došlo je do greške pri učitavanju promo poglavlja.</p>
+                    <p className="mt-3 text-sm text-destructive/70">
+                        Molimo pokušajte ponovo kasnije ili posetite našu stranicu sa planovima pretplate.
+                    </p>
+                    <Button
+                        className="mt-6"
+                        onClick={() => router.push('/pricing')}
+                    >
+                        Pogledaj ponudu
+                    </Button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-reading-background text-reading-contrast">
-            {/* Hero Section - matching landing page style */}
-            <section className="relative overflow-hidden border-b border-library-gold/20 bg-gradient-to-br from-library-midnight via-library-azure to-library-midnight">
-                <div className="absolute inset-0 -z-10 bg-hero-grid opacity-70" aria-hidden="true" />
-                <div className="absolute -top-24 right-10 h-56 w-56 rounded-full border border-library-highlight/30 opacity-40 blur-2xl" />
-                <div className="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-[40px] border border-library-gold/20 opacity-60" />
+        <div className={cn(dt.layouts.library, 'min-h-screen text-reading-text pb-16')}>
+            <div className={cn(dt.layouts.pageContainer, 'space-y-16 pt-12')}>
+                <section className="relative overflow-hidden rounded-[48px] border border-library-gold/20 bg-gradient-to-br from-library-azure/25 via-library-parchment/95 to-library-azure/15 px-8 py-12 shadow-[0_40px_120px_rgba(6,18,38,0.45)]">
+                    <div className="pointer-events-none absolute -left-10 top-0 h-64 w-64 rounded-full bg-library-gold/10 blur-3xl" aria-hidden="true" />
+                    <div className="pointer-events-none absolute -right-12 bottom-0 h-72 w-72 rounded-full bg-library-highlight/15 blur-3xl" aria-hidden="true" />
 
-                <div className={cn(dt.layouts.pageContainer, 'relative z-10')}>
-                    <div className="py-20 lg:py-32">
-                        <div className="mx-auto max-w-4xl text-center">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-azure/30 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-library-gray shadow-sm backdrop-blur">
-                                <Sparkles className="h-4 w-4 text-library-highlight" />
-                                Besplatno za sve
+                    <div className="relative grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+                        <div className="space-y-6 text-sky-950">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/40 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-sky-950">
+                                Promo sekcija
                             </div>
 
-                            <h1 className={cn(dt.responsive.heroTitle, 'mt-6 font-display font-semibold leading-tight drop-shadow-[0_25px_60px_rgba(12,24,48,0.45)]')}>
-                                Promo Poglavlja
+                            <h1 className={cn(dt.typography.pageTitle, dt.responsive.heroTitle, 'text-sky-950')}>
+                                Zavirite u Bookotecha kolekciju pre pretplate
                             </h1>
 
-                            <p className={cn(dt.responsive.heroSubtitle, 'mt-4 max-w-2xl mx-auto text-reading-contrast/80 leading-relaxed')}>
-                                Zavirite u naše knjige potpuno besplatno. Čitajte promo poglavlja bez pretplate i odlučite šta želite da nastavite.
-                            </p>
+                            <div className="space-y-4">
+                                <p className={cn(dt.typography.muted, 'text-base text-sky-950/80')}>
+                                    Pristupite izdvojenim promo poglavljima i upoznajte se sa našim čitalačkim iskustvom pre nego što se pretplatite.
+                                </p>
+                                <p className={cn(dt.typography.muted, 'text-base font-semibold text-sky-950')}>
+                                    Niste član Bookoteche? Pogledajte ponudu i izaberite plan koji vam najviše odgovara.
+                                </p>
+                            </div>
 
-                            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-reading-contrast/70">
-                                <div className="flex items-center gap-2 rounded-full border border-library-gold/25 bg-library-azure/20 px-4 py-2">
-                                    <BookOpen className="h-4 w-4 text-library-highlight" />
-                                    <span>{books?.length || 0} knjiga dostupno</span>
+                            <div className="flex flex-wrap items-center gap-4">
+                                <Button
+                                    size="lg"
+                                    onClick={() => router.push('/pricing')}
+                                    className={cn(dt.interactive.buttonPrimary, 'flex items-center gap-2 text-base')}
+                                >
+                                    Pogledaj ponudu
+                                    <ArrowUpRight className="h-5 w-5" />
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    onClick={() => router.push('/auth/register')}
+                                    className={cn(dt.interactive.buttonSecondary, 'text-base text-sky-950')}
+                                >
+                                    Kreiraj nalog
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    variant="ghost"
+                                    onClick={() => router.push('/promo-chapters')}
+                                    className="rounded-full border border-library-gold/30 bg-white/70 text-base text-sky-950 transition hover:bg-library-highlight/20"
+                                >
+                                    <Sparkles className="mr-2 h-5 w-5 text-library-gold" />
+                                    Čitaj promo poglavlja
+                                </Button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-sky-950/70">
+                                <div className="flex items-center gap-2 rounded-full border border-library-gold/40 bg-white/70 px-4 py-2">
+                                    <BookOpen className="h-4 w-4 text-library-gold" />
+                                    {books.length} promo naslova
                                 </div>
-                                <div className="flex items-center gap-2 rounded-full border border-library-gold/25 bg-library-azure/20 px-4 py-2">
-                                    <Eye className="h-4 w-4 text-library-highlight" />
-                                    <span>Bez obaveze</span>
+                                <div className="flex items-center gap-2 rounded-full border border-library-gold/40 bg-white/70 px-4 py-2">
+                                    <Compass className="h-4 w-4 text-library-gold" />
+                                    {categoryOptions.length || '0'} kategorija
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 -z-10 rounded-[36px] bg-library-azure/40 blur-3xl" aria-hidden="true" />
+                            <div className="relative overflow-hidden rounded-[36px] border border-library-gold/25 bg-white/70 p-6 shadow-[0_30px_90px_rgba(9,20,45,0.35)]">
+                                {highlightBook?.coverImageUrl ? (
+                                    <div className="flex min-h-[20rem] items-center justify-center">
+                                        <img
+                                            src={resolveApiFileUrl(highlightBook.coverImageUrl) ?? highlightBook.coverImageUrl}
+                                            alt={`Naslovnica za ${highlightBook.title}`}
+                                            className="max-h-[20rem] w-auto object-contain drop-shadow-2xl"
+                                            onError={event => {
+                                                const target = event.currentTarget;
+                                                if (!target.src.endsWith(FALLBACK_COVER_IMAGE)) {
+                                                    target.onerror = null;
+                                                    target.src = FALLBACK_COVER_IMAGE;
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex min-h-[20rem] items-center justify-center rounded-3xl bg-library-azure/20 text-sm text-sky-950/70">
+                                        Naslovnica će uskoro biti dostupna
+                                    </div>
+                                )}
+
+                                <div className="mt-6 space-y-2 text-center text-sky-950">
+                                    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-library-gray">
+                                        Istaknuto promo poglavlje
+                                    </p>
+                                    <h3 className="font-display text-2xl">{highlightBook?.title ?? 'Promo sadržaj se ažurira'}</h3>
+                                    {highlightBook?.author ? (
+                                        <p className="text-sm text-sky-950/70">{highlightBook.author}</p>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Books Grid */}
-            <div className={cn(dt.layouts.pageContainer, 'py-16 lg:py-24')}>
-                {books && books.length > 0 ? (
-                    <>
-                        <div className="mb-12">
-                            <h2 className="font-display text-3xl font-semibold text-reading-contrast lg:text-4xl mb-3">
-                                Dostupna Promo Poglavlja
-                            </h2>
-                            <p className="text-lg text-reading-contrast/70">
-                                Izaberite knjigu i počnite da čitate odmah
-                            </p>
+                <section className="space-y-8">
+                    <div className="space-y-3">
+                        <h2 className={cn(dt.typography.sectionTitle, 'text-sky-950')}>Dostupna promo poglavlja</h2>
+                        <p className={cn(dt.typography.muted, 'text-sky-950')}>
+                            Pretražite naslove po autoru, naslovu ili kategoriji i započnite čitanje besplatnih poglavlja.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-4 rounded-[32px] border border-library-highlight/25 bg-library-parchment/95 p-6 shadow-[0_24px_60px_rgba(6,18,38,0.35)] lg:flex-row lg:items-center">
+                        <div className="relative flex-1">
+                            <Sparkles className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-reading-text/60" />
+                            <Input
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                placeholder="Pretraži po naslovu, autoru ili opisu"
+                                className="h-12 rounded-full border-library-highlight/40 bg-white/80 pl-12 text-base text-reading-text shadow-inner focus-visible:ring-library-gold/40"
+                            />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {books.map((book: any) => (
-                                <div
-                                    key={book.id}
-                                    className="group relative overflow-hidden rounded-3xl border border-library-gold/20 bg-library-parchment/95 p-4 shadow-[0_20px_60px_rgba(4,12,28,0.3)] transition-all hover:shadow-[0_30px_80px_rgba(4,12,28,0.45)] hover:-translate-y-1"
-                                >
-                                    {/* Book Cover */}
-                                    <div className="relative mb-4 aspect-[2/3] overflow-hidden rounded-2xl bg-library-azure/15">
-                                        {book.coverImageUrl ? (
-                                            <img
-                                                src={resolveApiFileUrl(book.coverImageUrl)}
-                                                alt={book.title}
-                                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center">
-                                                <BookOpen className="h-20 w-20 text-library-copper/30" />
+                        <Select
+                            value={selectedCategory}
+                            onValueChange={value => setSelectedCategory(value)}
+                        >
+                            <SelectTrigger className="h-12 w-full rounded-full border-library-highlight/40 bg-white/80 px-5 text-left text-base text-reading-text shadow-inner focus:ring-library-gold/40 lg:w-64">
+                                <SelectValue placeholder="Sve kategorije" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-3xl border border-library-highlight/20 bg-library-parchment/95">
+                                <SelectItem value="all">Sve kategorije</SelectItem>
+                                {categoryOptions.length ? (
+                                    categoryOptions.map(category => (
+                                        <SelectItem key={category} value={category}>
+                                            {category}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <SelectItem value="no-categories" disabled>
+                                        Kategorije će uskoro biti dostupne
+                                    </SelectItem>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {(isFetching && !books.length) ? (
+                        <div className="flex justify-center py-16">
+                            <LoadingSpinner size="lg" variant="book" text="Učitavamo naslove" />
+                        </div>
+                    ) : paginatedBooks.length ? (
+                        <>
+                            <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+                                {paginatedBooks.map(book => {
+                                    const coverUrl = book.coverImageUrl
+                                        ? resolveApiFileUrl(book.coverImageUrl) ?? book.coverImageUrl
+                                        : null;
+
+                                    return (
+                                        <Card
+                                            key={book.id}
+                                            className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6 text-reading-text shadow-[0_24px_60px_rgba(6,18,38,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_32px_80px_rgba(6,18,38,0.45)]"
+                                        >
+                                            <div className="relative overflow-hidden rounded-3xl border border-library-highlight/30 bg-library-parchment/80 p-4 shadow-inner">
+                                                {coverUrl ? (
+                                                    <div className="flex min-h-[18rem] items-center justify-center">
+                                                        <img
+                                                            src={coverUrl}
+                                                            alt={`Naslovnica za ${book.title}`}
+                                                            className="max-h-[18rem] w-auto object-contain drop-shadow-xl"
+                                                            loading="lazy"
+                                                            onError={event => {
+                                                                const target = event.currentTarget;
+                                                                if (!target.src.endsWith(FALLBACK_COVER_IMAGE)) {
+                                                                    target.onerror = null;
+                                                                    target.src = FALLBACK_COVER_IMAGE;
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex min-h-[18rem] items-center justify-center rounded-2xl bg-library-azure/15 text-sm text-reading-text/60">
+                                                        Naslovnica u pripremi
+                                                    </div>
+                                                )}
+
+                                                <Badge className="absolute right-4 top-4 rounded-full bg-library-gold/80 text-library-midnight shadow-lg">
+                                                    Promo
+                                                </Badge>
                                             </div>
-                                        )}
 
-                                        {/* Promo Badge */}
-                                        <div className="absolute right-3 top-3">
-                                            <Badge className="rounded-full bg-library-gold/90 text-library-midnight shadow-lg">
-                                                <Sparkles className="mr-1 h-3 w-3" />
-                                                Promo
-                                            </Badge>
-                                        </div>
-                                    </div>
+                                            <div className="mt-6 flex flex-1 flex-col gap-4">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <h3 className="font-display text-2xl text-reading-text">{book.title}</h3>
+                                                        <p className="mt-1 text-sm text-reading-text/70">Autor: {book.author}</p>
+                                                    </div>
+                                                    {book.category?.name && (
+                                                        <Badge className="rounded-full bg-library-gold/15 text-library-copper">
+                                                            {book.category.name}
+                                                        </Badge>
+                                                    )}
+                                                </div>
 
-                                    {/* Book Info */}
-                                    <div className="space-y-3">
-                                        <div>
-                                            <h3 className="font-display text-xl font-semibold text-reading-text line-clamp-2 group-hover:text-library-copper transition-colors">
-                                                {book.title}
-                                            </h3>
-                                            <p className="mt-1 text-sm text-reading-text/60">{book.author}</p>
-                                        </div>
+                                                {book.description && (
+                                                    <p className="text-sm text-reading-text/70 line-clamp-3">{book.description}</p>
+                                                )}
 
-                                        {book.description && (
-                                            <p className="text-sm text-reading-text/70 line-clamp-2">
-                                                {book.description}
-                                            </p>
-                                        )}
+                                                <div className="flex flex-wrap items-center gap-3 text-[0.7rem] uppercase tracking-[0.3em] text-reading-text/60">
+                                                    {book.pages ? (
+                                                        <span className="rounded-full border border-library-gold/30 px-3 py-1">
+                                                            {book.pages} strana
+                                                        </span>
+                                                    ) : null}
+                                                    <span className="rounded-full border border-library-gold/30 px-3 py-1">
+                                                        Besplatno promo poglavlje
+                                                    </span>
+                                                </div>
 
-                                        <Link href={`/promo-chapters/${book.id}`}>
-                                            <Button
-                                                variant="outline"
-                                                className="w-full rounded-full border-library-gold/30 bg-transparent text-reading-text transition hover:bg-library-azure/30"
-                                            >
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                Čitaj besplatno
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                                <div className="mt-auto flex flex-wrap gap-3">
+                                                    <Button
+                                                        asChild
+                                                        className="flex-1 rounded-full bg-library-gold text-library-midnight shadow-lg transition hover:bg-library-gold/90"
+                                                    >
+                                                        <Link href={`/promo-chapters/${book.id}`}>Čitaj promo poglavlje</Link>
+                                                    </Button>
+                                                    <Button
+                                                        asChild
+                                                        variant="outline"
+                                                        className="flex-1 rounded-full border-library-gold/30 bg-white/80 py-4 text-reading-text transition hover:bg-library-highlight/20"
+                                                    >
+                                                        <Link href={`/book/${book.id}`}>Detalji knjige</Link>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
 
-                        {/* CTA Section - matching landing page style */}
-                        <section className="relative mt-20 overflow-hidden rounded-3xl border border-library-gold/20 bg-gradient-to-br from-library-midnight via-library-azure to-library-midnight py-16 text-reading-contrast">
-                            <div className="absolute inset-0 -z-10 bg-hero-grid opacity-30" aria-hidden="true" />
-                            <div className="mx-auto max-w-3xl text-center px-6">
-                                <h3 className="font-display text-3xl font-semibold sm:text-4xl">
-                                    Svidela vam se knjiga?
-                                </h3>
-                                <p className="mt-4 text-lg text-reading-contrast/75">
-                                    Pretplatite se i dobijte pristup celoj biblioteci sa stotinama knjiga
+                            <div className="mt-12 flex flex-col items-center justify-between gap-6 text-sm text-reading-text/70 sm:flex-row">
+                                <p>
+                                    Prikazano {Math.min((currentPage - 1) * PROMO_BOOKS_PER_PAGE + 1, filteredBooks.length)}–
+                                    {Math.min(currentPage * PROMO_BOOKS_PER_PAGE, filteredBooks.length)} od {filteredBooks.length} promo poglavlja
                                 </p>
-                                <div className="mt-8">
+                                <div className="flex items-center gap-3">
                                     <Button
-                                        size="lg"
-                                        onClick={() => router.push('/pricing')}
-                                        className="group flex items-center gap-2 rounded-full bg-library-gold px-10 py-6 text-lg font-semibold text-library-midnight shadow-[0_18px_40px_rgba(228,179,76,0.25)] transition-transform hover:-translate-y-1 hover:bg-library-gold/90"
+                                        variant="outline"
+                                        className="rounded-full border-library-gold/40 bg-white/80 px-5"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     >
-                                        Pogledaj Planove
-                                        <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        Prethodna
+                                    </Button>
+                                    <div className="rounded-full border border-library-gold/30 bg-white/80 px-5 py-2 font-semibold text-reading-text">
+                                        Strana {currentPage} od {totalPages}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="rounded-full border-library-gold/40 bg-white/80 px-5"
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    >
+                                        Sledeća
                                     </Button>
                                 </div>
                             </div>
-                        </section>
-                    </>
-                ) : (
-                    <div className="py-20 text-center">
-                        <div className="mx-auto max-w-md">
-                            <BookOpen className="mx-auto h-20 w-20 text-library-copper/30 mb-6" />
-                            <h3 className="font-display text-2xl font-bold text-reading-contrast mb-3">
-                                Nema dostupnih promo poglavlja
-                            </h3>
-                            <p className="text-reading-contrast/70 mb-8">
-                                Trenutno nema knjiga sa promo poglavljima. Vratite se uskoro!
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center gap-4 rounded-[32px] border border-dashed border-library-highlight/40 bg-library-parchment/80 py-16 text-center">
+                            <h3 className={cn(dt.typography.sectionTitle, 'text-library-gray')}>Nema dostupnih promo poglavlja</h3>
+                            <p className={cn(dt.typography.muted, 'max-w-xl text-library-gray/80')}>
+                                Trenutno nema knjiga sa promo poglavljima. Vratite se uskoro ili istražite naše planove pretplate.
                             </p>
-                            <Button
-                                onClick={() => router.push('/')}
-                                variant="outline"
-                                className="rounded-full border-library-gold/30 bg-transparent px-8 py-4 text-reading-contrast transition hover:bg-library-azure/40"
-                            >
-                                Nazad na početnu
-                            </Button>
+                            <div className="flex flex-wrap items-center justify-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    className="rounded-full border-library-gold/40 bg-white/80 px-8"
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setSelectedCategory('all');
+                                    }}
+                                >
+                                    Poništi filtere
+                                </Button>
+                                <Button
+                                    className="rounded-full"
+                                    onClick={() => router.push('/pricing')}
+                                >
+                                    Pogledaj ponudu
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </section>
             </div>
         </div>
     );
