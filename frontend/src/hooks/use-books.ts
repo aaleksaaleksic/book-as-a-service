@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useHttpClient } from "@/context/HttpClientProvider";
 import { booksApi } from "@/api/books";
+import { categoriesApi, type CategoryResponseDTO } from "@/api/categories";
 import { toast } from "@/hooks/use-toast";
 import type {
     BookSearchParams,
@@ -61,11 +62,15 @@ export function useBookCategories() {
     const client = useHttpClient();
 
     return useQuery({
-        queryKey: ["books", "categories"],
-        queryFn: async () => {
-            const response = await booksApi.getCategories(client);
-            return response.data;
+        queryKey: ["categories", "all"],
+        queryFn: async (): Promise<CategoryResponseDTO[]> => {
+            const response = await categoriesApi.getAllCategories(client);
+            return response.data ?? [];
         },
+        select: data =>
+            [...data].sort((categoryA, categoryB) =>
+                categoryA.name.localeCompare(categoryB.name, "sr", { sensitivity: "base" }),
+            ),
         staleTime: 60 * 60 * 1000, // 1 sat - kategorije se retko menjaju
     });
 }
