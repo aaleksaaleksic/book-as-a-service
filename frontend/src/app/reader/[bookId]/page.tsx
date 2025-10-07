@@ -138,7 +138,7 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
                         Pokušaj ponovo
                     </Button>
                     <Button asChild variant="outline">
-                        <Link href="/dashboard">
+                        <Link href="/library">
                             <ArrowLeft className="mr-2 h-4 w-4" /> Nazad na biblioteku
                         </Link>
                     </Button>
