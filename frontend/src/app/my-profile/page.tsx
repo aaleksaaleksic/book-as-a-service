@@ -7,6 +7,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { dt } from '@/lib/design-tokens';
 import { Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -25,8 +26,6 @@ const getSubscriptionPlanName = (planType: string) => {
             return 'Šestomesečna pretplata';
         case 'YEARLY':
             return 'Godišnja pretplata';
-        case 'TRIAL':
-            return 'Probni period';
         default:
             return planType;
     }
@@ -36,8 +35,6 @@ const getStatusBadge = (status: string) => {
     switch (status) {
         case 'ACTIVE':
             return { label: 'Aktivna', color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle };
-        case 'TRIAL':
-            return { label: 'Probni period', color: 'text-blue-600', bg: 'bg-blue-100', icon: Clock };
         case 'EXPIRED':
             return { label: 'Istekla', color: 'text-red-600', bg: 'bg-red-100', icon: XCircle };
         case 'CANCELED':
@@ -63,6 +60,7 @@ export default function MyProfilePage() {
         return null;
     }
 
+    const hasActiveSubscription = subscription?.status === 'ACTIVE';
     const statusBadge = subscription?.status ? getStatusBadge(subscription.status) : null;
     const StatusIcon = statusBadge?.icon;
     const isAutoRenew = subscription?.autoRenew;
@@ -156,7 +154,7 @@ export default function MyProfilePage() {
                             Pretplata
                         </h2>
 
-                        {subscription ? (
+                        {hasActiveSubscription ? (
                             <div className={cn(dt.spacing.componentSpacing)}>
                                 {/* Status Badge */}
                                 {statusBadge && (
@@ -200,7 +198,7 @@ export default function MyProfilePage() {
                                 )}
 
                                 {/* Auto-payment Note */}
-                                {subscription.status === 'ACTIVE' && subscription.endDate && (
+                                {subscription?.endDate && (
                                     <div className={cn(
                                         "mt-6 p-4 rounded-lg border",
                                         isMonthly && isAutoRenew
@@ -225,10 +223,19 @@ export default function MyProfilePage() {
 
                             </div>
                         ) : (
-                            <div className={cn(dt.components.infoBox)}>
-                                <p className={cn(dt.typography.body, "text-center")}>
+                            <div className={cn(dt.components.infoBox, "text-center space-y-4")}>
+                                <p className={cn(dt.typography.body)}>
                                     Trenutno nemate aktivnu pretplatu
                                 </p>
+                                <Link
+                                    href="/pricing"
+                                    className={cn(
+                                        dt.interactive.buttonPrimary,
+                                        "inline-block"
+                                    )}
+                                >
+                                    Pogledaj planove
+                                </Link>
                             </div>
                         )}
                     </div>

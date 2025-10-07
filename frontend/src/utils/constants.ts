@@ -43,7 +43,6 @@ export const AUTH_CONFIG = {
 // BUSINESS RULES CONSTANTS
 
 export const BUSINESS_RULES = {
-    TRIAL_DURATION_DAYS: 7,
     SUBSCRIPTION_PRICES: {
         MONTHLY_RSD: 600_00, // 600 dinara
         YEARLY_RSD: 6000_00, // 6000 dinara

@@ -54,16 +54,12 @@ const getSubscriptionTypeName = (type?: string) => {
     const upperType = type.toUpperCase();
     if (upperType === 'MONTHLY') return 'Mesečna';
     if (upperType === 'YEARLY') return 'Godišnja';
-    if (upperType === 'TRIAL') return 'Probna';
     return type;
 };
 
 const getStatusBadge = (subscription: AdminSubscription) => {
     if (subscription.status === 'ACTIVE' || subscription.isActive) {
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aktivna</span>;
-    }
-    if (subscription.status === 'TRIAL' || subscription.isTrial) {
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Probna</span>;
     }
     if (subscription.status === 'CANCELED' || subscription.isCanceled) {
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Otkazana</span>;

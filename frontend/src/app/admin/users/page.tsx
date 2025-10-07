@@ -125,9 +125,6 @@ export default function AdminUsersPage() {
         if (user.hasActiveSubscription) {
             // If we have subscription details, show more specific info
             if (subscription) {
-                if (subscription.status === 'TRIAL' || subscription.isTrial) {
-                    return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Probna</span>;
-                }
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aktivna</span>;
             }
             // Fallback to generic "Aktivna" if we don't have subscription details

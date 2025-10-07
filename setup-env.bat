@@ -24,7 +24,7 @@ echo.
 
 echo Step 2: Verifying environment variables...
 echo JWT_SECRET length:
-echo %JWT_SECRET% | findstr /R /C:"." | findstr /R /C:".........." >nul && echo ✓ JWT Secret is long enough || echo ✗ JWT Secret too short
+echo %JWT_SECRET% | findstr /R /C:"." | findstr /R /C:".........." >NUL 2>&1 && echo ✓ JWT Secret is long enough || echo ✗ JWT Secret too short
 
 echo.
 echo Step 3: Testing database connection...

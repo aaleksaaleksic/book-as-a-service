@@ -1,6 +1,6 @@
 // SUBSCRIPTION TYPES
 
-export type SubscriptionType = 'MONTHLY' | 'SIX_MONTH' | 'YEARLY' | 'TRIAL';
+export type SubscriptionType = 'MONTHLY' | 'SIX_MONTH' | 'YEARLY';
 
 export interface Subscription {
     id: number;
@@ -32,7 +32,6 @@ export type SubscriptionPlan = 'MONTHLY' | 'SIX_MONTH' | 'YEARLY';
 
 export type SubscriptionStatus =
     | 'ACTIVE'
-    | 'TRIAL'
     | 'EXPIRED'
     | 'CANCELED'
     | 'NONE'

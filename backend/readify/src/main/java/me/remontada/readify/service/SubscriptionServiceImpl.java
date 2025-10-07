@@ -188,49 +188,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return hasAccess;
     }
 
-    /**
-     * Create 7-day free trial subscription
-     */
-    @Override
-    public Subscription createTrialSubscription(User user) {
-        logger.info("Creating trial subscription for user: {}", user.getEmail());
-
-        // Check if user already had trial
-        List<Subscription> history = getUserSubscriptionHistory(user);
-        boolean hadTrial = history.stream()
-                .anyMatch(s -> s.getType() == SubscriptionType.TRIAL);
-
-        if (hadTrial) {
-            throw new RuntimeException("User already used trial subscription");
-        }
-
-        // Check for existing active subscription
-        Optional<Subscription> existingActive = getUserActiveSubscription(user);
-        if (existingActive.isPresent()) {
-            throw new RuntimeException("User already has active subscription");
-        }
-
-        // Create trial subscription
-        LocalDateTime startDate = LocalDateTime.now();
-        LocalDateTime endDate = startDate.plusDays(trialDurationDays);
-
-        Subscription trial = new Subscription();
-        trial.setUser(user);
-        trial.setType(SubscriptionType.TRIAL);
-        trial.setStatus(SubscriptionStatus.ACTIVE);
-        trial.setPriceInRsd(BigDecimal.ZERO); // Free trial
-        trial.setStartDate(startDate);
-        trial.setEndDate(endDate);
-        trial.setActivatedAt(LocalDateTime.now());
-        trial.setAutoRenew(false); // Trials don't auto-renew
-        trial.setCreatedAt(LocalDateTime.now());
-
-        trial = subscriptionRepository.save(trial);
-        logger.info("Trial subscription created for user: {} valid until: {}",
-                user.getEmail(), endDate);
-
-        return trial;
-    }
 
     /**
      * Process subscription payment and activate subscription
@@ -242,7 +199,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         // For renewals, cancel current subscription and create new one
         Optional<Subscription> currentSub = getUserActiveSubscription(user);
-        if (currentSub.isPresent() && currentSub.get().getType() != SubscriptionType.TRIAL) {
+        if (currentSub.isPresent()) {
             cancelSubscription(currentSub.get().getId(), user);
         }
 
@@ -336,7 +293,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             case MONTHLY -> monthlyPriceRsd;
             case SIX_MONTH -> sixMonthPriceRsd;
             case YEARLY -> yearlyPriceRsd;
-            case TRIAL -> BigDecimal.ZERO;
         };
     }
 
@@ -348,7 +304,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             case MONTHLY -> startDate.plusMonths(1);
             case SIX_MONTH -> startDate.plusMonths(6);
             case YEARLY -> startDate.plusYears(1);
-            case TRIAL -> startDate.plusDays(trialDurationDays);
         };
     }
 }

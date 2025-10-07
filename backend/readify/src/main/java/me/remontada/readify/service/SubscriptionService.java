@@ -20,9 +20,6 @@ public interface SubscriptionService {
 
     boolean hasActiveSubscription(User user);
 
-    // Trial management
-    Subscription createTrialSubscription(User user);
-
     // Mock payment processing
     Subscription processSubscriptionPayment(User user, SubscriptionType type);
 

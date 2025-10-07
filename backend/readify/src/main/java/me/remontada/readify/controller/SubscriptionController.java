@@ -50,34 +50,6 @@ public class SubscriptionController {
     }
 
     /**
-     * Create free trial subscription (7 days)
-     */
-    @PostMapping("/subscriptions/trial")
-    @PreAuthorize("hasAuthority('CAN_SUBSCRIBE')")
-    public ResponseEntity<Map<String, Object>> createTrialSubscription(Authentication authentication) {
-        try {
-            User currentUser = getCurrentUser(authentication);
-            logger.info("Creating trial subscription for user: {}", currentUser.getEmail());
-
-            Subscription trial = subscriptionService.createTrialSubscription(currentUser);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Besplatni trial je aktiviran!",
-                    "trialDuration", trialDurationDays + " dana",
-                    "subscription", SubscriptionMapper.toResponseDTO(trial)
-            ));
-
-        } catch (Exception e) {
-            logger.error("Failed to create trial subscription for user", e);
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
-        }
-    }
-
-    /**
      * Create paid subscription (monthly/yearly)
      */
     @PostMapping("/subscriptions/subscribe")

@@ -277,8 +277,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 "totalActive", totalActiveSubscriptions,
                 "monthly", subscriptionCounts.getOrDefault("MONTHLY", 0L),
                 "sixMonth", subscriptionCounts.getOrDefault("SIX_MONTH", 0L),
-                "yearly", subscriptionCounts.getOrDefault("YEARLY", 0L),
-                "trial", subscriptionCounts.getOrDefault("TRIAL", 0L)
+                "yearly", subscriptionCounts.getOrDefault("YEARLY", 0L)
         ));
 
         analytics.put("books", Map.of(

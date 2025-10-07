@@ -144,7 +144,8 @@ public class SubscriptionMapper {
 
     private static Boolean computeIsTrial(Subscription subscription) {
         try {
-            return subscription != null && subscription.getStatus() == SubscriptionStatus.TRIAL;
+            return false;
+
         } catch (Exception e) {
             log.warn("Failed to compute isTrial for Subscription", e);
             return false;
@@ -172,8 +173,6 @@ public class SubscriptionMapper {
                         return "Active - Expires Soon";
                     }
                     return "Active";
-                case TRIAL:
-                    return "Trial Period - " + subscription.getDaysRemaining() + " days left";
                 case EXPIRED:
                     return "Expired";
                 case CANCELED:
