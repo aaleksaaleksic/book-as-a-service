@@ -200,7 +200,7 @@ export default function LibraryPage() {
     }
 
     return (
-        <div className={cn(dt.layouts.mainPage, "text-reading-text pb-16")}>
+        <div className={cn(dt.layouts.library, "text-reading-text pb-16")}>
             <div className={cn(dt.layouts.pageContainer, "space-y-16 pt-12")}>
                 <section className="relative overflow-hidden rounded-[48px] border border-library-gold/20 bg-gradient-to-br from-library-azure/30 via-library-parchment/95 to-library-azure/20 px-8 py-12 shadow-[0_40px_120px_rgba(6,18,38,0.45)]">
                     <div className="pointer-events-none absolute -left-10 top-0 h-64 w-64 rounded-full bg-library-gold/10 blur-3xl" aria-hidden="true" />
@@ -208,7 +208,7 @@ export default function LibraryPage() {
 
                     <div className="relative grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
                         <div className="space-y-6 text-sky-950">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/40 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-library-gray">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/40 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-sky-950">
                                 Nastavi čitanje
                             </div>
 
@@ -314,8 +314,8 @@ export default function LibraryPage() {
 
                 <section className="space-y-8">
                     <div className="space-y-3">
-                        <h2 className={cn(dt.typography.sectionTitle, "text-white")}>Sve dostupne knjige</h2>
-                        <p className={cn(dt.typography.muted, "text-white/70")}
+                        <h2 className={cn(dt.typography.sectionTitle, "text-sky-950")}>Sve dostupne knjige</h2>
+                        <p className={cn(dt.typography.muted, "text-sky-950")}
 >
                             Pretražite kolekciju po autoru, naslovu ili kategoriji i nastavite da gradite svoju digitalnu biblioteku.
                         </p>

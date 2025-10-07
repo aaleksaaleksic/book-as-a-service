@@ -3,6 +3,7 @@
 export const dt = {
     layouts: {
         mainPage: "min-h-screen bg-gradient-to-b from-library-midnight via-library-azure/95 to-library-midnight",
+        library: "min-h-screen bg-library-parchment/95",
         authPage: "min-h-screen bg-gradient-to-br from-library-midnight via-library-azure to-library-highlight/20",
         pageContainer: "max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8",
         readerContainer: "max-w-4xl mx-auto px-6 py-8",
@@ -18,7 +19,7 @@ export const dt = {
         stepTitle: "text-2xl font-normal font-bebas text-reading-text",
         // Body text uses Inter
         body: "text-base text-reading-text font-ui",
-        muted: "text-sm text-reading-text/70 font-ui",
+        muted: "text-base text-reading-text/70 font-ui",
         small: "text-xs text-reading-text/60 font-ui",
         reading: "text-lg leading-relaxed text-reading-text font-reading",
         button: "text-base font-semibold font-ui",
