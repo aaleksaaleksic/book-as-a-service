@@ -36,6 +36,16 @@ public class AiChatController {
 
             return ResponseEntity.ok(AiChatResponse.success(response));
 
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid AI chat request: {}", e.getMessage());
+            return ResponseEntity
+                    .badRequest()
+                    .body(AiChatResponse.error(e.getMessage()));
+        } catch (IllegalStateException e) {
+            log.error("Gemini configuration error: {}", e.getMessage());
+            return ResponseEntity
+                    .status(503)
+                    .body(AiChatResponse.error(e.getMessage()));
         } catch (Exception e) {
             log.error("Error processing AI chat request", e);
             return ResponseEntity

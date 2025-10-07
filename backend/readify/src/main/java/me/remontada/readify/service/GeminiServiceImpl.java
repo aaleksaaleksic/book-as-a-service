@@ -3,34 +3,43 @@ package me.remontada.readify.service;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import me.remontada.readify.config.GeminiProperties;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
 public class GeminiServiceImpl implements GeminiService {
 
-    @Value("${GEMINI_API_KEY}")
-    private String apiKey;
-
-    @Value("${gemini.model:gemini-2.5-flash}")
-    private String modelName;
+    private final GeminiProperties geminiProperties;
 
     private Client client;
 
-    private Client getClient() {
+    public GeminiServiceImpl(GeminiProperties geminiProperties) {
+        this.geminiProperties = geminiProperties;
+    }
+
+    private synchronized Client getClient() {
         if (client == null) {
-            // Create client with API key from Spring config
+            String resolvedApiKey = geminiProperties.resolveApiKey();
+            if (!StringUtils.hasText(resolvedApiKey)) {
+                throw new IllegalStateException("Gemini API key is not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.");
+            }
+
             client = Client.builder()
-                    .apiKey(apiKey)
+                    .apiKey(resolvedApiKey)
                     .build();
-            log.info("Gemini client initialized with model: {}", modelName);
+            log.info("Gemini client initialized with model: {}", geminiProperties.getModel());
         }
         return client;
     }
 
     @Override
     public String chat(String userMessage, String context) {
+        if (!StringUtils.hasText(userMessage)) {
+            throw new IllegalArgumentException("User message must not be blank");
+        }
+
         try {
             log.info("Sending message to Gemini AI: {}", userMessage.substring(0, Math.min(50, userMessage.length())));
 
@@ -40,13 +49,20 @@ public class GeminiServiceImpl implements GeminiService {
             // Generate response
             GenerateContentResponse response = getClient()
                     .models
-                    .generateContent(modelName, fullPrompt, null);
+                    .generateContent(geminiProperties.getModel(), fullPrompt, null);
 
             String aiResponse = response.text();
+            if (!StringUtils.hasText(aiResponse)) {
+                log.warn("Gemini returned an empty response");
+                throw new RuntimeException("Received empty response from Gemini API");
+            }
+
             log.info("Received response from Gemini AI: {} characters", aiResponse.length());
 
             return aiResponse;
 
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error calling Gemini AI: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to get response from AI: " + e.getMessage());
