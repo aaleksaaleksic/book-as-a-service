@@ -17,6 +17,18 @@ export const useDownloadPrevention = (isEnabled: boolean = true) => {
 
     // Disable common keyboard shortcuts for downloading/saving
     const disableKeyboardShortcuts = (e: KeyboardEvent) => {
+      // Allow Ctrl+C (Copy) - users need to copy text to AI assistant
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        // Allow copy operation
+        return;
+      }
+
+      // Allow Ctrl+A (Select All) - users need to select text
+      if (e.ctrlKey && (e.key === 'a' || e.key === 'A')) {
+        // Allow select all operation
+        return;
+      }
+
       // Ctrl+S (Save)
       if (e.ctrlKey && e.key === 's') {
         e.preventDefault();
@@ -96,23 +108,13 @@ export const useDownloadPrevention = (isEnabled: boolean = true) => {
       };
     };
 
-    // Disable text selection on PDF viewer area
+    // Allow text selection on PDF viewer area for copying to AI assistant
     const disableSelection = () => {
-      const style = document.createElement('style');
-      style.textContent = `
-        .pdf-viewer, .react-pdf__Document {
-          -webkit-user-select: none !important;
-          -moz-user-select: none !important;
-          -ms-user-select: none !important;
-          user-select: none !important;
-          -webkit-touch-callout: none !important;
-          -webkit-tap-highlight-color: transparent !important;
-        }
-      `;
-      document.head.appendChild(style);
+      // Text selection is now allowed - users can select and copy text
+      // This is useful for copying text to the AI assistant
 
       return () => {
-        document.head.removeChild(style);
+        // No cleanup needed since we're not adding any styles
       };
     };
 

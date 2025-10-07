@@ -367,9 +367,13 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             private abortController = new AbortController();
             private loadedBytes = initialData?.length ?? 0;
 
-            // LRU Cache for 20 pages (roughly 40MB max for 2MB pages)
-            private readonly maxCachedRanges = 20;
+            // LRU Cache for 3 pages only (roughly 6MB max for 2MB pages) - security measure
+            private readonly maxCachedRanges = 3;
             private cachedRanges = new Map<string, { data: Uint8Array; lastAccessed: number }>();
+            private inactivityTimer: NodeJS.Timeout | null = null;
+            private periodicClearTimer: NodeJS.Timeout | null = null;
+            private readonly INACTIVITY_TIMEOUT = 30000; // 30 seconds
+            private readonly PERIODIC_CLEAR_INTERVAL = 120000; // 2 minutes
 
             private getCacheKey(begin: number, end: number): string {
                 return `${begin}-${end}`;
@@ -394,9 +398,47 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 }
             }
 
+            private clearAllCache(): void {
+                const size = this.cachedRanges.size;
+                this.cachedRanges.clear();
+                readerLog("cache cleared (all)", { previousSize: size });
+                console.log("🗑️ PDF Cache: All cached pages cleared for security");
+            }
+
+            private resetInactivityTimer(): void {
+                if (this.inactivityTimer) {
+                    clearTimeout(this.inactivityTimer);
+                }
+                this.inactivityTimer = setTimeout(() => {
+                    this.clearAllCache();
+                    console.log("⏱️ PDF Cache: Cleared due to 30s inactivity");
+                }, this.INACTIVITY_TIMEOUT);
+            }
+
+            private startPeriodicClear(): void {
+                this.periodicClearTimer = setInterval(() => {
+                    this.clearAllCache();
+                    console.log("🔄 PDF Cache: Periodic 2-minute cache clear");
+                }, this.PERIODIC_CLEAR_INTERVAL);
+            }
+
+            private stopTimers(): void {
+                if (this.inactivityTimer) {
+                    clearTimeout(this.inactivityTimer);
+                    this.inactivityTimer = null;
+                }
+                if (this.periodicClearTimer) {
+                    clearInterval(this.periodicClearTimer);
+                    this.periodicClearTimer = null;
+                }
+            }
+
             override async requestDataRange(begin: number, end: number) {
                 const requestedEnd = Number.isFinite(end) ? Math.max(begin, end - 1) : begin;
                 const cacheKey = this.getCacheKey(begin, requestedEnd);
+
+                // Reset inactivity timer on every request
+                this.resetInactivityTimer();
 
                 // Check cache first
                 const cached = this.cachedRanges.get(cacheKey);
@@ -413,6 +455,9 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                     "X-Readify-Session": metadata!.sessionToken,
                     "X-Readify-Watermark": metadata!.watermarkSignature,
                     "X-Readify-Issued-At": metadata!.issuedAt,
+                    "Cache-Control": "no-store, no-cache, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
                 };
 
                 if (authorizedHeadersRecord) {
@@ -462,7 +507,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 if (!this.abortController.signal.aborted) {
                     this.abortController.abort();
                 }
-                // Clear cache on abort
+                // Stop all timers and clear cache on abort
+                this.stopTimers();
                 this.cachedRanges.clear();
                 readerLog("cache cleared on abort", { cacheSize: this.cachedRanges.size });
             }
@@ -470,13 +516,19 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
         const transport = new MetadataRangeTransport(totalSize, initialData ?? null);
         transport.transportReady();
+
+        // Start periodic cache clearing for security
+        (transport as any).startPeriodicClear();
+
         readerLog("range transport ready", {
             totalSize,
             initialChunk: initialData?.length ?? 0,
-            maxCachedRanges: 20,
-            cacheEnabled: true
+            maxCachedRanges: 3,
+            cacheEnabled: true,
+            inactivityTimeout: "30s",
+            periodicClear: "2min"
         });
-        console.log("📚 PDF Cache: 20-page LRU cache enabled for book", bookId);
+        console.log("📚 PDF Cache: 3-page LRU cache with aggressive eviction enabled for book", bookId);
         return transport;
     }, [pdfjsLib, metadata, secureStream, authorizedHeadersRecord, decodeBase64ToUint8Array, bookId]);
 
