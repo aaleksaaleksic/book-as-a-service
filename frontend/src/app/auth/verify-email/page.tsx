@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Mail, MailCheck, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import {
     InputOTP,
     InputOTPGroup,
     InputOTPSlot,
-} from "@/components/ui/input-otp";
+} from '@/components/ui/input-otp';
+import { AuthPageLayout } from '@/components/auth/AuthPageLayout';
+import { CheckCircle, Mail, MailCheck, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { useEmailVerification, useResendEmailVerification } from '@/hooks/use-auth-api';
+import { dt } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 export default function VerifyEmailPage() {
@@ -94,169 +96,179 @@ export default function VerifyEmailPage() {
 
     if (isVerified) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-                <div className="w-full max-w-md">
-                    <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
-                        <CardContent className="pt-12 pb-8">
-                            <div className="flex flex-col items-center space-y-6">
-                                <div className="relative">
-                                    <div className="absolute inset-0 bg-green-400 rounded-full blur-xl opacity-30 animate-pulse"></div>
-                                    <div className="relative bg-gradient-to-br from-green-400 to-emerald-500 rounded-full p-4">
-                                        <CheckCircle className="w-16 h-16 text-white" strokeWidth={2.5} />
-                                    </div>
-                                </div>
-
-                                <div className="text-center space-y-2">
-                                    <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                                        Email verifikovan!
-                                    </h2>
-                                    <p className="text-gray-600 text-lg">
-                                        Uspešno ste aktivirali nalog
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <Clock className="w-4 h-4 animate-spin" />
-                                    <span>Preusmeravanje na prijavu...</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            <AuthPageLayout
+                badge="Čestitamo"
+                title="Email je uspešno verifikovan"
+                description="Vaš nalog je spreman za korišćenje. Preusmeravamo vas na stranicu za prijavu."
+            >
+                <div className="flex flex-col items-center space-y-8 text-center">
+                    <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-library-gold/40 blur-3xl" aria-hidden="true" />
+                        <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-library-gold to-library-azure text-white shadow-[0_25px_60px_rgba(12,35,64,0.25)]">
+                            <CheckCircle className="h-12 w-12" />
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <p className="font-reading text-lg text-sky-950/80">
+                            Email adresa <span className="font-semibold text-sky-950">{email}</span> je potvrđena.
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-sm font-medium text-sky-950/70">
+                            <Clock className="h-4 w-4 animate-spin" />
+                            <span>Preusmeravanje na prijavu...</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </AuthPageLayout>
         );
     }
 
-    return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-            <div className="w-full max-w-md">
-                <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm overflow-hidden">
-                    {/* Header with gradient */}
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6 text-white">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
-                                <MailCheck className="w-6 h-6" strokeWidth={2.5} />
-                            </div>
-                            <h1 className="text-2xl font-bold">Verifikujte email</h1>
-                        </div>
-                        <p className="text-emerald-50 text-sm">
-                            Poslali smo 6-cifreni kod na vašu email adresu
-                        </p>
-                    </div>
-
-                    <CardContent className="p-6 space-y-6">
-                        {/* Email display */}
-                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2">
-                                <Mail className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm text-gray-600">Email adresa:</span>
-                            </div>
-                            <p className="font-semibold text-gray-900 mt-1 break-all">{email}</p>
-                        </div>
-
-                        {/* OTP Input */}
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-emerald-500" />
-                                Unesite verifikacioni kod
-                            </label>
-                            <div className="flex justify-center">
-                                <InputOTP
-                                    maxLength={6}
-                                    value={value}
-                                    onChange={setValue}
-                                    disabled={verifyMutation.isPending}
-                                >
-                                    <InputOTPGroup className="gap-2">
-                                        <InputOTPSlot index={0} className="w-12 h-14 text-lg font-bold border-2 rounded-lg" />
-                                        <InputOTPSlot index={1} className="w-12 h-14 text-lg font-bold border-2 rounded-lg" />
-                                        <InputOTPSlot index={2} className="w-12 h-14 text-lg font-bold border-2 rounded-lg" />
-                                        <InputOTPSlot index={3} className="w-12 h-14 text-lg font-bold border-2 rounded-lg" />
-                                        <InputOTPSlot index={4} className="w-12 h-14 text-lg font-bold border-2 rounded-lg" />
-                                        <InputOTPSlot index={5} className="w-12 h-14 text-lg font-bold border-2 rounded-lg" />
-                                    </InputOTPGroup>
-                                </InputOTP>
-                            </div>
-                        </div>
-
-                        {/* Loading state */}
-                        {verifyMutation.isPending && (
-                            <div className="flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                                <Clock className="w-4 h-4 animate-spin" />
-                                <span className="text-sm font-medium">Verifikacija u toku...</span>
-                            </div>
-                        )}
-
-                        {/* Error state */}
-                        {verifyMutation.isError && (
-                            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
-                                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-sm">Neispravan kod</p>
-                                    <p className="text-xs text-red-600 mt-1">Proverite kod i pokušajte ponovo</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Verify button */}
-                        <Button
-                            onClick={() => handleComplete(value)}
-                            className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold shadow-lg shadow-emerald-500/30 transition-all duration-200"
-                            disabled={value.length !== 6 || verifyMutation.isPending}
-                        >
-                            {verifyMutation.isPending ? (
-                                <span className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 animate-spin" />
-                                    Verifikujem...
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    <CheckCircle className="w-5 h-5" />
-                                    Verifikuj email
-                                </span>
-                            )}
-                        </Button>
-
-                        {/* Resend section */}
-                        <div className="pt-6 border-t border-gray-200">
-                            <div className="text-center space-y-3">
-                                <p className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                                    <Mail className="w-4 h-4" />
-                                    Niste primili kod?
-                                </p>
-                                <Button
-                                    variant="outline"
-                                    onClick={handleResend}
-                                    disabled={resendMutation.isPending || resendCooldown > 0}
-                                    className="w-full h-11 border-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-200"
-                                >
-                                    {resendMutation.isPending ? (
-                                        <span className="flex items-center gap-2">
-                                            <Clock className="w-4 h-4 animate-spin" />
-                                            Šalje se...
-                                        </span>
-                                    ) : resendCooldown > 0 ? (
-                                        <span className="flex items-center gap-2 text-gray-500">
-                                            <Clock className="w-4 h-4" />
-                                            Sačekajte {resendCooldown}s
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-2 text-emerald-700 font-medium">
-                                            <MailCheck className="w-4 h-4" />
-                                            Pošalji novi kod
-                                        </span>
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Help text */}
-                        <p className="text-xs text-center text-gray-500 pt-2">
-                            Kod je validan 24 sata. Proverite spam folder ako ne vidite email.
-                        </p>
-                    </CardContent>
-                </Card>
+    const leftExtras = (
+        <div className="grid gap-4 text-left font-ui text-sky-950/80">
+            <div className="flex items-start gap-3">
+                <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-library-azure/10 text-library-azure">
+                    <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                    <p className="font-semibold text-sky-950">Proverite inbox</p>
+                    <p className="text-sm text-sky-950/70">Kod stiže u roku od jednog minuta. Ako ga nema, proverite spam.</p>
+                </div>
+            </div>
+            <div className="flex items-start gap-3">
+                <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-library-azure/10 text-library-azure">
+                    <Mail className="h-5 w-5" />
+                </div>
+                <div>
+                    <p className="font-semibold text-sky-950">Vaša email adresa</p>
+                    <p className="text-sm text-sky-950/70 break-all">{email || 'Proverite email iz prethodnog koraka.'}</p>
+                </div>
             </div>
         </div>
+    );
+
+    const footer = (
+        <p className="text-sm">
+            Niste dobili kod? Ponovo ga pošaljite ili kontaktirajte podršku na{' '}
+            <span className="font-semibold text-library-azure">support@bookotecha.rs</span>.
+        </p>
+    );
+
+    return (
+        <AuthPageLayout
+            badge="Poslednji korak"
+            title="Verifikujte email i aktivirajte nalog"
+            description="Unesite šestocifreni kod koji smo vam poslali kako bismo potvrdili da ova adresa pripada vama."
+            leftExtras={leftExtras}
+            footer={footer}
+        >
+            <div className="space-y-6">
+                <div className="space-y-2 text-center">
+                    <h2 className={cn(dt.typography.subsectionTitle, 'text-3xl text-sky-950')}>Verifikacioni kod</h2>
+                    <p className="font-ui text-sm text-sky-950/70">
+                        Kod je važeći 24 sata. Kada unesete svih šest cifara, verifikacija će se pokrenuti automatski.
+                    </p>
+                </div>
+
+                <div className="rounded-3xl border border-library-highlight/30 bg-white/80 p-6 text-left shadow-[0_12px_45px_rgba(12,35,64,0.18)]">
+                    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-sky-950/70">
+                        <Mail className="h-4 w-4" />
+                        Email adresa
+                    </div>
+                    <p className="mt-2 font-ui text-base text-sky-950 break-all">{email || 'Nepoznata adresa'}</p>
+                </div>
+
+                <div className="space-y-4">
+                    <label className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-sky-950/60">
+                        <Sparkles className="h-4 w-4 text-library-azure" />
+                        Unesite kod
+                    </label>
+                    <div className="flex justify-center">
+                        <InputOTP
+                            maxLength={6}
+                            value={value}
+                            onChange={setValue}
+                            disabled={verifyMutation.isPending}
+                        >
+                            <InputOTPGroup className="gap-3">
+                                {Array.from({ length: 6 }).map((_, index) => (
+                                    <InputOTPSlot
+                                        key={index}
+                                        index={index}
+                                        className="h-16 w-12 rounded-2xl border-library-highlight/30 bg-white/80 text-center text-xl font-semibold text-sky-950 shadow-[0_10px_25px_rgba(12,35,64,0.12)] transition focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25"
+                                    />
+                                ))}
+                            </InputOTPGroup>
+                        </InputOTP>
+                    </div>
+                </div>
+
+                {verifyMutation.isPending && (
+                    <div className="flex items-center justify-center gap-2 rounded-2xl border border-library-highlight/30 bg-library-azure/10 p-3 text-sm font-medium text-library-azure">
+                        <Clock className="h-4 w-4 animate-spin" />
+                        <span>Verifikacija u toku...</span>
+                    </div>
+                )}
+
+                {verifyMutation.isError && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-red-400/40 bg-red-100/80 p-4 text-red-800">
+                        <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                        <div>
+                            <p className="font-semibold text-sm">Neispravan kod</p>
+                            <p className="text-xs text-red-700">Proverite kod i pokušajte ponovo.</p>
+                        </div>
+                    </div>
+                )}
+
+                <Button
+                    onClick={() => handleComplete(value)}
+                    className={cn(
+                        dt.interactive.buttonPrimary,
+                        'w-full justify-center py-5 text-base font-semibold uppercase tracking-[0.18em]'
+                    )}
+                    disabled={value.length !== 6 || verifyMutation.isPending}
+                >
+                    {verifyMutation.isPending ? (
+                        <span className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 animate-spin" />
+                            Verifikujem...
+                        </span>
+                    ) : (
+                        <span className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5" />
+                            Verifikuj email
+                        </span>
+                    )}
+                </Button>
+
+                <div className="space-y-3 rounded-3xl border border-library-highlight/30 bg-white/70 p-6 text-center shadow-[0_12px_40px_rgba(12,35,64,0.15)]">
+                    <p className="flex items-center justify-center gap-2 text-sm font-medium text-sky-950/70">
+                        <Mail className="h-4 w-4" />
+                        Niste primili kod?
+                    </p>
+                    <Button
+                        variant="outline"
+                        onClick={handleResend}
+                        disabled={resendMutation.isPending || resendCooldown > 0}
+                        className="w-full justify-center rounded-full border-2 border-library-highlight/40 bg-white/90 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-sky-950 transition hover:bg-library-azure/10"
+                    >
+                        {resendMutation.isPending ? (
+                            <span className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 animate-spin" />
+                                Šalje se...
+                            </span>
+                        ) : resendCooldown > 0 ? (
+                            <span className="flex items-center gap-2 text-sky-950/60">
+                                <Clock className="h-4 w-4" />
+                                Sačekajte {resendCooldown}s
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-2 text-library-azure">
+                                <MailCheck className="h-4 w-4" />
+                                Pošalji novi kod
+                            </span>
+                        )}
+                    </Button>
+                </div>
+            </div>
+        </AuthPageLayout>
     );
 }
