@@ -43,6 +43,12 @@ import { useAuth } from "@/hooks/useAuth";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
+const PDFJS_DIST_VERSION = "5.3.93" as const;
+const DEFAULT_PDF_WORKER_SRC = `https://unpkg.com/pdfjs-dist@${PDFJS_DIST_VERSION}/build/pdf.worker.min.mjs` as const;
+const DEFAULT_PDF_WASM_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_DIST_VERSION}/build/pdf.wasm` as const;
+const DEFAULT_PDF_CMAP_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_DIST_VERSION}/cmaps/` as const;
+const DEFAULT_PDF_STANDARD_FONT_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_DIST_VERSION}/standard_fonts/` as const;
+
 const MIN_SCALE = 0.75;
 const MAX_SCALE = 2.5;
 const SCALE_STEP = 0.25;
@@ -247,7 +253,10 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
         const configurePdfWorker = async () => {
             const { pdfjs } = await import("react-pdf");
-            pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.3.93/build/pdf.worker.min.mjs`;
+            const workerSrc = process.env.NEXT_PUBLIC_PDF_WORKER_URL?.trim();
+            pdfjs.GlobalWorkerOptions.workerSrc = workerSrc && workerSrc.length > 0
+                ? workerSrc
+                : DEFAULT_PDF_WORKER_SRC;
             setPdfjsLib(pdfjs);
         };
 
@@ -681,20 +690,14 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     const baseDocumentOptions = useMemo(() => {
         const options: DocumentProps["options"] = {};
-        const cMapUrl = process.env.NEXT_PUBLIC_PDF_CMAP_URL;
-        const standardFontDataUrl = process.env.NEXT_PUBLIC_PDF_STANDARD_FONT_URL;
-        const wasmUrl = process.env.NEXT_PUBLIC_PDF_WASM_URL;
+        const cMapUrl = process.env.NEXT_PUBLIC_PDF_CMAP_URL?.trim() || DEFAULT_PDF_CMAP_URL;
+        const standardFontDataUrl = process.env.NEXT_PUBLIC_PDF_STANDARD_FONT_URL?.trim() || DEFAULT_PDF_STANDARD_FONT_URL;
+        const wasmUrl = process.env.NEXT_PUBLIC_PDF_WASM_URL?.trim() || DEFAULT_PDF_WASM_URL;
 
-        if (cMapUrl) {
-            options.cMapUrl = cMapUrl;
-            options.cMapPacked = true;
-        }
-        if (standardFontDataUrl) {
-            options.standardFontDataUrl = standardFontDataUrl;
-        }
-        if (wasmUrl) {
-            options.wasmUrl = wasmUrl;
-        }
+        options.cMapUrl = cMapUrl;
+        options.cMapPacked = true;
+        options.standardFontDataUrl = standardFontDataUrl;
+        options.wasmUrl = wasmUrl;
 
         return Object.keys(options).length ? options : undefined;
     }, []);
