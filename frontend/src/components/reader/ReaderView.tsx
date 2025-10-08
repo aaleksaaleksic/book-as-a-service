@@ -38,6 +38,7 @@ import type { PdfRangeTransport } from "@/api/types/pdf.types";
 import { useDownloadPrevention } from "@/hooks/useDownloadPrevention";
 import { bookmarksApi } from "@/api/bookmarks";
 import { AiChatPanel } from "@/components/ai-chat/AiChatPanel";
+import { useAuth } from "@/hooks/useAuth";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -151,6 +152,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     // Enable download prevention security measures
     useDownloadPrevention(true);
+
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
     // FIX 2: Initialize loadError with a lazy initializer function
     const [loadError, setLoadError] = useState<string | null>(() => {
@@ -1325,7 +1328,20 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
             </div>
 
             {/* AI Chat Panel */}
-            <AiChatPanel bookId={bookId} bookTitle={bookTitle} />
+            {isPromoChapter ? (
+                isAuthenticated ? (
+                    <AiChatPanel bookId={bookId} bookTitle={bookTitle} />
+                ) : !isAuthLoading ? (
+                    <div className="fixed bottom-8 right-8 z-40 max-w-sm rounded-2xl border border-slate-800/60 bg-slate-950/90 p-5 text-sm text-slate-200 shadow-2xl shadow-black/40">
+                        <p className="text-base font-semibold text-slate-100">AI Asistent</p>
+                        <p className="mt-2 leading-relaxed text-slate-300">
+                            Napravite nalog ili se ulogujte u postojeći da biste probali našeg AI asistenta.
+                        </p>
+                    </div>
+                ) : null
+            ) : (
+                <AiChatPanel bookId={bookId} bookTitle={bookTitle} />
+            )}
         </div>
     );
 };
