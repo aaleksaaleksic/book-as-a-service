@@ -69,7 +69,7 @@ export interface ReaderViewProps {
     onPageChange?: (page: number) => void;
     className?: string;
     skipMetadata?: boolean; // Skip metadata fetch for public content (promo chapters)
-    isPromoChapter?: boolean; // Hide AI chat and bookmarks for promo chapters
+    isPromoChapter?: boolean; // Hide bookmarks for promo chapters
 }
 
 type PdfSource = DocumentProps["file"] | null;
@@ -1324,8 +1324,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 </aside>
             </div>
 
-            {/* AI Chat Panel - hidden for promo chapters */}
-            {!isPromoChapter && <AiChatPanel bookId={bookId} bookTitle={bookTitle} />}
+            {/* AI Chat Panel */}
+            <AiChatPanel bookId={bookId} bookTitle={bookTitle} />
         </div>
     );
 };
