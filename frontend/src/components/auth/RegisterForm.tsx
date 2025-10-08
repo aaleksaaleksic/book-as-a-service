@@ -13,38 +13,46 @@ import { Label } from '@/components/ui/label';
 import { dt } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
-const registerSchema = z.object({
-    firstName: z
-        .string()
-        .min(1, 'Ime je obavezno')
-        .min(2, 'Ime mora imati najmanje 2 karaktera'),
-    lastName: z
-        .string()
-        .min(1, 'Prezime je obavezno')
-        .min(2, 'Prezime mora imati najmanje 2 karaktera'),
-    email: z
-        .string()
-        .min(1, 'Email je obavezan')
-        .email('Unesite validnu email adresu'),
-    phoneNumber: z
-        .string()
-        .min(1, 'Broj telefona je obavezan')
-        .regex(/^\+?[1-9]\d{7,14}$/, 'Format: +381611234567 ili 0611234567'),
-    password: z
-        .string()
-        .min(1, 'Lozinka je obavezna')
-        .min(8, 'Lozinka mora imati najmanje 8 karaktera')
-        .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Lozinka mora sadržati malo slovo, veliko slovo i broj'),
-    confirmPassword: z
-        .string()
-        .min(1, 'Potvrda lozinke je obavezna'),
-    acceptTerms: z
-        .boolean()
-        .refine(val => val === true, 'Morate prihvatiti uslove korišćenja'),
-}).refine((data) => data.password === data.confirmPassword, {
-    message: 'Lozinke se ne poklapaju',
-    path: ['confirmPassword'],
-});
+const registerSchema = z
+    .object({
+        firstName: z
+            .string()
+            .trim()
+            .min(1, 'Ime je obavezno')
+            .min(2, 'Ime mora imati najmanje 2 karaktera'),
+        lastName: z
+            .string()
+            .trim()
+            .min(1, 'Prezime je obavezno')
+            .min(2, 'Prezime mora imati najmanje 2 karaktera'),
+        email: z
+            .string()
+            .trim()
+            .min(1, 'Email je obavezan')
+            .email('Unesite validnu email adresu')
+            .transform(value => value.toLowerCase()),
+        phoneNumber: z
+            .string()
+            .trim()
+            .min(1, 'Broj telefona je obavezan')
+            .transform(value => value.replace(/\s+/g, ''))
+            .refine(value => /^\+?[1-9]\d{7,14}$/.test(value), 'Format: +381611234567 ili 0611234567'),
+        password: z
+            .string()
+            .min(1, 'Lozinka je obavezna')
+            .min(8, 'Lozinka mora imati najmanje 8 karaktera')
+            .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Lozinka mora sadržati malo slovo, veliko slovo i broj'),
+        confirmPassword: z
+            .string()
+            .min(1, 'Potvrda lozinke je obavezna'),
+        acceptTerms: z
+            .boolean()
+            .refine(val => val === true, 'Morate prihvatiti uslove korišćenja'),
+    })
+    .refine(data => data.password === data.confirmPassword, {
+        message: 'Lozinke se ne poklapaju',
+        path: ['confirmPassword'],
+    });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -52,9 +60,10 @@ interface RegisterFormProps {
     onSubmit: (data: RegisterFormData) => Promise<void>;
     isLoading?: boolean;
     error?: string | null;
+    serverErrors?: Partial<Record<keyof RegisterFormData, string>>;
 }
 
-export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFormProps) => {
+export const RegisterForm = ({ onSubmit, isLoading = false, error, serverErrors }: RegisterFormProps) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -81,6 +90,13 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
             // Error handling u parent komponenti
         }
     };
+
+    const firstNameError = errors.firstName?.message ?? serverErrors?.firstName;
+    const lastNameError = errors.lastName?.message ?? serverErrors?.lastName;
+    const emailError = errors.email?.message ?? serverErrors?.email;
+    const phoneError = errors.phoneNumber?.message ?? serverErrors?.phoneNumber;
+    const passwordError = errors.password?.message ?? serverErrors?.password;
+    const confirmPasswordError = errors.confirmPassword?.message ?? serverErrors?.confirmPassword;
 
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -111,15 +127,15 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         placeholder="Vaše ime"
                         className={cn(
                             'h-14 rounded-2xl border-library-highlight/30 bg-white/80 pl-12 pr-4 font-ui text-base text-sky-950 placeholder:text-sky-950/40 shadow-[0_12px_30px_rgba(11,29,58,0.08)] transition-all focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25',
-                            errors.firstName && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
+                            firstNameError && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
                         )}
                         disabled={loading}
                         {...register('firstName')}
                     />
                 </div>
-                {errors.firstName && (
+                {firstNameError && (
                     <p className="text-sm font-medium text-red-600">
-                        {errors.firstName.message}
+                        {firstNameError}
                     </p>
                 )}
             </div>
@@ -140,15 +156,15 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         placeholder="Vaše prezime"
                         className={cn(
                             'h-14 rounded-2xl border-library-highlight/30 bg-white/80 pl-12 pr-4 font-ui text-base text-sky-950 placeholder:text-sky-950/40 shadow-[0_12px_30px_rgba(11,29,58,0.08)] transition-all focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25',
-                            errors.lastName && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
+                            lastNameError && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
                         )}
                         disabled={loading}
                         {...register('lastName')}
                     />
                 </div>
-                {errors.lastName && (
+                {lastNameError && (
                     <p className="text-sm font-medium text-red-600">
-                        {errors.lastName.message}
+                        {lastNameError}
                     </p>
                 )}
             </div>
@@ -169,15 +185,15 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         placeholder="vaš@email.com"
                         className={cn(
                             'h-14 rounded-2xl border-library-highlight/30 bg-white/80 pl-12 pr-4 font-ui text-base text-sky-950 placeholder:text-sky-950/40 shadow-[0_12px_30px_rgba(11,29,58,0.08)] transition-all focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25',
-                            errors.email && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
+                            emailError && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
                         )}
                         disabled={loading}
                         {...register('email')}
                     />
                 </div>
-                {errors.email && (
+                {emailError && (
                     <p className="text-sm font-medium text-red-600">
-                        {errors.email.message}
+                        {emailError}
                     </p>
                 )}
             </div>
@@ -198,15 +214,15 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         placeholder="+381611234567"
                         className={cn(
                             'h-14 rounded-2xl border-library-highlight/30 bg-white/80 pl-12 pr-4 font-ui text-base text-sky-950 placeholder:text-sky-950/40 shadow-[0_12px_30px_rgba(11,29,58,0.08)] transition-all focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25',
-                            errors.phoneNumber && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
+                            phoneError && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
                         )}
                         disabled={loading}
                         {...register('phoneNumber')}
                     />
                 </div>
-                {errors.phoneNumber && (
+                {phoneError && (
                     <p className="text-sm font-medium text-red-600">
-                        {errors.phoneNumber.message}
+                        {phoneError}
                     </p>
                 )}
             </div>
@@ -227,7 +243,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         placeholder="••••••••"
                         className={cn(
                             'h-14 rounded-2xl border-library-highlight/30 bg-white/80 pl-12 pr-12 font-ui text-base text-sky-950 placeholder:text-sky-950/40 shadow-[0_12px_30px_rgba(11,29,58,0.08)] transition-all focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25',
-                            errors.password && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
+                            passwordError && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
                         )}
                         disabled={loading}
                         {...register('password')}
@@ -241,8 +257,8 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                 </div>
-                {errors.password && (
-                    <p className="text-sm font-medium text-red-600">{errors.password.message}</p>
+                {passwordError && (
+                    <p className="text-sm font-medium text-red-600">{passwordError}</p>
                 )}
             </div>
 
@@ -262,7 +278,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         placeholder="••••••••"
                         className={cn(
                             'h-14 rounded-2xl border-library-highlight/30 bg-white/80 pl-12 pr-12 font-ui text-base text-sky-950 placeholder:text-sky-950/40 shadow-[0_12px_30px_rgba(11,29,58,0.08)] transition-all focus:border-library-gold/60 focus:outline-none focus:ring-2 focus:ring-library-gold/25',
-                            errors.confirmPassword && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
+                            confirmPasswordError && 'border-red-400/70 focus:border-red-500 focus:ring-red-200'
                         )}
                         disabled={loading}
                         {...register('confirmPassword')}
@@ -276,8 +292,8 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                 </div>
-                {errors.confirmPassword && (
-                    <p className="text-sm font-medium text-red-600">{errors.confirmPassword.message}</p>
+                {confirmPasswordError && (
+                    <p className="text-sm font-medium text-red-600">{confirmPasswordError}</p>
                 )}
             </div>
 

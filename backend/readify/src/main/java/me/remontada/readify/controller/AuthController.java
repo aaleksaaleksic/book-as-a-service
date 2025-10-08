@@ -12,6 +12,7 @@ import me.remontada.readify.model.User;
 import me.remontada.readify.service.UserService;
 import me.remontada.readify.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -49,9 +50,10 @@ public class AuthController {
             Optional<User> userOpt = userService.findByEmail(email);
             if (userOpt.isEmpty()) {
                 log.warn("Login failed - user not found: {}", email);
-                return ResponseEntity.status(401).body(Map.of(
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                         "success", false,
-                        "message", "Invalid credentials"
+                        "errorCode", "USER_NOT_FOUND",
+                        "message", "Account with the provided email address does not exist"
                 ));
             }
 
@@ -59,16 +61,18 @@ public class AuthController {
 
             if (!passwordEncoder.matches(password, user.getPassword())) {
                 log.warn("Login failed - invalid password for user: {}", email);
-                return ResponseEntity.status(401).body(Map.of(
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                         "success", false,
-                        "message", "Invalid credentials"
+                        "errorCode", "INVALID_PASSWORD",
+                        "message", "Incorrect password"
                 ));
             }
 
             if (!user.getActive()) {
                 log.warn("Login failed - inactive user: {}", email);
-                return ResponseEntity.status(401).body(Map.of(
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                         "success", false,
+                        "errorCode", "ACCOUNT_DEACTIVATED",
                         "message", "Account is deactivated"
                 ));
             }

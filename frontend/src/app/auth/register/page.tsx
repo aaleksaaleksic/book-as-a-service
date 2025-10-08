@@ -13,10 +13,14 @@ export default function RegisterPage() {
     const router = useRouter();
     const registerMutation = useRegister();
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<
+        Partial<Record<'firstName' | 'lastName' | 'email' | 'phoneNumber' | 'password' | 'confirmPassword', string>>
+    >({});
 
     const handleRegister = async (data: any) => {
         try {
             setError(null);
+            setFieldErrors({});
 
             const registerRequest: RegisterRequest = {
                 firstName: data.firstName,
@@ -29,8 +33,29 @@ export default function RegisterPage() {
             await registerMutation.mutateAsync(registerRequest);
             router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`);
         } catch (error: any) {
-            if (error.response?.data?.message) {
-                setError(error.response.data.message);
+            const response = error?.response;
+            const errorCode = response?.data?.errorCode as string | undefined;
+            const backendMessage = response?.data?.message as string | undefined;
+            const normalizedMessage = backendMessage?.toLowerCase() ?? '';
+
+            if (errorCode === 'EMAIL_ALREADY_EXISTS' || normalizedMessage.includes('email')) {
+                const message = 'Nalog sa ovom email adresom već postoji.';
+                setError(message);
+                setFieldErrors({ email: message });
+                return;
+            }
+
+            if (errorCode === 'PHONE_ALREADY_EXISTS' || normalizedMessage.includes('phone')) {
+                const message = 'Nalog sa ovim brojem telefona već postoji.';
+                setError(message);
+                setFieldErrors({ phoneNumber: message });
+                return;
+            }
+
+            if (backendMessage) {
+                setError(backendMessage);
+            } else if (error.message === 'Network Error') {
+                setError('Ne možemo da se povežemo sa serverom. Proverite internet vezu.');
             } else {
                 setError('Došlo je do greške prilikom registracije.');
             }
@@ -64,6 +89,7 @@ export default function RegisterPage() {
                     onSubmit={handleRegister}
                     isLoading={registerMutation.isPending}
                     error={error}
+                    serverErrors={fieldErrors}
                 />
             </div>
         </AuthPageLayout>
