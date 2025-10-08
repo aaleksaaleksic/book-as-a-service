@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { PageLoader } from '@/components/ui/loading-spinner';
 import { PromoRateLimitDialog } from '@/components/promo/PromoRateLimitDialog';
-import { tokenManager } from '@/lib/api-client';
+import { useAuth } from '@/hooks/useAuth';
 
 const ReaderView = dynamic(() => import('@/components/reader/ReaderView'), {
     ssr: false,
@@ -23,14 +23,12 @@ interface RateLimitStatus {
 export default function PromoChapterReaderPage() {
     const params = useParams();
     const bookId = parseInt(params.id as string);
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const [book, setBook] = useState<any>(null);
     const [isLoadingBook, setIsLoadingBook] = useState(true);
     const [showRateLimitDialog, setShowRateLimitDialog] = useState(false);
     const [rateLimitStatus, setRateLimitStatus] = useState<RateLimitStatus | null>(null);
     const [isCheckingRateLimit, setIsCheckingRateLimit] = useState(true);
-
-    // Check if user is authenticated
-    const isAuthenticated = !!tokenManager.getToken();
 
     // Fetch book data without authentication (public endpoint)
     useEffect(() => {
@@ -73,6 +71,7 @@ export default function PromoChapterReaderPage() {
             // Skip rate limit check for authenticated users
             if (isAuthenticated) {
                 setIsCheckingRateLimit(false);
+                setRateLimitStatus(null);
                 return;
             }
 
@@ -109,8 +108,14 @@ export default function PromoChapterReaderPage() {
             }
         };
 
-        checkRateLimit();
-    }, [isAuthenticated]);
+        if (!isAuthLoading) {
+            checkRateLimit();
+        }
+    }, [isAuthenticated, isAuthLoading]);
+
+    if (isAuthLoading) {
+        return <PageLoader text="Provera statusa naloga..." />;
+    }
 
     if (isCheckingRateLimit) {
         return <PageLoader text="Provera dostupnosti..." />;
