@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { TopBooksSection } from '@/components/landing/TopBooksSection';
 import { ValuePropositionSection } from '@/components/landing/ValuePropositionSection';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LoadingSpinner, PageLoader } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { dt } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,11 +49,7 @@ export default function LandingPage() {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-reading-background">
-                <LoadingSpinner size="lg" text="Pripremamo vašu biblioteku..." />
-            </div>
-        );
+        return <PageLoader text="Pripremamo vašu biblioteku..." />;
     }
 
     const currentYear = new Date().getFullYear();

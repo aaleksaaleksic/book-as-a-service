@@ -3,17 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { PageLoader } from '@/components/ui/loading-spinner';
 import { PromoRateLimitDialog } from '@/components/promo/PromoRateLimitDialog';
 import { tokenManager } from '@/lib/api-client';
 
 const ReaderView = dynamic(() => import('@/components/reader/ReaderView'), {
     ssr: false,
-    loading: () => (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950">
-            <LoadingSpinner size="lg" text="Učitavanje čitača..." />
-        </div>
-    ),
+    loading: () => <PageLoader text="Učitavanje čitača..." />,
 });
 
 interface RateLimitStatus {
@@ -117,44 +113,36 @@ export default function PromoChapterReaderPage() {
     }, [isAuthenticated]);
 
     if (isCheckingRateLimit) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950">
-                <LoadingSpinner size="lg" text="Provera dostupnosti..." />
-            </div>
-        );
+        return <PageLoader text="Provera dostupnosti..." />;
     }
 
     // If rate limit is reached, show the dialog and don't render the reader
     if (rateLimitStatus?.limitReached && !isAuthenticated) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950">
+            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
                 <PromoRateLimitDialog
                     open={showRateLimitDialog}
                     onOpenChange={setShowRateLimitDialog}
                     currentCount={rateLimitStatus.currentCount}
                     maxCount={rateLimitStatus.maxCount}
                 />
-                <div className="text-center text-slate-100">
-                    <p className="text-xl">Dnevni limit za promo poglavlja dostignut</p>
-                    <p className="mt-4 text-slate-400">Kreirajte besplatan nalog da nastavite</p>
+                <div className="text-center">
+                    <p className="text-xl font-semibold">Dnevni limit za promo poglavlja dostignut</p>
+                    <p className="mt-4 text-sky-950/70">Kreirajte besplatan nalog da nastavite</p>
                 </div>
             </div>
         );
     }
 
     if (isLoadingBook) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950">
-                <LoadingSpinner size="lg" text="Učitavanje knjige..." />
-            </div>
-        );
+        return <PageLoader text="Učitavanje knjige..." />;
     }
 
     if (!book) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950">
-                <div className="text-center text-slate-100">
-                    <p className="text-xl">Knjiga nije pronađena</p>
+            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
+                <div className="text-center">
+                    <p className="text-xl font-semibold">Knjiga nije pronađena</p>
                 </div>
             </div>
         );

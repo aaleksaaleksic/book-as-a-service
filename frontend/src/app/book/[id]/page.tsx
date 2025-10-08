@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Star, ArrowLeft, Clock3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { PageLoader } from '@/components/ui/loading-spinner';
 import { dt } from '@/lib/design-tokens';
 import { resolveApiFileUrl } from '@/lib/asset-utils';
 import { useBook, usePopularBooks } from '@/hooks/use-books';
@@ -64,11 +64,7 @@ export default function BookDetailsPage() {
     };
 
     if (isBookLoading || isPopularLoading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95">
-                <LoadingSpinner size="lg" text="Učitavanje detalja knjige..." />
-            </div>
-        );
+        return <PageLoader text="Učitavanje detalja knjige..." />;
     }
 
     if (!book) {

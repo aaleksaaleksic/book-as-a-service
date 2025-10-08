@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LoadingSpinner, PageLoader } from '@/components/ui/loading-spinner';
 import {
     Select,
     SelectContent,
@@ -124,17 +124,13 @@ export default function PromoChaptersPage() {
     };
 
     if (isLoading && !books.length) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-reading-background">
-                <LoadingSpinner size="lg" text="Učitavamo promo poglavlja…" />
-            </div>
-        );
+        return <PageLoader text="Učitavamo promo poglavlja…" />;
     }
 
     if (error) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-reading-background">
-                <div className="rounded-3xl border border-destructive/30 bg-white/90 p-10 text-center text-destructive shadow-lg">
+            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
+                <div className="rounded-3xl border border-destructive/30 bg-white/90 p-10 text-center shadow-lg">
                     <p className="text-lg font-semibold">Došlo je do greške pri učitavanju promo poglavlja.</p>
                     <p className="mt-3 text-sm text-destructive/70">
                         Molimo pokušajte ponovo kasnije ili posetite našu stranicu sa planovima pretplate.
@@ -290,7 +286,9 @@ export default function PromoChaptersPage() {
 
                     {(isFetching && !books.length) ? (
                         <div className="flex justify-center py-16">
-                            <LoadingSpinner size="lg" variant="book" text="Učitavamo naslove" />
+                            <div className="rounded-3xl bg-library-parchment/95 px-10 py-8 text-sky-950 shadow-inner">
+                                <LoadingSpinner size="lg" variant="book" text="Učitavamo naslove" color="primary" />
+                            </div>
                         </div>
                     ) : paginatedBooks.length ? (
                         <>

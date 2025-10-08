@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { AxiosError } from 'axios';
 import { api } from '@/lib/api-client';
 
 export interface ChatMessage {
@@ -45,7 +46,9 @@ export const useAiChat = () => {
                 bookContext,
             };
 
-            const response = await api.post<AiChatResponse>('/api/v1/ai-chat/ask', request);
+            const response = await api.post<AiChatResponse>('/api/v1/ai-chat/ask', request, {
+                timeout: Math.max(api.defaults.timeout ?? 0, 45000),
+            });
 
             if (response.data.success) {
                 const assistantMessage: ChatMessage = {
@@ -60,7 +63,13 @@ export const useAiChat = () => {
                 throw new Error(response.data.error || 'Failed to get AI response');
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+            const axiosError = err as AxiosError<{ error?: string }>;
+            const timeoutMessage = axiosError.code === 'ECONNABORTED'
+                ? 'AI odgovor traje duže nego obično. Molimo pokušajte ponovo sa kraćim odlomkom.'
+                : null;
+            const errorMessage = timeoutMessage
+                ?? axiosError.response?.data?.error
+                ?? (axiosError instanceof Error ? axiosError.message : 'Failed to send message');
             setError(errorMessage);
             console.error('AI Chat error:', err);
 

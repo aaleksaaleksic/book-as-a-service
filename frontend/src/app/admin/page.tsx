@@ -11,6 +11,7 @@ import {
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardAnalytics } from '@/hooks/use-dashboard-analytics';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function AdminDashboardPage() {
     const { user } = useAuth();
@@ -84,7 +85,9 @@ export default function AdminDashboardPage() {
 
                 {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-950"></div>
+                        <div className="w-full max-w-md rounded-3xl bg-library-parchment/95 px-10 py-8 text-sky-950 shadow-inner">
+                            <LoadingSpinner size="lg" text="Učitavamo analitiku..." color="primary" />
+                        </div>
                     </div>
                 ) : analytics ? (
                     <>

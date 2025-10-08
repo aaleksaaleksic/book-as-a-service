@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSubscription } from '@/hooks/use-user-subscription';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { PageLoader } from '@/components/ui/loading-spinner';
 import { dt } from '@/lib/design-tokens';
 import { Calendar, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -64,11 +64,7 @@ export default function MyProfilePage() {
     const [isCanceling, setIsCanceling] = useState(false);
 
     if (authLoading || subLoading) {
-        return (
-            <div className={cn(dt.layouts.mainPage, "flex items-center justify-center bg-library-parchment/95")}>
-                <LoadingSpinner size="lg" variant="spinner" text="Učitavanje profila" />
-            </div>
-        );
+        return <PageLoader text="Učitavanje profila" />;
     }
 
     if (!user) {
