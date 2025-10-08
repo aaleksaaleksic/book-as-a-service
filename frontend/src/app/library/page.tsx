@@ -17,6 +17,7 @@ import type { BookmarkResponseDTO } from "@/api/types/bookmarks.types";
 import { resolveApiFileUrl } from "@/lib/asset-utils";
 import { cn } from "@/lib/utils";
 import { dt } from "@/lib/design-tokens";
+import { AUTH_CONFIG } from "@/utils/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -115,7 +116,16 @@ export default function LibraryPage() {
     );
 
     useEffect(() => {
-        if (!isAuthLoading && (!isAuthenticated || !hasLibraryAccess)) {
+        if (isAuthLoading) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            router.replace(AUTH_CONFIG.LOGIN_REDIRECT);
+            return;
+        }
+
+        if (!hasLibraryAccess) {
             router.replace("/pricing");
         }
     }, [isAuthLoading, isAuthenticated, hasLibraryAccess, router]);
@@ -191,7 +201,7 @@ export default function LibraryPage() {
         setSearchTerm(event.target.value);
     };
 
-    if (isAuthLoading || !hasLibraryAccess) {
+    if (isAuthLoading || (isAuthenticated && !hasLibraryAccess)) {
         return <PageLoader text="Pripremamo vašu biblioteku…" />;
     }
 
