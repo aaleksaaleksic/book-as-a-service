@@ -11,8 +11,6 @@ import { AuthPageLayout } from '@/components/auth/AuthPageLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useLogin } from '@/hooks/use-auth-api';
-import { dt } from '@/lib/design-tokens';
-import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -91,7 +89,7 @@ export default function LoginPage() {
         >
             <div className="space-y-6">
                 <div className="space-y-2 text-center">
-                    <h2 className={cn(dt.typography.subsectionTitle, 'text-3xl text-sky-950')}>Prijavite se</h2>
+                    <h2 className="text-3xl font-semibold font-ui text-sky-950">Prijavite se</h2>
                     <p className="font-ui text-sm text-sky-950/70">
                         Unesite email i lozinku povezanu sa vašim nalogom.
                     </p>
@@ -110,7 +108,7 @@ export default function LoginPage() {
                     <Button
                         type="button"
                         onClick={() => router.push('/browse')}
-                        className="w-full justify-center rounded-full border border-library-highlight/30 bg-white/60 py-6 text-sm font-semibold uppercase tracking-[0.18em] text-sky-950 transition hover:bg-library-azure/10"
+                        className="w-full justify-center rounded-full border border-library-highlight/30 bg-white/60 py-6 text-sm font-semibold uppercase tracking-[0.18em] text-sky-950 transition hover:bg-library-azure/10 font-ui"
                     >
                         Nastavite kao gost
                     </Button>

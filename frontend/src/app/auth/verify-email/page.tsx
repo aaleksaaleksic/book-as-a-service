@@ -162,7 +162,7 @@ export default function VerifyEmailPage() {
         >
             <div className="space-y-6">
                 <div className="space-y-2 text-center">
-                    <h2 className={cn(dt.typography.subsectionTitle, 'text-3xl text-sky-950')}>Verifikacioni kod</h2>
+                    <h2 className="text-3xl font-semibold font-ui text-sky-950">Verifikacioni kod</h2>
                     <p className="font-ui text-sm text-sky-950/70">
                         Kod je važeći 24 sata. Kada unesete svih šest cifara, verifikacija će se pokrenuti automatski.
                     </p>
@@ -222,7 +222,7 @@ export default function VerifyEmailPage() {
                     onClick={() => handleComplete(value)}
                     className={cn(
                         dt.interactive.buttonPrimary,
-                        'w-full justify-center py-5 text-base font-semibold uppercase tracking-[0.18em]'
+                        'w-full justify-center py-5 text-base font-semibold uppercase tracking-[0.18em] font-ui'
                     )}
                     disabled={value.length !== 6 || verifyMutation.isPending}
                 >
@@ -248,7 +248,7 @@ export default function VerifyEmailPage() {
                         variant="outline"
                         onClick={handleResend}
                         disabled={resendMutation.isPending || resendCooldown > 0}
-                        className="w-full justify-center rounded-full border-2 border-library-highlight/40 bg-white/90 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-sky-950 transition hover:bg-library-azure/10"
+                        className="w-full justify-center rounded-full border-2 border-library-highlight/40 bg-white/90 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-sky-950 transition hover:bg-library-azure/10 font-ui"
                     >
                         {resendMutation.isPending ? (
                             <span className="flex items-center gap-2">

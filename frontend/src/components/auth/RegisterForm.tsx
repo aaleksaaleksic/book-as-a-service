@@ -304,7 +304,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error }: RegisterFor
                 type="submit"
                 className={cn(
                     dt.interactive.buttonPrimary,
-                    'w-full justify-center py-5 text-base font-semibold uppercase tracking-[0.18em]'
+                    'w-full justify-center py-5 text-base font-semibold uppercase tracking-[0.18em] font-ui'
                 )}
                 disabled={loading}
             >
