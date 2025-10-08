@@ -33,15 +33,15 @@ export const AuthPageLayout = ({
             </div>
 
             <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-4 py-16 sm:px-6 lg:px-8">
-                <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_420px]">
+                <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_480px]">
                     <div className="space-y-8 text-center lg:text-left">
                         <div className="flex justify-center lg:justify-start">
                             <Image
                                 src="/logo.svg"
                                 alt="Bookotecha logo"
-                                width={180}
-                                height={80}
-                                className="h-28 w-auto"
+                                width={220}
+                                height={100}
+                                className="h-32 w-auto"
                                 priority
                             />
                         </div>
@@ -76,7 +76,7 @@ export const AuthPageLayout = ({
 
                     <div className="relative">
                         <div className="absolute inset-0 -translate-y-6 rounded-[40px] bg-gradient-to-br from-white/40 to-white/10 blur-2xl" aria-hidden="true" />
-                        <div className="relative rounded-[32px] border border-library-highlight/30 bg-white/85 p-8 shadow-[0_35px_90px_rgba(12,35,64,0.25)] backdrop-blur-xl sm:p-10">
+                        <div className="relative rounded-[32px] border border-library-highlight/30 bg-white/85 p-8 shadow-[0_35px_90px_rgba(12,35,64,0.25)] backdrop-blur-xl sm:p-12">
                             {children}
                         </div>
                     </div>
