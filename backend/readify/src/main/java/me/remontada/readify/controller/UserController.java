@@ -295,10 +295,46 @@ public class UserController {
             String firstName = request.get("firstName");
             String lastName = request.get("lastName");
             String email = request.get("email");
+            email = email != null ? email.trim().toLowerCase() : null;
             String phoneNumber = request.get("phoneNumber");
+            String normalizedPhoneNumber = phoneNumber != null ? phoneNumber.replaceAll("\\s+", "") : null;
             String password = request.get("password");
+            password = password != null ? password.trim() : null;
 
-            User user = userService.createUser(firstName, lastName, email, phoneNumber, password);
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "errorCode", "EMAIL_REQUIRED",
+                        "message", "Email is required"
+                ));
+            }
+
+            if (password == null || password.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "errorCode", "PASSWORD_REQUIRED",
+                        "message", "Password is required"
+                ));
+            }
+
+            if (userService.existsByEmail(email)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                        "success", false,
+                        "errorCode", "EMAIL_ALREADY_EXISTS",
+                        "message", "An account with this email already exists"
+                ));
+            }
+
+            if (normalizedPhoneNumber != null && !normalizedPhoneNumber.trim().isEmpty() &&
+                    userService.existsByPhoneNumber(normalizedPhoneNumber)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                        "success", false,
+                        "errorCode", "PHONE_ALREADY_EXISTS",
+                        "message", "An account with this phone number already exists"
+                ));
+            }
+
+            User user = userService.createUser(firstName, lastName, email, normalizedPhoneNumber, password);
 
             log.info("User registered successfully: {}", user.getEmail());
 
@@ -312,6 +348,7 @@ public class UserController {
             log.error("User registration failed", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
+                    "errorCode", "REGISTRATION_FAILED",
                     "message", e.getMessage()
             ));
         }

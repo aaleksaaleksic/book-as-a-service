@@ -17,6 +17,7 @@ export default function LoginPage() {
     const searchParams = useSearchParams();
     const loginMutation = useLogin();
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Partial<Record<'email' | 'password', string>>>({});
 
     const registered = searchParams.get('registered') === 'true';
     const verified = searchParams.get('verified') === 'true';
@@ -24,14 +25,42 @@ export default function LoginPage() {
     const handleLogin = async (data: { email: string; password: string }) => {
         try {
             setError(null);
+            setFieldErrors({});
             const loginRequest: LoginRequest = {
-                email: data.email,
+                email: data.email.trim().toLowerCase(),
                 password: data.password,
             };
             await loginMutation.mutateAsync(loginRequest);
         } catch (error: any) {
-            if (error.response?.status === 401) {
-                setError('Neispravni email ili lozinka');
+            const response = error?.response;
+            const errorCode = response?.data?.errorCode as string | undefined;
+            const backendMessage = response?.data?.message as string | undefined;
+            const normalizedMessage = backendMessage?.toLowerCase() ?? '';
+
+            if (errorCode === 'USER_NOT_FOUND' || response?.status === 404) {
+                const message = 'Nalog sa ovom email adresom ne postoji.';
+                setError(message);
+                setFieldErrors({ email: message });
+                return;
+            }
+
+            if (errorCode === 'INVALID_PASSWORD' || normalizedMessage.includes('password')) {
+                const message = 'Pogrešna lozinka.';
+                setError(message);
+                setFieldErrors({ password: message });
+                return;
+            }
+
+            if (errorCode === 'ACCOUNT_DEACTIVATED' || normalizedMessage.includes('deactivated')) {
+                const message = 'Vaš nalog je deaktiviran. Kontaktirajte podršku.';
+                setError(message);
+                return;
+            }
+
+            if (backendMessage) {
+                setError(backendMessage);
+            } else if (error.message === 'Network Error') {
+                setError('Ne možemo da se povežemo sa serverom. Proverite internet vezu.');
             } else {
                 setError('Došlo je do greške. Pokušajte ponovo.');
             }
@@ -98,6 +127,7 @@ export default function LoginPage() {
                     onSubmit={handleLogin}
                     isLoading={loginMutation.isPending}
                     error={error}
+                    serverErrors={fieldErrors}
                 />
                 <div className="space-y-3">
                     <div className="flex items-center gap-3 text-sm font-medium text-sky-950/70">
