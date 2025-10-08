@@ -115,33 +115,37 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
 
     if (isLoading || isFetching) {
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-                <LoadingSpinner size="lg" variant="book" text="Pripremamo vaš čitač…" />
-                <p className="text-sm text-muted-foreground">Proveravamo pristup i bezbednosne dozvole…</p>
+            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
+                <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <LoadingSpinner size="lg" variant="book" text="Pripremamo vaš čitač…" color="primary" />
+                    <p className="text-sm text-sky-950/70">Proveravamo pristup i bezbednosne dozvole…</p>
+                </div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-                <AlertTriangle className="h-10 w-10 text-destructive" />
-                <div>
-                    <h1 className="text-lg font-semibold">Neuspešno učitavanje čitača</h1>
-                    <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                        {(error as Error).message || "Došlo je do neočekivane greške."}
-                    </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                    <Button onClick={() => refetch()}>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Pokušaj ponovo
-                    </Button>
-                    <Button asChild variant="outline">
-                        <Link href="/library">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Nazad na biblioteku
-                        </Link>
-                    </Button>
+            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
+                <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <AlertTriangle className="h-10 w-10 text-destructive" />
+                    <div>
+                        <h1 className="text-lg font-semibold">Neuspešno učitavanje čitača</h1>
+                        <p className="mt-2 max-w-md text-sm text-sky-950/70">
+                            {(error as Error).message || "Došlo je do neočekivane greške."}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                        <Button onClick={() => refetch()}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Pokušaj ponovo
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href="/library">
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Nazad na biblioteku
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
         );
@@ -153,25 +157,27 @@ const ReaderBookPage: React.FC<ReaderPageProps> = ({ params }) => {
 
     if (!data.success || !data.canAccess) {
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-                <AlertTriangle className="h-10 w-10 text-destructive" />
-                <div>
-                    <h1 className="text-lg font-semibold">Pristup nije dozvoljen</h1>
-                    <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                        {data.message || "Za pristup ovoj knjizi potrebna je aktivna pretplata."}
-                    </p>
-                </div>
-                {data.contentPreview && (
-                    <div className="max-w-2xl rounded-lg border border-dashed border-border bg-background/60 p-6 text-left text-sm text-muted-foreground">
-                        <h2 className="mb-2 text-lg font-semibold text-foreground">Pregled dostupnog sadržaja</h2>
-                        <p className="whitespace-pre-wrap leading-relaxed">{data.contentPreview}</p>
+            <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
+                <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <AlertTriangle className="h-10 w-10 text-destructive" />
+                    <div>
+                        <h1 className="text-lg font-semibold">Pristup nije dozvoljen</h1>
+                        <p className="mt-2 max-w-xl text-sm text-sky-950/70">
+                            {data.message || "Za pristup ovoj knjizi potrebna je aktivna pretplata."}
+                        </p>
                     </div>
-                )}
-                <Button asChild variant="outline">
-                    <Link href="/pricing">
-                        Pogledaj pretplate
-                    </Link>
-                </Button>
+                    {data.contentPreview && (
+                        <div className="max-w-2xl rounded-lg border border-dashed border-sky-900/20 bg-white/80 p-6 text-left text-sm text-sky-950/70">
+                            <h2 className="mb-2 text-lg font-semibold text-sky-950">Pregled dostupnog sadržaja</h2>
+                            <p className="whitespace-pre-wrap leading-relaxed">{data.contentPreview}</p>
+                        </div>
+                    )}
+                    <Button asChild variant="outline">
+                        <Link href="/pricing">
+                            Pogledaj pretplate
+                        </Link>
+                    </Button>
+                </div>
             </div>
         );
     }

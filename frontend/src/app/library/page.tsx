@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner, PageLoader } from "@/components/ui/loading-spinner";
 import {
     Select,
     SelectContent,
@@ -192,11 +192,7 @@ export default function LibraryPage() {
     };
 
     if (isAuthLoading || !hasLibraryAccess) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-reading-background">
-                <LoadingSpinner size="lg" text="Pripremamo vašu biblioteku…" />
-            </div>
-        );
+        return <PageLoader text="Pripremamo vašu biblioteku…" />;
     }
 
     return (
@@ -360,7 +356,9 @@ export default function LibraryPage() {
 
                     {(isBooksLoading || isBooksFetching || isCategoriesLoading) && !books.length ? (
                         <div className="flex justify-center py-16">
-                            <LoadingSpinner size="lg" variant="book" text="Učitavamo naslove" />
+                            <div className="rounded-3xl bg-library-parchment/95 px-10 py-8 text-sky-950 shadow-inner">
+                                <LoadingSpinner size="lg" variant="book" text="Učitavamo naslove" color="primary" />
+                            </div>
                         </div>
                     ) : paginatedBooks.length ? (
                         <>

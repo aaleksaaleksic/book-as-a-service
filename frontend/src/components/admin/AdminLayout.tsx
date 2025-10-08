@@ -17,7 +17,7 @@ import {
     X,
     Mail
 } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { PageLoader } from '@/components/ui/loading-spinner';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -162,9 +162,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             requireAuth={true}
             roles={['ADMIN', 'MODERATOR']}
             fallback={
-                <div className="flex items-center justify-center min-h-screen">
-                    <LoadingSpinner size="lg" />
-                </div>
+                <PageLoader text="Učitavamo administratorski panel..." />
             }
         >
             <div className="flex min-h-screen bg-gray-50">

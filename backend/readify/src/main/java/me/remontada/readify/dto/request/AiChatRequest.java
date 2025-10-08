@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class AiChatRequest {
 
     @NotBlank(message = "Message is required")
-    @Size(max = 4000, message = "Message must not exceed 4000 characters")
+    @Size(max = 12000, message = "Message must not exceed 12000 characters")
     private String message;
 
     // Optional context from the book for better responses

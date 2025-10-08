@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useCan, useSubscription } from '@/hooks/useAuth';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LoadingSpinner, PageLoader } from '@/components/ui/loading-spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, CreditCard, AlertTriangle } from 'lucide-react';
@@ -70,11 +70,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     }, [requireAuth, isLoading, isAuthenticated, redirectTo, fallback, router]);
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <LoadingSpinner size="lg" />
-            </div>
-        );
+        return <PageLoader text="Proveravamo vaš nalog..." />;
     }
 
     if (requireAuth && !isAuthenticated) {
@@ -82,11 +78,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
             return <>{fallback}</>;
         }
 
-        return (
-            <div className="flex min-h-screen items-center justify-center">
-                <LoadingSpinner size="lg" />
-            </div>
-        );
+        return <PageLoader text="Preusmeravanje na prijavu..." />;
     }
 
     if (roles.length > 0 && user) {

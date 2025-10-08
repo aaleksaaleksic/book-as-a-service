@@ -166,14 +166,14 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 };
 
 export const PageLoader: React.FC<{ text?: string }> = ({ text = "Loading..." }) => (
-    <div className="flex items-center justify-center min-h-screen bg-library-parchment/95">
-        <LoadingSpinner size="lg" variant="spinner" text={text} />
+    <div className="flex min-h-screen items-center justify-center bg-library-parchment/95 text-sky-950">
+        <LoadingSpinner size="lg" variant="spinner" text={text} color="primary" />
     </div>
 );
 
 export const ComponentLoader: React.FC<{ text?: string }> = ({ text }) => (
-    <div className="flex items-center justify-center py-8 bg-library-parchment/95">
-        <LoadingSpinner size="md" variant="spinner" text={text} />
+    <div className="flex items-center justify-center bg-library-parchment/95 py-8 text-sky-950">
+        <LoadingSpinner size="md" variant="spinner" text={text} color="primary" />
     </div>
 );
 
