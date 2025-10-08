@@ -8,7 +8,6 @@ export const useDownloadPrevention = (isEnabled: boolean = true) => {
     if (!isEnabled) return;
 
     let devToolsOpen = false;
-    const isProduction = process.env.NODE_ENV === 'production';
 
     // Disable right-click context menu
     const disableContextMenu = (e: MouseEvent) => {
@@ -75,11 +74,6 @@ export const useDownloadPrevention = (isEnabled: boolean = true) => {
 
     // Detect developer tools opening (basic detection)
     const detectDevTools = () => {
-      if (!isProduction) {
-        // Skip invasive devtools detection in non-production environments
-        return () => undefined;
-      }
-
       const threshold = 160;
 
       // Check if window is resized to accommodate dev tools
@@ -97,7 +91,7 @@ export const useDownloadPrevention = (isEnabled: boolean = true) => {
       };
 
       // Monitor console access attempts
-      const consoleLog = console.log;
+      let consoleLog = console.log;
       console.log = function(...args) {
         if (!devToolsOpen) {
           devToolsOpen = true;
