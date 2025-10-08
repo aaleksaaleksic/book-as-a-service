@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentMap;
 @Service
 public class PromoChapterRateLimitService {
 
-    private static final int MAX_PROMO_CHAPTERS_PER_DAY = 3;
+    private static final int MAX_PROMO_CHAPTERS_PER_DAY = 5;
     private static final long CLEANUP_INTERVAL_HOURS = 6;
 
     private final ConcurrentMap<String, IpAccessTracker> ipTrackers = new ConcurrentHashMap<>();
