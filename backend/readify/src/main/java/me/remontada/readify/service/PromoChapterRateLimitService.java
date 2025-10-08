@@ -14,13 +14,13 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Rate limiting service for promo chapter access.
- * Limits anonymous users to 3 promo chapters per day by IP address.
+ * Limits anonymous users to 5 promo chapters per day by IP address.
  */
 @Slf4j
 @Service
 public class PromoChapterRateLimitService {
 
-    private static final int MAX_PROMO_CHAPTERS_PER_DAY = 3;
+    private static final int MAX_PROMO_CHAPTERS_PER_DAY = 5;
     private static final long CLEANUP_INTERVAL_HOURS = 6;
 
     private final ConcurrentMap<String, IpAccessTracker> ipTrackers = new ConcurrentHashMap<>();
