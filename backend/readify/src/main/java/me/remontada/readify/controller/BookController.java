@@ -37,6 +37,7 @@ public class BookController {
     private final CategoryService categoryService;
     private final PublisherService publisherService;
     private final RatingService ratingService;
+    private final PromoChapterRateLimitService promoRateLimitService;
 
     @Autowired
     public BookController(BookService bookService,
@@ -46,7 +47,8 @@ public class BookController {
                           StreamingSessionService streamingSessionService,
                           CategoryService categoryService,
                           PublisherService publisherService,
-                          RatingService ratingService) {
+                          RatingService ratingService,
+                          PromoChapterRateLimitService promoRateLimitService) {
         this.bookService = bookService;
         this.userService = userService;
         this.fileStorageService = fileStorageService;
@@ -55,6 +57,7 @@ public class BookController {
         this.categoryService = categoryService;
         this.publisherService = publisherService;
         this.ratingService = ratingService;
+        this.promoRateLimitService = promoRateLimitService;
     }
 
 
@@ -203,9 +206,45 @@ public class BookController {
         }
     }
 
+    @GetMapping("/promo-chapters/rate-limit-status")
+    public ResponseEntity<Map<String, Object>> getPromoRateLimitStatus(
+            jakarta.servlet.http.HttpServletRequest request,
+            Authentication authentication) {
+        try {
+            // If user is authenticated, no rate limit
+            if (authentication != null && authentication.isAuthenticated()) {
+                return ResponseEntity.ok(Map.of(
+                    "authenticated", true,
+                    "limitReached", false,
+                    "currentCount", 0,
+                    "maxCount", 0,
+                    "remainingCount", 999
+                ));
+            }
+
+            // For anonymous users, check IP-based rate limit
+            String ipAddress = getClientIpAddress(request);
+            PromoChapterRateLimitService.PromoAccessStatus status =
+                promoRateLimitService.getAccessStatus(ipAddress);
+
+            return ResponseEntity.ok(Map.of(
+                "authenticated", false,
+                "limitReached", status.isLimitReached(),
+                "currentCount", status.getCurrentCount(),
+                "maxCount", status.getMaxCount(),
+                "remainingCount", status.getRemainingCount()
+            ));
+        } catch (Exception e) {
+            log.error("Error checking promo rate limit status", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
     @GetMapping("/{id}/promo-chapter")
     public void streamPromoChapter(@PathVariable Long id,
                                    @RequestHeader(value = "Range", required = false) String rangeHeader,
+                                   jakarta.servlet.http.HttpServletRequest request,
+                                   Authentication authentication,
                                    jakarta.servlet.http.HttpServletResponse response) {
         try {
             Book book = bookService.findById(id)
@@ -216,6 +255,26 @@ public class BookController {
                 response.setContentType("application/json");
                 response.getWriter().write("{\"success\": false, \"message\": \"Promo chapter not available\"}");
                 return;
+            }
+
+            // Check rate limit for anonymous users only
+            if (authentication == null || !authentication.isAuthenticated()) {
+                String ipAddress = getClientIpAddress(request);
+                PromoChapterRateLimitService.PromoAccessResult rateLimitResult =
+                    promoRateLimitService.checkPromoAccess(ipAddress, id);
+
+                if (!rateLimitResult.isAllowed()) {
+                    response.setStatus(429); // Too Many Requests
+                    response.setContentType("application/json");
+                    response.getWriter().write(String.format(
+                        "{\"success\": false, \"message\": \"%s\", \"currentCount\": %d, \"maxCount\": %d}",
+                        rateLimitResult.getReason(),
+                        rateLimitResult.getCurrentCount(),
+                        rateLimitResult.getMaxCount()
+                    ));
+                    log.info("Promo chapter rate limit exceeded for IP {} on book {}", ipAddress, id);
+                    return;
+                }
             }
 
             org.springframework.core.io.Resource promoResource = fileStorageService.getPromoChapter(id);
@@ -294,6 +353,33 @@ public class BookController {
                 .replaceAll("^_+", "");
         if (sanitized.isBlank()) sanitized = "document";
         return sanitized.substring(0, Math.min(sanitized.length(), 50));
+    }
+
+    private String getClientIpAddress(jakarta.servlet.http.HttpServletRequest request) {
+        // Check various headers used by proxies and load balancers
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            // X-Forwarded-For can contain multiple IPs, get the first one
+            return ip.split(",")[0].trim();
+        }
+
+        ip = request.getHeader("X-Real-IP");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            return ip;
+        }
+
+        ip = request.getHeader("Proxy-Client-IP");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            return ip;
+        }
+
+        ip = request.getHeader("WL-Proxy-Client-IP");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            return ip;
+        }
+
+        // Fall back to remote address
+        return request.getRemoteAddr();
     }
 
 

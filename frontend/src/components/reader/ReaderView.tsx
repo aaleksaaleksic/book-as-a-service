@@ -69,6 +69,7 @@ export interface ReaderViewProps {
     onPageChange?: (page: number) => void;
     className?: string;
     skipMetadata?: boolean; // Skip metadata fetch for public content (promo chapters)
+    isPromoChapter?: boolean; // Hide AI chat and bookmarks for promo chapters
 }
 
 type PdfSource = DocumentProps["file"] | null;
@@ -127,6 +128,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                                                             onPageChange,
                                                             className,
                                                             skipMetadata = false,
+                                                            isPromoChapter = false,
                                                         }) => {
     // Hybrid controlled/uncontrolled pattern
     const [numPages, setNumPages] = useState<number>(0);
@@ -965,6 +967,11 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
 
     // Load bookmarked page ONCE on mount (init block - runs only once per bookId)
     useEffect(() => {
+        // Skip bookmark loading for promo chapters
+        if (isPromoChapter) {
+            return;
+        }
+
         // Only load bookmark once per bookId
         if (bookmarkLoadedForBookRef.current === bookId) {
             return;
@@ -992,7 +999,7 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 // No bookmark or error - silently ignore, start from page 1
                 console.log("[Bookmark Init] No bookmark found, starting from page 1");
             });
-    }, [bookId, isClient, controlledPageNumber]);
+    }, [bookId, isClient, controlledPageNumber, isPromoChapter]);
 
     // Simple fire-and-forget bookmark save - no state management needed
     const handleSaveBookmark = () => {
@@ -1249,22 +1256,24 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                                 </button>
                             </div>
 
-                            {/* Bookmark button */}
-                            <div className="space-y-2">
-                                <button
-                                    className="w-full rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left transition hover:border-slate-700 disabled:opacity-50"
-                                    onClick={handleSaveBookmark}
-                                    disabled={!pageNumber}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Bookmark className="h-4 w-4 text-amber-400" />
-                                        <span className="text-sm">Sačuvaj dokle sam stao</span>
-                                    </div>
-                                    <div className="text-xs text-slate-400 mt-1">
-                                        Strana {pageNumber}
-                                    </div>
-                                </button>
-                            </div>
+                            {/* Bookmark button - hidden for promo chapters */}
+                            {!isPromoChapter && (
+                                <div className="space-y-2">
+                                    <button
+                                        className="w-full rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left transition hover:border-slate-700 disabled:opacity-50"
+                                        onClick={handleSaveBookmark}
+                                        disabled={!pageNumber}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Bookmark className="h-4 w-4 text-amber-400" />
+                                            <span className="text-sm">Sačuvaj dokle sam stao</span>
+                                        </div>
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            Strana {pageNumber}
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Zoom controls */}
                             <div className="space-y-2">
@@ -1315,8 +1324,8 @@ const ReaderViewComponent: React.FC<ReaderViewProps> = ({
                 </aside>
             </div>
 
-            {/* AI Chat Panel */}
-            <AiChatPanel bookId={bookId} bookTitle={bookTitle} />
+            {/* AI Chat Panel - hidden for promo chapters */}
+            {!isPromoChapter && <AiChatPanel bookId={bookId} bookTitle={bookTitle} />}
         </div>
     );
 };

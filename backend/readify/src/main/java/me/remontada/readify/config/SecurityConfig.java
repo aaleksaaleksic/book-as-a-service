@@ -84,6 +84,7 @@ public class SecurityConfig {
 
                         // Public promo chapter access (no authentication needed)
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/promo-chapters").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/books/promo-chapters/rate-limit-status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/*/promo-chapter").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/api/v1/books/*/promo-chapter").permitAll()
 

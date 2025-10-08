@@ -24,6 +24,9 @@ const publicRoutes = [
     '/auth/reset-password',
     '/browse',
     '/books/[id]',
+    '/book/[id]',
+    '/promo-chapters',
+    '/promo-chapters/[id]',
     '/about',
     '/contact',
 ];
@@ -31,8 +34,20 @@ const publicRoutes = [
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+    // Check if route is explicitly public
+    const isPublicRoute = publicRoutes.some(route => {
+        const routePattern = route.replace(/\[.*?\]/g, '[^/]+');
+        const regex = new RegExp(`^${routePattern}$`);
+        return regex.test(pathname);
+    });
+
+    // If it's a public route, allow access
+    if (isPublicRoute) {
+        return NextResponse.next();
+    }
+
     const isProtectedRoute = Object.keys(protectedRoutes).some(route => {
-        const routePattern = route.replace(/\[.*?\]/g, '.*');
+        const routePattern = route.replace(/\[.*?\]/g, '[^/]+');
         const regex = new RegExp(`^${routePattern}$`);
         return regex.test(pathname);
     });
@@ -40,7 +55,6 @@ export function middleware(request: NextRequest) {
     if (!isProtectedRoute) {
         return NextResponse.next();
     }
-
 
     const token = request.cookies.get('readbookhub_auth_token');
 
