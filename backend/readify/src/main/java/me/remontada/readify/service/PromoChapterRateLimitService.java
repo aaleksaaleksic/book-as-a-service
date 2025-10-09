@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Rate limiting service for promo chapter access.
- * Limits anonymous users to 3 promo chapters per day by IP address.
+ * Limits anonymous users to 5 promo chapters per day by IP address.
  */
 @Slf4j
 @Service
