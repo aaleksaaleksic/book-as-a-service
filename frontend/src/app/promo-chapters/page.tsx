@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { BookSuggestionForm } from '@/components/BookSuggestionForm';
 
 const PROMO_BOOKS_PER_PAGE = 6;
 const FALLBACK_COVER_IMAGE = '/book-placeholder.svg';
@@ -432,6 +433,14 @@ export default function PromoChaptersPage() {
                             </div>
                         </div>
                     )}
+                </section>
+
+                <section className="rounded-[32px] border border-library-highlight/25 bg-white/85 p-8 shadow-[0_24px_60px_rgba(6,18,38,0.35)]">
+                    <h2 className={cn(dt.typography.subsectionTitle, 'text-sky-950')}>Predložite knjigu</h2>
+                    <p className={cn(dt.typography.muted, 'mt-3 text-sky-950/80')}>
+                        Želite da vidite određenu knjigu na platformi? Pošaljite nam predlog i pomoći ćemo vam.
+                    </p>
+                    <BookSuggestionForm className="mt-6" />
                 </section>
             </div>
         </div>

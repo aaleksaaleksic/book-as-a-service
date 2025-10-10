@@ -68,6 +68,26 @@ public class EmailController {
         );
     }
 
+    @PostMapping("/test-renewal-reminder")
+    public ResponseEntity<String> testRenewalReminder(
+            @RequestParam String email,
+            @RequestParam(defaultValue = "Test User") String userName) {
+
+        log.info("Test renewal reminder request for: {}", email);
+
+        try {
+            // Send test email with sample data
+            java.time.LocalDateTime expiryDate = java.time.LocalDateTime.now().plusDays(3);
+            emailService.sendSubscriptionRenewalReminder(email, userName, "YEARLY", expiryDate);
+
+            return ResponseEntity.ok("Test renewal reminder sent successfully to: " + email);
+        } catch (Exception e) {
+            log.error("Failed to send test renewal reminder", e);
+            return ResponseEntity.internalServerError()
+                    .body("Failed to send email: " + e.getMessage());
+        }
+    }
+
     private String buildEmailHtml(String subject, String content) {
         return """
                 <!DOCTYPE html>

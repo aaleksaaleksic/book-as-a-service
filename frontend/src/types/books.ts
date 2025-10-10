@@ -13,7 +13,6 @@ export interface Book {
     readingTimeMinutes: number;
     featured: boolean;
     popular: boolean;
-    rating: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -24,7 +23,6 @@ export interface BookSummary {
     author: string;
     coverImageUrl: string;
     category: string;
-    rating: number;
     readingTimeMinutes: number;
 }
 
@@ -59,7 +57,6 @@ export interface BookReview {
     userId: number;
     userName: string;
     bookId: number;
-    rating: number;
     comment?: string;
     createdAt: string;
     helpful: number;
@@ -67,7 +64,6 @@ export interface BookReview {
 
 export interface BookStatistics {
     totalReads: number;
-    averageRating: number;
     totalReviews: number;
     averageReadingTime: number;
     completionRate: number;
@@ -88,13 +84,11 @@ export interface BookSearchParams {
     size?: number;
     featured?: boolean;
     popular?: boolean;
-    minRating?: number;
 }
 
 export type BookSortOption =
     | 'title'
     | 'author'
-    | 'rating'
     | 'publishedAt'
     | 'readingTime'
     | 'popularity';
@@ -104,7 +98,6 @@ export type SortDirection = 'asc' | 'desc';
 export interface BookSearchFilters {
     categories: BookCategory[];
     authors: string[];
-    ratings: number[];
     readingTimeRanges: ReadingTimeRange[];
 }
 
@@ -160,6 +153,5 @@ export type BookInteractionType =
     | 'START_READING'
     | 'FINISH_READING'
     | 'BOOKMARK'
-    | 'RATE'
     | 'REVIEW'
     | 'SHARE';

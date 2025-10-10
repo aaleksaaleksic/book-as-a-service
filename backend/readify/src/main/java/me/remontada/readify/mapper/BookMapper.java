@@ -43,9 +43,6 @@ public class BookMapper {
                     .isAvailable(book.getIsAvailable())
                     .coverImageUrl(resolveCoverImageUrl(book))
 
-                    .averageRating(safeGetBigDecimal(book.getAverageRating()))
-
-                    .totalRatings(safeGetLong(book.getRatingsCount()))
                     .readCount(safeGetLong(book.getTotalReads()))
 
                     .createdAt(book.getCreatedAt())

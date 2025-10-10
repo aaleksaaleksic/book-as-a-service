@@ -1,10 +1,7 @@
 package me.remontada.readify.controller;
 
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import me.remontada.readify.dto.request.RatingCreateDTO;
 import me.remontada.readify.dto.response.BookResponseDTO;
-import me.remontada.readify.dto.response.RatingResponseDTO;
 import me.remontada.readify.mapper.BookMapper;
 import me.remontada.readify.model.Book;
 import me.remontada.readify.model.Category;
@@ -36,7 +33,6 @@ public class BookController {
     private final StreamingSessionService streamingSessionService;
     private final CategoryService categoryService;
     private final PublisherService publisherService;
-    private final RatingService ratingService;
     private final PromoChapterRateLimitService promoRateLimitService;
 
     @Autowired
@@ -47,7 +43,6 @@ public class BookController {
                           StreamingSessionService streamingSessionService,
                           CategoryService categoryService,
                           PublisherService publisherService,
-                          RatingService ratingService,
                           PromoChapterRateLimitService promoRateLimitService) {
         this.bookService = bookService;
         this.userService = userService;
@@ -56,7 +51,6 @@ public class BookController {
         this.streamingSessionService = streamingSessionService;
         this.categoryService = categoryService;
         this.publisherService = publisherService;
-        this.ratingService = ratingService;
         this.promoRateLimitService = promoRateLimitService;
     }
 
@@ -176,20 +170,6 @@ public class BookController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error fetching popular books", e);
-            return ResponseEntity.status(500).build();
-        }
-    }
-
-
-    @GetMapping("/top-rated")
-    public ResponseEntity<List<BookResponseDTO>> getTopRatedBooks() {
-        try {
-            List<Book> books = bookService.getTopRatedBooks();
-
-            List<BookResponseDTO> response = BookMapper.toResponseDTOList(books);
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
             return ResponseEntity.status(500).build();
         }
     }
@@ -649,151 +629,6 @@ public class BookController {
             }
         } else {
             throw new IllegalArgumentException("Price must be a number or string");
-        }
-    }
-
-    // ==================== RATING ENDPOINTS ====================
-
-    /**
-     * Add or update rating for a book
-     * POST /api/v1/books/{id}/rating
-     */
-    @PostMapping("/{id}/rating")
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<Map<String, Object>> addOrUpdateRating(@PathVariable Long id,
-                                                                  @Valid @RequestBody RatingCreateDTO ratingDTO,
-                                                                  Authentication authentication) {
-        try {
-            User currentUser = getCurrentUser(authentication);
-
-            RatingResponseDTO rating = ratingService.addOrUpdateRating(id, ratingDTO, currentUser);
-
-            log.info("User {} rated book {} with {} stars", currentUser.getEmail(), id, ratingDTO.getRating());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Rating submitted successfully",
-                    "rating", rating
-            ));
-
-        } catch (Exception e) {
-            log.error("Error adding rating for book {}", id, e);
-            return ResponseEntity.status(400).body(Map.of(
-                    "success", false,
-                    "message", "Error submitting rating: " + e.getMessage()
-            ));
-        }
-    }
-
-    /**
-     * Get user's rating for a specific book
-     * GET /api/v1/books/{id}/rating/me
-     */
-    @GetMapping("/{id}/rating/me")
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<Map<String, Object>> getUserRating(@PathVariable Long id,
-                                                              Authentication authentication) {
-        try {
-            User currentUser = getCurrentUser(authentication);
-
-            Optional<RatingResponseDTO> rating = ratingService.getUserRatingForBook(id, currentUser);
-
-            if (rating.isPresent()) {
-                return ResponseEntity.ok(Map.of(
-                        "success", true,
-                        "rating", rating.get()
-                ));
-            } else {
-                return ResponseEntity.ok(Map.of(
-                        "success", true,
-                        "rating", (Object) null,
-                        "message", "No rating found"
-                ));
-            }
-
-        } catch (Exception e) {
-            log.error("Error fetching user rating for book {}", id, e);
-            return ResponseEntity.status(400).body(Map.of(
-                    "success", false,
-                    "message", "Error fetching rating: " + e.getMessage()
-            ));
-        }
-    }
-
-    /**
-     * Get all ratings for a book
-     * GET /api/v1/books/{id}/ratings
-     */
-    @GetMapping("/{id}/ratings")
-    public ResponseEntity<Map<String, Object>> getBookRatings(@PathVariable Long id) {
-        try {
-            List<RatingResponseDTO> ratings = ratingService.getBookRatings(id);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "ratings", ratings,
-                    "count", ratings.size()
-            ));
-
-        } catch (Exception e) {
-            log.error("Error fetching ratings for book {}", id, e);
-            return ResponseEntity.status(400).body(Map.of(
-                    "success", false,
-                    "message", "Error fetching ratings: " + e.getMessage()
-            ));
-        }
-    }
-
-    /**
-     * Get ratings with reviews for a book
-     * GET /api/v1/books/{id}/reviews
-     */
-    @GetMapping("/{id}/reviews")
-    public ResponseEntity<Map<String, Object>> getBookReviews(@PathVariable Long id) {
-        try {
-            List<RatingResponseDTO> reviews = ratingService.getBookRatingsWithReviews(id);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "reviews", reviews,
-                    "count", reviews.size()
-            ));
-
-        } catch (Exception e) {
-            log.error("Error fetching reviews for book {}", id, e);
-            return ResponseEntity.status(400).body(Map.of(
-                    "success", false,
-                    "message", "Error fetching reviews: " + e.getMessage()
-            ));
-        }
-    }
-
-    /**
-     * Delete user's rating for a book
-     * DELETE /api/v1/books/ratings/{ratingId}
-     */
-    @DeleteMapping("/ratings/{ratingId}")
-    @PreAuthorize("hasAuthority('CAN_READ_BOOKS')")
-    public ResponseEntity<Map<String, Object>> deleteRating(@PathVariable Long ratingId,
-                                                             Authentication authentication) {
-        try {
-            User currentUser = getCurrentUser(authentication);
-
-            ratingService.deleteRating(ratingId, currentUser);
-
-            log.info("User {} deleted rating {}", currentUser.getEmail(), ratingId);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Rating deleted successfully"
-            ));
-
-        } catch (Exception e) {
-            log.error("Error deleting rating {}", ratingId, e);
-            return ResponseEntity.status(400).body(Map.of(
-                    "success", false,
-                    "message", "Error deleting rating: " + e.getMessage()
-            ));
         }
     }
 }

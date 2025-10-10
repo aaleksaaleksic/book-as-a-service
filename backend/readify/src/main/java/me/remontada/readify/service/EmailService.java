@@ -40,5 +40,23 @@ public interface EmailService {
      * @param htmlContent Email content in HTML format
      */
     void sendBulkEmail(List<String> recipients, String subject, String htmlContent);
+
+    /**
+     * Sends subscription renewal reminder email
+     * @param email User's email address
+     * @param userName User's full name
+     * @param subscriptionType Type of subscription (SIX_MONTH or YEARLY)
+     * @param expiryDate When the subscription expires
+     */
+    void sendSubscriptionRenewalReminder(String email, String userName, String subscriptionType, java.time.LocalDateTime expiryDate);
+
+    /**
+     * Sends discount code email
+     * @param email User's email address
+     * @param code Discount code
+     * @param discountPercentage Discount percentage
+     * @param expiresAt When the code expires
+     */
+    void sendDiscountCode(String email, String code, Integer discountPercentage, java.time.LocalDateTime expiresAt);
 }
 

@@ -35,6 +35,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentService paymentService;
+    private final EmailService emailService;
 
     // Pricing configuration from application.properties (in RSD)
     @Value("${readify.subscription.monthly-price:999}")
@@ -51,9 +52,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Autowired
     public SubscriptionServiceImpl(SubscriptionRepository subscriptionRepository,
-                                   PaymentService paymentService) {
+                                   PaymentService paymentService,
+                                   EmailService emailService) {
         this.subscriptionRepository = subscriptionRepository;
         this.paymentService = paymentService;
+        this.emailService = emailService;
     }
 
     /**
@@ -330,6 +333,67 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (user.hasPermission(Permission.CAN_READ_PREMIUM_BOOKS)) {
             user.getPermissions().remove(Permission.CAN_READ_PREMIUM_BOOKS);
             logger.info("Revoked CAN_READ_PREMIUM_BOOKS permission from user: {}", user.getEmail());
+        }
+    }
+
+    /**
+     * Send subscription renewal reminders - runs daily at 9:00 AM
+     * Sends emails to users with 6-month or yearly subscriptions expiring in 3 days
+     */
+    @Scheduled(cron = "0 0 9 * * *") // Every day at 9:00 AM
+    public void sendSubscriptionExpiryReminders() {
+        logger.info("Starting scheduled task: sendSubscriptionExpiryReminders");
+
+        try {
+            // Calculate the time window for subscriptions expiring in exactly 3 days
+            LocalDateTime threeDaysFromNow = LocalDateTime.now().plusDays(3);
+            LocalDateTime startOfDay = threeDaysFromNow.withHour(0).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime endOfDay = threeDaysFromNow.withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+
+            // Only target 6-month and yearly subscriptions
+            List<SubscriptionType> targetTypes = List.of(SubscriptionType.SIX_MONTH, SubscriptionType.YEARLY);
+
+            // Find subscriptions expiring in 3 days
+            List<Subscription> expiringSubscriptions = subscriptionRepository
+                    .findActiveSubscriptionsExpiringBetween(targetTypes, startOfDay, endOfDay);
+
+            if (expiringSubscriptions.isEmpty()) {
+                logger.info("No subscriptions expiring in 3 days. No emails to send.");
+                return;
+            }
+
+            logger.info("Found {} subscriptions expiring in 3 days", expiringSubscriptions.size());
+
+            int successCount = 0;
+            int failureCount = 0;
+
+            for (Subscription subscription : expiringSubscriptions) {
+                try {
+                    User user = subscription.getUser();
+                    String email = user.getEmail();
+                    String userName = user.getFirstName() + " " + user.getLastName();
+                    String subscriptionType = subscription.getType().name();
+                    LocalDateTime expiryDate = subscription.getEndDate();
+
+                    // Send renewal reminder email
+                    emailService.sendSubscriptionRenewalReminder(email, userName, subscriptionType, expiryDate);
+
+                    successCount++;
+                    logger.info("Sent renewal reminder to: {} for subscription: {} expiring on: {}",
+                            email, subscription.getId(), expiryDate);
+
+                } catch (Exception e) {
+                    failureCount++;
+                    logger.error("Failed to send renewal reminder for subscription: {}",
+                            subscription.getId(), e);
+                }
+            }
+
+            logger.info("Completed subscription renewal reminders. Success: {}, Failed: {}",
+                    successCount, failureCount);
+
+        } catch (Exception e) {
+            logger.error("Error during subscription renewal reminder task", e);
         }
     }
 }

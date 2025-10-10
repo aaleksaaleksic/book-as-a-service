@@ -14,7 +14,6 @@ import {
     TrendingUp,
     Users,
     MousePointerClick,
-    Star,
     BookOpen,
 } from 'lucide-react';
 
@@ -131,7 +130,7 @@ export default function AdminBookDetailsPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {/* Total Reads */}
                     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
@@ -184,27 +183,6 @@ export default function AdminBookDetailsPage() {
                             </div>
                         )}
                         <p className="mt-2 text-xs text-gray-500">Ukupan broj korisnika</p>
-                    </div>
-
-                    {/* Average Rating */}
-                    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-medium text-gray-600">Prosečna ocena</h3>
-                            <div className="h-10 w-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                <Star className="h-5 w-5 text-yellow-600" />
-                            </div>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                            <div className="text-3xl font-bold text-gray-900">
-                                {book.averageRating && book.averageRating > 0 ? book.averageRating.toFixed(1) : '-'}
-                            </div>
-                            {book.averageRating > 0 && (
-                                <span className="text-yellow-500 text-2xl">★</span>
-                            )}
-                        </div>
-                        <p className="mt-2 text-xs text-gray-500">
-                            {book.ratingsCount ? `${book.ratingsCount} ocena` : 'Nema ocena'}
-                        </p>
                     </div>
                 </div>
 

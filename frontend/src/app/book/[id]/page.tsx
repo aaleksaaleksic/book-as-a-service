@@ -172,36 +172,20 @@ export default function BookDetailsPage() {
                                     </div>
                                 )}
 
-                                <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-950">
-                                        Prosečna ocena
-                                    </p>
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <span className="text-2xl font-bold text-sky-950">
-                                            {book.averageRating > 0 ? book.averageRating.toFixed(1) : 'N/A'}
-                                        </span>
-                                        {book.averageRating > 0 && (
-                                            <Star className="h-6 w-6 fill-library-gold text-library-gold" />
-                                        )}
-                                        {book.totalRatings > 0 && (
-                                            <span className="text-sm text-sky-950/70">
-                                                ({book.totalRatings} {book.totalRatings === 1 ? 'ocena' : 'ocena'})
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
                             </div>
 
                             {/* Action buttons */}
                             <div className="space-y-4 pt-4">
                                 {hasActiveSubscription ? (
-                                    <Button
-                                        size="lg"
-                                        onClick={handleReadBook}
-                                        className={cn(dt.interactive.buttonPrimary, 'w-full text-lg')}
-                                    >
-                                        Nastavi čitanje
-                                    </Button>
+                                    <>
+                                        <Button
+                                            size="lg"
+                                            onClick={handleReadBook}
+                                            className={cn(dt.interactive.buttonPrimary, 'w-full text-lg')}
+                                        >
+                                            Čitaj
+                                        </Button>
+                                    </>
                                 ) : (
                                     <>
                                         <Button
@@ -234,7 +218,7 @@ export default function BookDetailsPage() {
                     </div>
 
                     {/* Description section below the grid */}
-                    <div className="mt-12">
+                    <div className="mt-12 space-y-8">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-950">
                                 Opis

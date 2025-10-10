@@ -30,10 +30,6 @@ public class BookResponseDTO {
     private Boolean isAvailable;
     private String coverImageUrl;
 
-    private BigDecimal averageRating;
-
-    private Long totalRatings;
-
     private Long readCount;
 
     private LocalDateTime createdAt;

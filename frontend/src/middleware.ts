@@ -27,6 +27,7 @@ const publicRoutes = [
     '/book/[id]',
     '/promo-chapters',
     '/promo-chapters/[id]',
+    '/pricing',
     '/about',
     '/contact',
 ];

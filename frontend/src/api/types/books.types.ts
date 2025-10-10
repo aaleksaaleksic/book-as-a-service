@@ -17,8 +17,6 @@ export interface BookResponseDTO {
     price: number;
     isPremium: boolean;
     isAvailable: boolean;
-    averageRating: number;
-    totalRatings: number;
     readCount: number;
     createdAt: string;
     updatedAt: string;

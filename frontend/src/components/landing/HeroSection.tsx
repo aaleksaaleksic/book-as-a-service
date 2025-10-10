@@ -46,9 +46,16 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                 <div className="py-20 lg:py-32">
                     <div className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
                         <div className="space-y-8">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-azure/30 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-white shadow-sm backdrop-blur">
-                                <Sparkles className="h-4 w-4 text-library-highlight" />
-                                Nova era digitalnog čitanja
+                            <div className="flex flex-col gap-4">
+                                <img
+                                    src="/landing_logo.svg"
+                                    alt="Bookotecha"
+                                    className="h-auto w-auto max-w-[300px]"
+                                />
+                                <div className="inline-flex items-center gap-2 rounded-full border border-library-gold/20 bg-library-azure/30 px-4 py-2 text-sm font-semibold uppercase tracking-[0.32em] text-white shadow-sm backdrop-blur self-start">
+                                    <Sparkles className="h-4 w-4 text-library-highlight" />
+                                    Nova era digitalnog čitanja
+                                </div>
                             </div>
 
                             <h1 className={cn(dt.responsive.heroTitle, dt.typography.heroTitle, 'drop-shadow-[0_25px_60px_rgba(12,24,48,0.45)]')}>
@@ -234,7 +241,7 @@ export const HeroSection = ({ topBook, isAuthenticated, isBooksLoading, hasActiv
                                             <Button
                                                 size="lg"
                                                 variant="ghost"
-                                                onClick={() => (isAuthenticated ? router.push(`/book/${topBook.id}`) : router.push('/auth/register'))}
+                                                onClick={() => (router.push(`/book/${topBook.id}`))}
                                                 className="w-full rounded-full border border-library-gold/25 bg-library-azure/10 py-5 text-reading-text transition hover:bg-library-highlight/10"
                                             >
                                                 Otvori detalje knjige

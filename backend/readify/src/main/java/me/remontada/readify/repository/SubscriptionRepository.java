@@ -84,4 +84,20 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
      */
     @Query("SELECT s.type, COUNT(s) FROM Subscription s GROUP BY s.type")
     List<Object[]> getSubscriptionCountByType();
+
+    /**
+     * Find active subscriptions of specific types expiring within a given date range
+     * Used for sending renewal reminders for 6-month and yearly subscriptions
+     */
+    @Query("""
+            SELECT s FROM Subscription s
+            WHERE s.status = 'ACTIVE'
+            AND s.type IN :types
+            AND s.endDate BETWEEN :startDate AND :endDate
+            """)
+    List<Subscription> findActiveSubscriptionsExpiringBetween(
+            @Param("types") List<me.remontada.readify.model.SubscriptionType> types,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }

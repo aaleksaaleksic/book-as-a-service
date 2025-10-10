@@ -67,6 +67,52 @@ export default function PricingPage() {
                         </p>
                     </div>
 
+                    {/* AI Promo Section */}
+                    <div className="mx-auto mt-12 max-w-4xl">
+                        <div className="relative overflow-hidden rounded-[32px] border border-library-highlight/30 bg-gradient-to-br from-library-azure/20 via-library-parchment/95 to-library-highlight/10 p-8 shadow-[0_30px_80px_rgba(84,166,255,0.25)] md:p-12">
+                            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-library-highlight/20 blur-3xl" aria-hidden="true" />
+                            <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-library-gold/15 blur-3xl" aria-hidden="true" />
+
+                            <div className="relative z-10 text-center">
+
+                                <h2 className={cn(dt.typography.subsectionTitle, 'mt-6 text-sky-950')}>
+                                    Učite brže uz najnoviju AI tehnologiju
+                                </h2>
+
+                                <p className={cn(dt.typography.body, 'mx-auto mt-4 max-w-2xl text-sky-950/80')}>
+                                    Svaki plan uključuje <strong className="font-semibold text-sky-950">Google Gemini 2.5</strong> asistenta integrisanog direktno u čitač.
+                                    Označite tekst i dobijte trenutna objašnjenja koncepata, prevode, sažetke i odgovore na pitanja —
+                                    sve dok čitate.
+                                </p>
+
+                                <div className="mx-auto mt-8 grid max-w-2xl gap-4 text-left md:grid-cols-3">
+                                    <div className="rounded-2xl border border-library-gold/25 bg-white/60 p-4 backdrop-blur-sm">
+
+                                        <h3 className="font-semibold text-sky-950">Objašnjenje koncepata</h3>
+                                        <p className="mt-1 text-sm text-sky-950/70">
+                                            Razumite složene teme trenutno
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-library-gold/25 bg-white/60 p-4 backdrop-blur-sm">
+
+                                        <h3 className="font-semibold text-sky-950">Sažimanje sadržaja</h3>
+                                        <p className="mt-1 text-sm text-sky-950/70">
+                                            Brže savladajte ključne informacije
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-library-gold/25 bg-white/60 p-4 backdrop-blur-sm">
+                                        <h3 className="font-semibold text-sky-950">Pitanja i odgovori</h3>
+                                        <p className="mt-1 text-sm text-sky-950/70">
+                                            Postavite bilo koje pitanje o tekstu
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Pricing Cards */}
                     <div className="mx-auto mt-16 grid max-w-6xl gap-8 md:grid-cols-3">
                         {plans.map((plan) => (
@@ -97,7 +143,7 @@ export default function PricingPage() {
                                 <div className="mt-6 h-40 flex flex-col items-center justify-center text-center">
                                     {plan.price.amount ? (
                                         <div className="h-8 mb-2">
-                                            <span className="text-xl font-semibold text-sky-950/40 line-through">
+                                            <span className="font-bebas text-xl font-semibold text-sky-950/40 line-through">
                                                 {plan.price.amount} {plan.price.currency}
                                             </span>
                                         </div>
@@ -105,10 +151,10 @@ export default function PricingPage() {
                                         <div className="h-8 mb-2" />
                                     )}
                                     <div className="flex items-baseline justify-center gap-2">
-                                        <span className="font-display text-5xl font-bold text-sky-950">
+                                        <span className="font-bebas text-5xl font-bold text-sky-950">
                                             {plan.price.amount}
                                         </span>
-                                        <span className="font-display text-2xl font-semibold text-sky-950">
+                                        <span className="font-bebas text-2xl font-semibold text-sky-950">
                                             {plan.price.currency}
                                         </span>
                                     </div>

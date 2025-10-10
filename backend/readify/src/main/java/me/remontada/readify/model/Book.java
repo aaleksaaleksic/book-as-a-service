@@ -92,14 +92,6 @@ public class Book {
     @Builder.Default
     private Long totalReads = 0L;
 
-    @Column(name = "average_rating", precision = 3, scale = 2)
-    @Builder.Default
-    private BigDecimal averageRating = BigDecimal.ZERO;
-
-    @Column(name = "ratings_count")
-    @Builder.Default
-    private Long ratingsCount = 0L;
-
     public String getFullTitle() {
         return title + " by " + author;
     }
@@ -134,18 +126,6 @@ public class Book {
         this.totalReads = (this.totalReads != null ? this.totalReads : 0L) + 1L;
     }
 
-
-    public void updateRating(BigDecimal newRating, BigDecimal currentTotalRating) {
-        if (newRating == null || newRating.compareTo(BigDecimal.ONE) < 0 || newRating.compareTo(BigDecimal.valueOf(5)) > 0) {
-            throw new IllegalArgumentException("Rating must be between 1 and 5");
-        }
-
-        this.ratingsCount = (this.ratingsCount != null ? this.ratingsCount : 0L) + 1L;
-
-        BigDecimal totalRating = currentTotalRating.add(newRating);
-        this.averageRating = totalRating.divide(BigDecimal.valueOf(this.ratingsCount), 2, BigDecimal.ROUND_HALF_UP);
-    }
-
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
@@ -158,12 +138,6 @@ public class Book {
         }
         if (this.totalReads == null) {
             this.totalReads = 0L;
-        }
-        if (this.averageRating == null) {
-            this.averageRating = BigDecimal.ZERO;
-        }
-        if (this.ratingsCount == null) {
-            this.ratingsCount = 0L;
         }
     }
 }

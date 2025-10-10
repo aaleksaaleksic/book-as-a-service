@@ -64,9 +64,24 @@ public class AnalyticsController {
             @RequestBody Map<String, Object> request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
+        logger.info("=== START READING SESSION ENDPOINT HIT ===");
+        logger.info("Authentication: {}", authentication != null ? authentication.getName() : "NULL");
+        logger.info("Authorities: {}", authentication != null ? authentication.getAuthorities() : "NULL");
+        logger.info("Request body: {}", request);
+
         try {
             User currentUser = getCurrentUser(authentication);
-            Long bookId = Long.valueOf(request.get("bookId").toString());
+
+            // Better error handling for bookId parsing
+            Object bookIdObj = request.get("bookId");
+            if (bookIdObj == null) {
+                throw new IllegalArgumentException("bookId is required");
+            }
+
+            Long bookId = bookIdObj instanceof Number
+                ? ((Number) bookIdObj).longValue()
+                : Long.valueOf(bookIdObj.toString());
+
             String deviceType = (String) request.getOrDefault("deviceType", "UNKNOWN");
 
             Book book = bookService.findById(bookId)

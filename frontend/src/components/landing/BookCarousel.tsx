@@ -24,7 +24,6 @@ interface Book {
     author: string;
     coverImageUrl?: string;
     category: string;
-    rating: number;
     popular?: boolean;
     featured?: boolean;
 }

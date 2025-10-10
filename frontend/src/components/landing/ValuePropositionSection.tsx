@@ -6,6 +6,7 @@ import { Compass, Headphones, Layers, Sparkles, Users } from 'lucide-react';
 import { dt } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { BookSuggestionForm } from '@/components/BookSuggestionForm';
 
 interface ValuePropositionSectionProps {
     isAuthenticated: boolean;
@@ -86,6 +87,11 @@ export const ValuePropositionSection = ({ isAuthenticated }: ValuePropositionSec
                             >
                                 Pogledaj promo poglavlja
                             </Button>
+                        </div>
+
+                        <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">
+                            <h3 className={dt.typography.subsectionTitle}>Predložite knjigu</h3>
+                            <BookSuggestionForm className="mt-4" />
                         </div>
 
                         <div className="rounded-3xl border border-library-highlight/20 bg-white/85 p-8 shadow-[0_18px_60px_rgba(31,41,51,0.15)]">

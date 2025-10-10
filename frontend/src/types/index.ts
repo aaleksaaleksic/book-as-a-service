@@ -27,7 +27,6 @@ export interface BookWithProgress extends Book {
     userProgress?: ReadingProgress;
     userSession?: ReadingSession;
     inUserLibrary: boolean;
-    userRating?: number;
 }
 
 

@@ -127,9 +127,44 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     public void trackBookClick(Book book) {
 
         LocalDate today = LocalDate.now();
-        BookAnalytics analytics = bookAnalyticsRepository
-                .findByBookAndAnalyticsDate(book, today)
-                .orElse(new BookAnalytics());
+        BookAnalytics analytics;
+
+        try {
+            analytics = bookAnalyticsRepository
+                    .findByBookAndAnalyticsDate(book, today)
+                    .orElse(new BookAnalytics());
+        } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
+            // Handle duplicate records - this should not happen, but if it does, we'll clean it up
+            logger.error("Found duplicate BookAnalytics for book {} on date {}. Cleaning up duplicates.", book.getTitle(), today);
+
+            // Query all duplicates manually and merge them
+            List<BookAnalytics> duplicates = bookAnalyticsRepository.findAll().stream()
+                    .filter(ba -> ba.getBook().getId().equals(book.getId()) && ba.getAnalyticsDate().equals(today))
+                    .toList();
+
+            if (duplicates.isEmpty()) {
+                analytics = new BookAnalytics();
+            } else {
+                // Keep the first one and merge data
+                analytics = duplicates.get(0);
+
+                // Sum up all clicks from duplicates
+                long totalClicks = duplicates.stream().mapToLong(BookAnalytics::getDailyClicks).sum();
+                long totalReaders = duplicates.stream().mapToLong(BookAnalytics::getDailyUniqueReaders).sum();
+                long totalMinutes = duplicates.stream().mapToLong(BookAnalytics::getDailyReadingMinutes).sum();
+                long totalSessions = duplicates.stream().mapToLong(BookAnalytics::getDailySessions).sum();
+
+                analytics.setDailyClicks(totalClicks);
+                analytics.setDailyUniqueReaders(totalReaders);
+                analytics.setDailyReadingMinutes(totalMinutes);
+                analytics.setDailySessions(totalSessions);
+
+                // Delete the duplicates (skip the first one)
+                for (int i = 1; i < duplicates.size(); i++) {
+                    bookAnalyticsRepository.delete(duplicates.get(i));
+                }
+            }
+        }
 
         if (analytics.getId() == null) {
             analytics.setBook(book);
@@ -147,9 +182,22 @@ public class AnalyticsServiceImpl implements AnalyticsService {
      */
     private void trackUniqueReader(Book book) {
         LocalDate today = LocalDate.now();
-        BookAnalytics analytics = bookAnalyticsRepository
-                .findByBookAndAnalyticsDate(book, today)
-                .orElse(new BookAnalytics());
+        BookAnalytics analytics;
+
+        try {
+            analytics = bookAnalyticsRepository
+                    .findByBookAndAnalyticsDate(book, today)
+                    .orElse(new BookAnalytics());
+        } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
+            // Handle duplicate records
+            logger.error("Found duplicate BookAnalytics for book {} on date {}. Using first record.", book.getTitle(), today);
+
+            List<BookAnalytics> duplicates = bookAnalyticsRepository.findAll().stream()
+                    .filter(ba -> ba.getBook().getId().equals(book.getId()) && ba.getAnalyticsDate().equals(today))
+                    .toList();
+
+            analytics = duplicates.isEmpty() ? new BookAnalytics() : duplicates.get(0);
+        }
 
         if (analytics.getId() == null) {
             analytics.setBook(book);
@@ -368,9 +416,22 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<Book> allBooks = bookRepository.findAll();
 
         for (Book book : allBooks) {
-            BookAnalytics analytics = bookAnalyticsRepository
-                    .findByBookAndAnalyticsDate(book, date)
-                    .orElse(new BookAnalytics());
+            BookAnalytics analytics;
+
+            try {
+                analytics = bookAnalyticsRepository
+                        .findByBookAndAnalyticsDate(book, date)
+                        .orElse(new BookAnalytics());
+            } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
+                // Handle duplicate records
+                logger.error("Found duplicate BookAnalytics for book {} on date {}. Using first record.", book.getTitle(), date);
+
+                List<BookAnalytics> duplicates = bookAnalyticsRepository.findAll().stream()
+                        .filter(ba -> ba.getBook().getId().equals(book.getId()) && ba.getAnalyticsDate().equals(date))
+                        .toList();
+
+                analytics = duplicates.isEmpty() ? new BookAnalytics() : duplicates.get(0);
+            }
 
             if (analytics.getId() == null) {
                 analytics.setBook(book);

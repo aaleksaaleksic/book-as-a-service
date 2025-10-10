@@ -21,7 +21,6 @@ public interface BookService {
     List<String> getAllCategories();
 
     List<Book> getPopularBooks();
-    List<Book> getTopRatedBooks();
 
     Book createBook(String title, String author, String description, String isbn,
                     String category, String publisher, Integer pages, String language, Integer publicationYear,

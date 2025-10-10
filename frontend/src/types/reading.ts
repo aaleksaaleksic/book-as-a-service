@@ -117,7 +117,6 @@ export interface MonthlyReadingStats {
     month: string; // YYYY-MM format
     booksCompleted: number;
     totalMinutes: number;
-    averageRating: number;
     topGenres: string[];
 }
 

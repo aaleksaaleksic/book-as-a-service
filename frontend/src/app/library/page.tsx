@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { srLatn } from "date-fns/locale";
-import { Search, Calendar, BookOpen, Bookmark } from "lucide-react";
+import { Search, Calendar, BookOpen, Bookmark, Clock3 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useBooks, useBookCategories } from "@/hooks/use-books";
@@ -30,6 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { BookSuggestionForm } from "@/components/BookSuggestionForm";
 
 const BOOKS_PER_PAGE = 6;
 const FALLBACK_COVER_IMAGE = "/book-placeholder.svg";
@@ -377,78 +378,80 @@ export default function LibraryPage() {
                                     const coverUrl = book.coverImageUrl ? resolveApiFileUrl(book.coverImageUrl) ?? book.coverImageUrl : null;
 
                                     return (
-                                        <Card
+                                        <article
                                             key={book.id}
-                                            className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border border-library-highlight/30 bg-library-parchment/95 p-6 text-reading-text shadow-[0_24px_60px_rgba(6,18,38,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_32px_80px_rgba(6,18,38,0.45)]"
+                                            className={cn(dt.components.bookCard, 'relative')}
                                         >
-                                            <div className="relative overflow-hidden rounded-3xl border border-library-highlight/30 bg-library-parchment/80 p-4 shadow-inner">
-                                                {coverUrl ? (
-                                                    <div className="flex min-h-[18rem] items-center justify-center">
-                                                        <img
-                                                            src={coverUrl}
-                                                            alt={`Naslovnica za ${book.title}`}
-                                                            className="max-h-[18rem] w-auto object-contain drop-shadow-xl"
-                                                            loading="lazy"
-                                                            onError={event => {
-                                                                const target = event.currentTarget;
-                                                                if (!target.src.endsWith(FALLBACK_COVER_IMAGE)) {
-                                                                    target.onerror = null;
-                                                                    target.src = FALLBACK_COVER_IMAGE;
-                                                                }
-                                                            }}
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex min-h-[18rem] items-center justify-center rounded-2xl bg-library-azure/15 text-sm text-reading-text/60">
-                                                        Naslovnica u pripremi
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="mt-6 flex flex-1 flex-col gap-4">
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div>
-                                                        <h3 className="font-display text-2xl text-reading-text">{book.title}</h3>
-                                                        <p className="mt-1 text-sm text-reading-text/70">Autor: {book.author}</p>
-                                                    </div>
-                                                    {book.category?.name && (
-                                                        <Badge className="rounded-full bg-library-gold/15 text-library-copper">
-                                                            {book.category.name}
-                                                        </Badge>
+                                            <div className="space-y-6">
+                                                <div className="relative overflow-hidden rounded-3xl bg-library-parchment/95 p-4 shadow-xl">
+                                                    {coverUrl ? (
+                                                        <div className="flex min-h-[18rem] items-center justify-center sm:min-h-[22rem]">
+                                                            <img
+                                                                src={coverUrl}
+                                                                alt={book.title}
+                                                                className="max-h-[18rem] w-auto object-contain drop-shadow-xl sm:max-h-[22rem]"
+                                                                loading="lazy"
+                                                                onError={event => {
+                                                                    const target = event.currentTarget;
+                                                                    if (!target.src.endsWith(FALLBACK_COVER_IMAGE)) {
+                                                                        target.onerror = null;
+                                                                        target.src = FALLBACK_COVER_IMAGE;
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex min-h-[18rem] w-full items-center justify-center rounded-2xl bg-library-azure/15 text-reading-text/60 sm:min-h-[22rem]">
+                                                            Nema dostupne naslovnice
+                                                        </div>
                                                     )}
                                                 </div>
 
-                                                {book.description && (
-                                                    <p className="text-sm text-reading-text/70 line-clamp-3">{book.description}</p>
-                                                )}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div>
+                                                            <h3 className={dt.typography.cardTitle}>{book.title}</h3>
+                                                            <p className={cn(dt.typography.muted, 'mt-1')}>{book.author}</p>
+                                                        </div>
+                                                        <Badge className={dt.components.badge}>
+                                                            {book.category?.name || 'N/A'}
+                                                        </Badge>
+                                                    </div>
 
-                                                <div className="flex flex-wrap items-center gap-3 text-[0.7rem] uppercase tracking-[0.3em] text-reading-text/60">
-                                                    <span className="rounded-full border border-library-gold/30 px-3 py-1">
-                                                        {book.pages} strana
-                                                    </span>
-                                                    <span className="rounded-full border border-library-gold/30 px-3 py-1">
-                                                        {book.isPremium ? "Premium naslov" : "Besplatan pristup"}
-                                                    </span>
-                                                </div>
+                                                    {book.description && (
+                                                        <p className={cn(dt.typography.muted, 'line-clamp-4')}>
+                                                            {book.description}
+                                                        </p>
+                                                    )}
 
-                                                <div className="mt-auto flex flex-wrap gap-3">
-                                                    <Button
-                                                        asChild
-                                                        variant="ghost"
-                                                        className="flex-1 rounded-full border border-library-gold/30 bg-library-azure/15 py-4 text-reading-text transition hover:bg-library-highlight/20"
-                                                    >
-                                                        <Link href={`/reader/${book.id}`}>Čitaj</Link>
-                                                    </Button>
-                                                    <Button
-                                                        asChild
-                                                        variant="outline"
-                                                        className="flex-1 rounded-full border-library-gold/30 bg-white/80 py-4 text-reading-text transition hover:bg-library-highlight/20"
-                                                    >
-                                                        <Link href={`/book/${book.id}`}>Detalji</Link>
-                                                    </Button>
+                                                    <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-reading-text/60">
+                                                        <div className="flex items-center gap-2 rounded-full border border-library-gold/25 px-3 py-1">
+                                                            <Clock3 className="h-3.5 w-3.5 text-library-gold" />
+                                                            {book.pages} strana
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <Button
+                                                            asChild
+                                                            size="lg"
+                                                            variant="ghost"
+                                                            className="flex-1 rounded-full border border-library-gold/25 bg-library-azure/10 py-5 text-reading-text transition hover:bg-library-highlight/10"
+                                                        >
+                                                            <Link href={`/reader/${book.id}`}>Čitaj</Link>
+                                                        </Button>
+                                                        <Button
+                                                            asChild
+                                                            size="lg"
+                                                            variant="ghost"
+                                                            className="flex-1 rounded-full border border-library-gold/25 bg-library-azure/10 py-5 text-reading-text transition hover:bg-library-highlight/10"
+                                                        >
+                                                            <Link href={`/book/${book.id}`}>Detalji</Link>
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </Card>
+                                        </article>
                                     );
                                 })}
                             </div>
@@ -500,6 +503,14 @@ export default function LibraryPage() {
                             </Button>
                         </div>
                     )}
+                </section>
+
+                <section className="rounded-[32px] border border-library-highlight/25 bg-white/85 p-8 shadow-[0_24px_60px_rgba(6,18,38,0.35)]">
+                    <h2 className={cn(dt.typography.subsectionTitle, "text-sky-950")}>Predložite knjigu</h2>
+                    <p className={cn(dt.typography.muted, "mt-3 text-sky-950/80")}>
+                        Želite da vidite određenu knjigu na platformi? Pošaljite nam predlog i pomoći ćemo vam.
+                    </p>
+                    <BookSuggestionForm className="mt-6" />
                 </section>
             </div>
         </div>

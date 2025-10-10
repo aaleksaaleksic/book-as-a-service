@@ -24,7 +24,7 @@ export const TopBooksSection = ({ books, isLoading }: TopBooksSectionProps) => {
     };
 
     const handleViewAll = () => {
-        router.push('/browse?sort=popular');
+        router.push('/library');
     };
 
     return (

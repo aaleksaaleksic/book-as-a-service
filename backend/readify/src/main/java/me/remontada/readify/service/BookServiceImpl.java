@@ -125,12 +125,6 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<Book> getTopRatedBooks() {
-        return bookRepository.findTop10ByIsAvailableTrueOrderByAverageRatingDesc();
-    }
-
-    @Override
     @Deprecated
     public Book createBook(String title, String author, String description, String isbn,
                            String category, String publisher, Integer pages, String language, Integer publicationYear,
@@ -185,8 +179,6 @@ public class BookServiceImpl implements BookService {
                 .isAvailable(isAvailable != null ? isAvailable : Boolean.TRUE)
                 .addedBy(addedBy)
                 .totalReads(0L)
-                .averageRating(BigDecimal.ZERO)
-                .ratingsCount(0L)
                 .build();
 
         Book savedBook = bookRepository.save(book);
@@ -227,8 +219,6 @@ public class BookServiceImpl implements BookService {
                 .isAvailable(isAvailable != null ? isAvailable : Boolean.TRUE)
                 .addedBy(addedBy)
                 .totalReads(0L)
-                .averageRating(BigDecimal.ZERO)
-                .ratingsCount(0L)
                 .build();
 
         Book savedBook = bookRepository.save(book);

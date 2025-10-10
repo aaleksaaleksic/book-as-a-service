@@ -88,6 +88,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/*/promo-chapter").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/api/v1/books/*/promo-chapter").permitAll()
 
+                        // Public proposition submission (no authentication needed)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/propositions").permitAll()
+
+                        // Public discount generator (no authentication needed)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/public/discount/generate").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/discount/available").permitAll()
+
+                        // Discount validation and usage (public endpoints)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/discount/validate").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/discount/use").permitAll()
+
                         // File endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/covers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/books/**").authenticated()
@@ -114,7 +125,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/users/**").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/verify-phone").authenticated()
-                        
+
+                        // Analytics endpoints (protected)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/analytics/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/analytics/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/analytics/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/analytics/**").authenticated()
+
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )

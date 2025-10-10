@@ -36,13 +36,10 @@ export const AuthPageLayout = ({
                 <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_480px]">
                     <div className="space-y-8 text-center lg:text-left">
                         <div className="flex justify-center lg:justify-start">
-                            <Image
-                                src="/logo.svg"
+                            <img
+                                src="/landing_logo.svg"
                                 alt="Bookotecha logo"
-                                width={220}
-                                height={100}
-                                className="h-32 w-auto"
-                                priority
+                                className="h-auto w-full max-w-md"
                             />
                         </div>
 

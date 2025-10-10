@@ -15,7 +15,8 @@ import {
     Tag,
     Building2,
     X,
-    Mail
+    Mail,
+    Lightbulb
 } from 'lucide-react';
 import { PageLoader } from '@/components/ui/loading-spinner';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -80,6 +81,18 @@ const navItems: NavItem[] = [
         href: '/admin/analytics',
         icon: <BarChart3 className="w-5 h-5" />,
         permission: 'CAN_VIEW_ANALYTICS',
+    },
+    {
+        title: 'Predlozi',
+        href: '/admin/propositions',
+        icon: <Lightbulb className="w-5 h-5" />,
+        permission: 'CAN_CREATE_BOOKS',
+    },
+    {
+        title: 'Popusti',
+        href: '/admin/discounts-table',
+        icon: <Lightbulb className="w-5 h-5" />,
+        permission: 'CAN_CREATE_BOOKS',
     },
 ];
 
@@ -216,6 +229,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                                 >
                                     <Mail className="w-4 h-4" />
                                     <span className="hidden sm:inline">Mail Sender</span>
+                                </Link>
+                                <Link
+                                    href="/admin/discounts"
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+                                >
+                                    <Mail className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Popust Kod</span>
                                 </Link>
 
                                 {/* Divider */}
